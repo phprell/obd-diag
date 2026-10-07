@@ -14,7 +14,7 @@ Rectangle {
     implicitHeight: label.implicitHeight + 6
     radius: height / 2
     color: fill
-    border.color: Qt.darker(fill, 1.08)
+    border.color: Theme.chipBorder(fill)
 
     Label {
         id: label

@@ -8,6 +8,8 @@ ApplicationWindow {
 
     // DiagnosisViewModel, von Python als Kontext-Eigenschaft gesetzt (ui/window.py)
     readonly property var vm: diagnosis
+    // DesignController (ui/theme.py): hell, dunkel oder wie das System
+    readonly property var design: designController
 
     width: 1000
     height: 700
@@ -16,6 +18,54 @@ ApplicationWindow {
     visible: true
     title: "OBD-Diagnose"
     color: Theme.background
+
+    // Fusion-Palette passend zum Design (Theme.qml); Menüs und Dialoge erben sie.
+    // Rollen mit eigener Farbe für deaktivierte Elemente je Gruppe setzen: die
+    // Kurzform (palette.text) gilt für alle Gruppen und überschriebe sonst je nach
+    // Reihenfolge der Bindungen die deaktivierte Farbe.
+    palette.window: Theme.fusion.window
+    palette.alternateBase: Theme.fusion.alternateBase
+    palette.button: Theme.fusion.button
+    palette.brightText: "#ffffff"
+    palette.highlightedText: "#ffffff"
+    palette.toolTipBase: Theme.fusion.toolTipBase
+    palette.toolTipText: Theme.fusion.toolTipText
+    palette.light: Theme.fusion.light
+    palette.midlight: Theme.fusion.midlight
+    palette.mid: Theme.fusion.mid
+    palette.dark: Theme.fusion.shade
+    palette.shadow: Theme.fusion.shadow
+    palette.link: Theme.fusion.link
+    palette.linkVisited: Theme.fusion.linkVisited
+    palette.placeholderText: Theme.fusion.placeholderText
+    palette.active.windowText: Theme.fusion.windowText
+    palette.inactive.windowText: Theme.fusion.windowText
+    palette.disabled.windowText: Theme.fusion.disabledText
+    palette.active.text: Theme.fusion.text
+    palette.inactive.text: Theme.fusion.text
+    palette.disabled.text: Theme.fusion.disabledText
+    palette.active.buttonText: Theme.fusion.buttonText
+    palette.inactive.buttonText: Theme.fusion.buttonText
+    palette.disabled.buttonText: Theme.fusion.disabledText
+    palette.active.base: Theme.fusion.base
+    palette.inactive.base: Theme.fusion.base
+    palette.disabled.base: Theme.fusion.disabledBase
+    palette.active.highlight: Theme.fusion.highlight
+    palette.inactive.highlight: Theme.fusion.highlight
+    palette.disabled.highlight: Theme.fusion.disabledHighlight
+    palette.active.accent: Theme.fusion.highlight
+    palette.inactive.accent: Theme.fusion.highlight
+    palette.disabled.accent: Theme.fusion.disabledHighlight
+
+    // Eintrag unter Optionen → Design
+    component DesignItem: MenuItem {
+        required property string key
+        objectName: "design_" + key
+        checkable: true
+        checked: window.design.mode === key
+        ButtonGroup.group: designGroup
+        onTriggered: window.design.mode = key
+    }
 
     // --- Aktionen (Menü, Tastenkürzel und Schaltflächen teilen sie sich) ---
 
@@ -74,6 +124,8 @@ ApplicationWindow {
             }
         }
         Menu {
+            objectName: "optionsMenu"
+            width: 320  // sonst werden die langen Einträge gekürzt
             title: "&Optionen"
             MenuItem {
                 objectName: "onlineVinMenuItem"
@@ -94,7 +146,34 @@ ApplicationWindow {
                 text: "Mitschnitt-Ordner öffnen"
                 onTriggered: window.vm.openTraceFolder()
             }
+            MenuSeparator {}
+            Menu {
+                objectName: "designMenu"
+                title: "Design"
+
+                ButtonGroup {
+                    id: designGroup
+                }
+                DesignItem {
+                    key: "system"
+                    text: "Wie das System"
+                }
+                DesignItem {
+                    key: "light"
+                    text: "Hell"
+                }
+                DesignItem {
+                    key: "dark"
+                    text: "Dunkel"
+                }
+            }
         }
+    }
+
+    Binding {
+        target: Theme
+        property: "dark"
+        value: window.design.dark
     }
 
     header: ConnectionBar {

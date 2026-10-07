@@ -23,7 +23,13 @@ def main(argv: list[str] | None = None) -> int:
     from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel
     from obd_diag.ui.window import install_translations, load_main_window, set_style
 
-    app = QGuiApplication(sys.argv if argv is None else argv)
+    # Eine schon laufende Anwendung (Tests mit pytest-qt) weiterverwenden; Qt erlaubt
+    # nur eine je Prozess.
+    existing = QGuiApplication.instance()
+    if isinstance(existing, QGuiApplication):
+        app = existing
+    else:
+        app = QGuiApplication(sys.argv if argv is None else argv)
     app.setApplicationName("obd-diag")
     app.setApplicationDisplayName("OBD-Diagnose")
     app.setApplicationVersion(__version__)
