@@ -492,7 +492,7 @@ class _Builder:
         if r is not None:
             cells.append(
                 (
-                    "Motorkontrollleuchte",
+                    "Kontrollleuchte",
                     self._colored(*(("an", _BAD) if r.mil_on else ("aus", _GOOD)), bold=True),
                 )
             )
@@ -542,7 +542,7 @@ class _Builder:
                     ("Gemeldete Fehlercodes", str(readiness.dtc_count)),
                     ("Motorart", f"{engine} (Monitore für {engine}-Motoren)"),
                 ],
-                40 * mm,
+                48 * mm,
             )
         )
         out.append(Spacer(1, 6))

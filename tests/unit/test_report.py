@@ -68,7 +68,9 @@ def test_csv_without_codes_has_only_header(tmp_path: Path) -> None:
 
 def _pdf_text(path: Path) -> str:
     text = "\n".join(page.extract_text() for page in PdfReader(path).pages)
-    return re.sub(r"[ \t]+", " ", text)
+    # Umbrüche hängen von der eingebetteten Schrift ab (DejaVu läuft breiter als
+    # Liberation); verglichen wird deshalb der Text mit einfachen Leerzeichen.
+    return re.sub(r"\s+", " ", text)
 
 
 @pytest.fixture(params=["ttf", "helvetica"])
@@ -144,7 +146,7 @@ def test_pdf_low_voltage_and_ready(tmp_path: Path, font: str) -> None:
     text = _pdf_text(path)
     assert "11,2 V (niedrig)" in text
     assert "Warnung: Bordspannung unter 11,8 V" in text
-    assert "Alle Tests abgeschlossen\nja" in text
+    assert "Alle Tests abgeschlossen ja" in text
     assert "AU-bereit" not in text
 
 
