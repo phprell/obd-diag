@@ -49,10 +49,15 @@ def test_can_multi_frame_without_spaces_and_second_ecu() -> None:
     assert parse_dtc_response(response, can=True) == ["P0133", "P0300", "P0171", "U0100"]
 
 
-def test_can_without_count_byte() -> None:
-    # ELM327-emulator 4.0.0 lässt das Zählbyte weg
-    assert parse_dtc_response("470420", mode=0x07, can=True) == ["P0420"]
-    assert parse_dtc_response("43013303000171", can=True) == ["P0133", "P0300", "P0171"]
+def test_can_ignores_padding_after_counted_codes() -> None:
+    # Füllbyte wie bei Renault (AndrOBD #283) darf nicht als Code gelesen werden
+    assert parse_dtc_response("43 01 01 33 AA", can=True) == ["P0133"]
+    assert parse_dtc_response("47 01 04 20 55 55", mode=0x07, can=True) == ["P0420"]
+
+
+def test_can_fewer_codes_than_counted_raises() -> None:
+    with pytest.raises(ValueError, match="unvollständig"):
+        parse_dtc_response("43 03 01 33 03 00", can=True)
 
 
 def test_can_no_codes() -> None:

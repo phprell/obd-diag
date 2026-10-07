@@ -1,8 +1,7 @@
 """Vollständiger Scan gegen den ELM327-Emulator (Szenario ``car``) über ein pty.
 
-Der Emulator 4.0.0 lässt bei CAN das Zählbyte nach dem Mode-Byte weg und gibt
-mehrteilige Antworten (ab vier Codes) nicht im ELM327-Format aus. Die Tests bleiben
-deshalb bei höchstens drei Codes je Mode, die in einen CAN-Frame passen.
+Die Fehlercode-Antworten des Emulators baut ``tests/conftest.py`` standardgemäß
+(mit Zählbyte); drei gespeicherte Codes ergeben damit eine mehrteilige Antwort.
 """
 
 import json
@@ -79,3 +78,12 @@ def test_cli_scan_json_against_emulator(
         ("P0133", "pending"),
         ("P0420", "permanent"),
     ]
+
+
+def test_scan_many_codes_multi_frame(car_port: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    codes = ["0133", "0300", "C100", "0420", "0171", "0101", "0442"]
+    monkeypatch.setattr(obd_message, "DTC_STORED", codes)
+    with SerialTransport(car_port) as transport:
+        result = scan(Elm327(transport), None)
+    stored = [c.code for c in result.codes if c.kind is DtcKind.STORED]
+    assert stored == ["P0133", "P0300", "U0100", "P0420", "P0171", "P0101", "P0442"]

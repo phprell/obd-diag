@@ -26,7 +26,11 @@ class SerialTransport:
             self._serial = None
 
     def write(self, data: bytes) -> None:
-        self._port().write(data)
+        port = self._port()
+        # Reste einer früheren Antwort (z. B. ein zweiter Prompt nach STOPPED) würden
+        # sonst als Antwort auf diesen Befehl gelesen und alles Weitere verschieben.
+        port.reset_input_buffer()
+        port.write(data)
 
     def read_until(self, terminator: bytes, timeout: float) -> bytes:
         port = self._port()
