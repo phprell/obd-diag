@@ -47,3 +47,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["integration: braucht den ELM327-Emulator"]
+
+[tool.uv.sources]
+# Das PyPI-sdist meldet beim Bauen 4.0.0.post1 statt 4.0.0, was uv ablehnt.
+elm327-emulator = { git = "https://github.com/Ircama/ELM327-emulator", tag = "v4.0.0" }
