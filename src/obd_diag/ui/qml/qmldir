@@ -1,0 +1,8 @@
+singleton Theme 1.0 Theme.qml
+Banner 1.0 Banner.qml
+ConnectionBar 1.0 ConnectionBar.qml
+CodeList 1.0 CodeList.qml
+CodeDetail 1.0 CodeDetail.qml
+ClearDialog 1.0 ClearDialog.qml
+SectionTitle 1.0 SectionTitle.qml
+Chip 1.0 Chip.qml

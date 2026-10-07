@@ -10,6 +10,8 @@ Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/ar
 Roadmap-Schritt 1 (Grundgerüst): Transport-Schicht für USB-Seriell, minimaler
 ELM327-Treiber, DTC-Dekodierung, Tests gegen Fake und Emulator, CI.
 Roadmap-Schritt 2: `obd-diag scan` liest Fehlercodes und erklärt sie.
+Roadmap-Schritt 3: Desktop-Oberfläche (PySide6/QML) mit Verbinden, Fehlerliste,
+Detailansicht und Löschen.
 
 ## Entwicklung
 
@@ -20,7 +22,10 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
 
-Ohne uv: `python -m venv .venv && .venv/bin/pip install -e . pytest ruff mypy types-pyserial ELM327-emulator`.
+Ohne uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytest-qt ruff mypy types-pyserial ELM327-emulator`.
+
+Die GUI-Tests (`tests/ui`) laufen ohne Bildschirm (`QT_QPA_PLATFORM=offscreen`, setzt
+`tests/ui/conftest.py`) und werden übersprungen, wenn PySide6 fehlt.
 
 ### Fehlercode-Katalog
 
@@ -76,6 +81,35 @@ Im Emulator sind standardmäßig keine Codes gesetzt; die Tests geben sie über 
 Listen `DTC_STORED`, `DTC_PENDING` und `DTC_PERMANENT` in `elm.obd_message` vor
 (siehe `tests/integration/test_scan_emulator.py`).
 
+### Oberfläche
+
+```sh
+uv run obd-diag-gui
+```
+
+Installiert wird die Oberfläche über das Extra `gui` (`pip install 'obd-diag[gui]'`);
+ohne es bleibt eine Kopfzeilen-Installation (z. B. auf dem Raspberry Pi) klein.
+
+Oben Port und Baudrate wählen – die Liste zeigt gefundene Adapter, ein Pfad lässt sich
+auch eintippen – und „Verbinden & Scannen“ drücken. Links stehen die Codes nach
+gespeichert, ausstehend und permanent gruppiert, rechts die Erklärung des gewählten
+Codes mit Ursachen, Symptomen und Kostenrahmen. Unten: Adapter, Protokoll,
+Bordspannung (rot bei niedriger Spannung).
+
+„Fehlercodes löschen …“ fragt vorher nach (Zündung an, Motor aus; Codes und Freeze
+Frame werden gesichert; die Readiness für die Abgasuntersuchung wird zurückgesetzt),
+zeigt danach den Pfad der Sicherung und das Ergebnis des Kontroll-Scans.
+
+Gegen den Emulator:
+
+```sh
+uv run elm -s car      # zeigt das pty an, z. B. /dev/pts/5
+uv run obd-diag-gui    # /dev/pts/5 ins Port-Feld eintragen, verbinden
+```
+
+Jede Aktion öffnet den Port, arbeitet in einem Hintergrund-Thread und schließt ihn
+wieder; die Oberfläche bleibt dabei bedienbar.
+
 ## Struktur
 
 ```
@@ -84,6 +118,6 @@ src/obd_diag/
 ├── protocol/    # ELM327-Befehle, OBD-II-Dekodierung
 ├── services/    # Diagnose-Abläufe (Scan)
 ├── data/        # DTC-Katalog (SQLite), FIN (folgt)
-├── ui/          # QML (folgt)
+├── ui/          # Desktop-Oberfläche: View-Models (Python) und QML
 └── cli.py
 ```

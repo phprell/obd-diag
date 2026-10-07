@@ -12,6 +12,12 @@ dependencies = [
 
 [project.scripts]
 obd-diag = "obd_diag.cli:main"
+obd-diag-gui = "obd_diag.ui.app:main"
+
+[project.optional-dependencies]
+gui = [
+    "pyside6-essentials>=6.8",
+]
 
 [dependency-groups]
 dev = [
@@ -22,6 +28,8 @@ dev = [
     "ELM327-emulator>=3.0",
     "pyyaml>=6.0.3",
     "types-pyyaml>=6.0.12.20260906",
+    "pyside6-essentials>=6.8",
+    "pytest-qt>=4.5.0",
 ]
 
 [build-system]
@@ -53,6 +61,8 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["integration: braucht den ELM327-Emulator"]
+# GUI-Tests (tests/ui) setzen QT_QPA_PLATFORM=offscreen selbst, siehe tests/ui/conftest.py
+qt_api = "pyside6"
 
 [tool.uv.sources]
 # Das PyPI-sdist meldet beim Bauen 4.0.0.post1 statt 4.0.0, was uv ablehnt.

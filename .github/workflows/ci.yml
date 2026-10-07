@@ -8,11 +8,16 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      # GUI-Tests ohne Bildschirm (tests/ui/conftest.py setzt es ebenfalls)
+      QT_QPA_PLATFORM: offscreen
     strategy:
       matrix:
         python: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+      # Laufzeitbibliotheken für PySide6/Qt Quick (offscreen rendert über OpenGL/EGL)
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python }}
