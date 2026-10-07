@@ -61,3 +61,9 @@ def test_scan_without_codes_and_low_voltage() -> None:
 def test_unknown_mode_03_is_an_error() -> None:
     with pytest.raises(UnknownCommandError):
         scan(Elm327(FakeTransport(CAN_CAR | {"03": "?"})), None)
+
+
+def test_scan_defaults_to_german() -> None:
+    catalog = FakeCatalog({})
+    scan(Elm327(FakeTransport(CAN_CAR)), catalog)
+    assert {lang for _, lang in catalog.lookups} == {"de"}

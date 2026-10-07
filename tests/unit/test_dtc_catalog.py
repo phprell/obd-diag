@@ -153,3 +153,21 @@ def test_real_catalog_p0420() -> None:
         assert info is not None
         assert "Katalysator" in info.title
         assert info.causes
+
+
+@pytest.mark.parametrize("missing", ["cost_eur_min", "cost_eur_max"])
+def test_incomplete_cost_range_is_dropped(db_path: Path, missing: str) -> None:
+    with sqlite3.connect(db_path) as con:
+        con.execute(f"UPDATE dtc SET {missing} = NULL WHERE code = 'P0420'")
+    con.close()
+    with DtcCatalog(db_path) as catalog:
+        info = catalog.lookup("P0420")
+    assert info is not None and info.cost_eur is None
+
+
+def test_reopens_after_close(catalog: DtcCatalog) -> None:
+    assert catalog.lookup("P0420") is not None
+    catalog.close()
+    catalog.close()  # zweimal schließen schadet nicht
+    assert catalog.lookup("P0420") is not None
+    assert catalog.meta()["source_commit"] == "abc123"

@@ -34,6 +34,13 @@ Ohne uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytes
 `tests/fixtures/traces/`), gegen den DTC-Decoder von python-OBD und mit
 Hypothesis-Round-Trip- und Fuzz-Tests.
 
+Mutationstests (Löschen, Ablage, Scan, Sitzung, Katalog, Mitschnitt; Konfiguration
+unter `[tool.mutmut]` in `pyproject.toml`, rund eine halbe Minute):
+`uv run --with mutmut mutmut run`, danach `uv run --with mutmut mutmut results`.
+In `services/clear.py` darf kein Mutant überleben; die übrigen Überlebenden sind
+gleichwertig (z. B. `"utf-8"` → `"UTF-8"`, Groß-/Kleinschreibung in SQL). Der Ordner
+`mutants/` ist nur Arbeitskopie.
+
 Die GUI-Tests (`tests/ui`) laufen ohne Bildschirm (`QT_QPA_PLATFORM=offscreen`, setzt
 `tests/ui/conftest.py`) und werden übersprungen, wenn PySide6 fehlt.
 

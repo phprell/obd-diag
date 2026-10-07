@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from obd_diag import __version__
 from obd_diag.protocol.elm327 import Elm327, ElmError
 from obd_diag.services import clear
 from obd_diag.services.clear import (
@@ -56,16 +57,34 @@ def test_preconditions_without_voltage_reading() -> None:
     check_preconditions(Elm327(_car(ATRV="?")))
 
 
+def test_preconditions_voltage_at_limit() -> None:
+    # Genau 11,8 V gilt noch als ausreichend (gewarnt wird erst darunter).
+    check_preconditions(Elm327(_car(ATRV="11.8V")))
+
+
+def test_preconditions_accept_answer_with_spaces() -> None:
+    # Mit ATS1 (Standard nach ATZ) trennt der Adapter die Bytes durch Leerzeichen.
+    check_preconditions(Elm327(_car(**{"0100": "41 00 BE 3F A8 13"})))
+
+
 @pytest.mark.parametrize(
     ("overrides", "message"),
     [
         ({"0100": "SEARCHING...\rUNABLE TO CONNECT"}, "Keine Verbindung zum Steuergerät"),
         ({"0100": "NO DATA"}, r"Keine Verbindung zum Steuergerät \(NO DATA\)\. Ist die Zündung"),
-        ({"0100": "OK"}, "Keine Verbindung zum Steuergerät"),
-        ({"ATRV": "11.2V"}, r"Bordspannung zu niedrig \(11\.2 V"),
+        ({"0100": "OK"}, r"Keine Verbindung zum Steuergerät \(Antwort 'OK'\)\. Ist die Zündung"),
+        (
+            {"ATRV": "11.2V"},
+            r"^Bordspannung zu niedrig \(11\.2 V, mindestens 11\.8 V\)\. "
+            r"Batterie laden oder Ladegerät anschließen\.$",
+        ),
+        ({"ATRV": "11.79V"}, "Bordspannung zu niedrig"),
         ({"010C": "410C0AF0"}, r"Motor läuft \(700 1/min\)"),
         ({"010C": "410C0001"}, "Motor läuft"),
-        ({"010C": "NO DATA"}, "Drehzahl nicht lesbar"),
+        (
+            {"010C": "NO DATA"},
+            r"^Drehzahl nicht lesbar, daher wird nicht gelöscht\. Motor aus, Zündung an\?$",
+        ),
         ({"010C": "7F0112"}, "Drehzahl nicht lesbar"),
         ({"010C": "OK"}, "Drehzahl nicht lesbar"),
         ({"010C": "CAN ERROR"}, "Drehzahl nicht lesbar"),
@@ -109,8 +128,12 @@ def test_clear_codes_backs_up_then_clears(monkeypatch: pytest.MonkeyPatch, tmp_p
     assert result.backup_path == tmp_path / "dtc-backup-20261007-123005.json"
     assert sorted(p.name for p in tmp_path.iterdir()) == ["dtc-backup-20261007-123005.json"]
 
+    # Vor und nach dem Löschen wird in der gewünschten Sprache nachgeschlagen.
+    assert catalog.lookups == [("P0133", "en"), ("P0300", "en"), ("P0171", "en")]
+
     data = json.loads(result.backup_path.read_text(encoding="utf-8"))
     assert data["created"] == "2026-10-07T12:30:05+00:00"
+    assert data["tool_version"] == __version__
     assert data["adapter"] == "ELM327 v1.5"
     assert data["protocol"] == "ISO 15765-4 (CAN 11/500)"
     assert data["scan"]["voltage"] == 12.4
@@ -177,7 +200,10 @@ def test_nothing_is_cleared_when_refused(overrides: dict[str, str], tmp_path: Pa
 
 def test_only_permanent_codes_are_not_cleared(tmp_path: Path) -> None:
     transport = _car(**{"03": "4300", "07": "4700", "0A": "4A010420"})
-    with pytest.raises(ClearRefused, match="nichts zu löschen"):
+    with pytest.raises(
+        ClearRefused,
+        match=r"^Keine gespeicherten oder ausstehenden Fehlercodes, nichts zu löschen\.$",
+    ):
         clear_codes(Elm327(transport), None, backup_dir=tmp_path)
     assert "04" not in transport.sent
 
@@ -229,8 +255,19 @@ def test_unconfirmed_clear(response: str, message: str, tmp_path: Path) -> None:
     assert len(list(tmp_path.iterdir())) == 1
 
 
-def test_codes_that_return_remain_visible(tmp_path: Path) -> None:
+@pytest.mark.parametrize("lang", [None, "en"])
+def test_codes_that_return_remain_visible(tmp_path: Path, lang: str | None) -> None:
     # Der Fehler besteht weiter: das Steuergerät setzt P0133 sofort wieder.
     transport = FakeTransport(CAN_CAR_ENGINE_OFF, CLEARED | {"03": "43010133"})
-    result = clear_codes(Elm327(transport), None, backup_dir=tmp_path)
+    catalog = FakeCatalog({"P0133": "Lambdasonde reagiert zu langsam"})
+    if lang is None:
+        result = clear_codes(Elm327(transport), catalog, backup_dir=tmp_path)
+    else:
+        result = clear_codes(Elm327(transport), catalog, backup_dir=tmp_path, lang=lang)
     assert [(c.code, c.kind) for c in result.after.codes] == [("P0133", DtcKind.STORED)]
+    # Auch der Kontroll-Scan erklärt die Codes, standardmäßig auf Deutsch.
+    (code,) = result.after.codes
+    assert code.info is not None
+    assert code.info.title == "Lambdasonde reagiert zu langsam"
+    assert catalog.lookups[-1] == ("P0133", lang or "de")
+    assert {used for _, used in catalog.lookups} == {lang or "de"}

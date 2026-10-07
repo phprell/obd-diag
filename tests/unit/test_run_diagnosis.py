@@ -143,3 +143,33 @@ def test_readiness_monitors_complete_for_au() -> None:
         MonitorState.COMPLETE,
         MonitorState.NOT_SUPPORTED,
     }
+
+
+@pytest.mark.parametrize("lang", [None, "en"])
+def test_language_is_passed_to_catalog(lang: str | None) -> None:
+    catalog = FakeCatalog({})
+    elm = Elm327(FakeTransport(FULL_CAR))
+    if lang is None:
+        run_diagnosis(elm, catalog)
+    else:
+        run_diagnosis(elm, catalog, lang)
+    assert catalog.lookups
+    assert {used for _, used in catalog.lookups} == {lang or "de"}
+
+
+def test_missing_parts_are_logged(caplog: pytest.LogCaptureFixture) -> None:
+    responses = {
+        **FULL_CAR,
+        "0101": "CAN ERROR",
+        "0902": "CAN ERROR",
+        **dict.fromkeys(["020200", "020400", "020500", "020C00", "020D00"], "CAN ERROR"),
+    }
+    with caplog.at_level("WARNING", logger="obd_diag.services.session"):
+        _run(responses)
+    messages = [r.getMessage() for r in caplog.records]
+    assert [m.split(":")[0] for m in messages] == [
+        "Readiness nicht lesbar",
+        "Freeze Frame nicht lesbar",
+        "FIN nicht lesbar",
+    ]
+    assert all(m.endswith("CAN ERROR") for m in messages), messages

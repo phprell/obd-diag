@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from obd_diag import __version__
 from obd_diag.services.diagnostics import scan_to_dict
 from obd_diag.services.session import (
     Session,
@@ -182,3 +183,53 @@ def test_load_rejects_clear_backup(tmp_path: Path) -> None:
     path.write_text(json.dumps(backup), encoding="utf-8")
     with pytest.raises(ValueError, match="Keine obd-diag-Diagnosesitzung"):
         load_session(path)
+
+
+def test_dict_has_tool_version() -> None:
+    assert session_to_dict(minimal_session())["tool_version"] == __version__
+
+
+def test_from_dict_rejects_with_exact_message() -> None:
+    with pytest.raises(ValueError) as info:
+        session_from_dict({"format": "x"})
+    assert str(info.value) == (
+        "Keine obd-diag-Diagnosesitzung (Kennung 'format' fehlt oder ist falsch)."
+    )
+
+
+def test_from_dict_tolerates_missing_optional_lists() -> None:
+    """Fehlende Listen (Ursachen, Symptome, Codes, Rohwerte, Online-Daten) sind leer."""
+    data = session_to_dict(full_session())
+    del data["scan"]["codes"][0]["info"]["causes"]
+    del data["scan"]["codes"][0]["info"]["symptoms"]
+    for key in ("raw", "values"):
+        del data["freeze_frame"][key]
+    del data["vehicle"]["online"]
+    session = session_from_dict(data)
+    info = session.scan.codes[0].info
+    assert info is not None and info.causes == () and info.symptoms == ()
+    assert session.freeze_frame is not None
+    assert session.freeze_frame.raw == {} and session.freeze_frame.values == {}
+    assert session.vehicle is not None and session.vehicle.online == {}
+
+    del data["scan"]["codes"]
+    assert session_from_dict(data).scan.codes == []
+
+
+def test_round_trip_diesel_readiness() -> None:
+    readiness = dataclasses.replace(READINESS, compression_ignition=True)
+    session = dataclasses.replace(minimal_session(), readiness=readiness)
+    restored = session_from_dict(json.loads(json.dumps(session_to_dict(session))))
+    assert restored.readiness is not None and restored.readiness.compression_ignition is True
+
+
+def test_load_utf8_independent_of_locale(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Auch unter einer Latin-1-Locale werden Umlaute richtig gelesen."""
+    path = save_session(full_session(), tmp_path)
+    real_read_text = Path.read_text
+
+    def latin1_read_text(self: Path, encoding: str | None = None, errors: str | None = None) -> str:
+        return real_read_text(self, encoding=encoding or "latin-1", errors=errors)
+
+    monkeypatch.setattr(Path, "read_text", latin1_read_text)
+    assert load_session(path) == full_session()

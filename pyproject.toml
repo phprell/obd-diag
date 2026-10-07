@@ -68,6 +68,21 @@ markers = ["integration: braucht den ELM327-Emulator"]
 # GUI-Tests (tests/ui) setzen QT_QPA_PLATFORM=offscreen selbst, siehe tests/ui/conftest.py
 qt_api = "pyside6"
 
+[tool.mutmut]
+# Mutationstests für Löschen, Ablage, Scan, Sitzung, Katalog und Mitschnitt; nur die
+# schnellen Unit-Tests. Aufruf: uv run --with mutmut mutmut run (siehe README).
+source_paths = ["src/obd_diag"]
+only_mutate = [
+    "src/obd_diag/services/clear.py",
+    "src/obd_diag/services/storage.py",
+    "src/obd_diag/services/diagnostics.py",
+    "src/obd_diag/services/session.py",
+    "src/obd_diag/data/dtc_catalog.py",
+    "src/obd_diag/transport/trace.py",
+]
+pytest_add_cli_args_test_selection = ["tests/unit"]
+also_copy = ["tests"]
+
 [tool.uv.sources]
 # Das PyPI-sdist meldet beim Bauen 4.0.0.post1 statt 4.0.0, was uv ablehnt.
 elm327-emulator = { git = "https://github.com/Ircama/ELM327-emulator", tag = "v4.0.0" }

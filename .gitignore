@@ -13,3 +13,4 @@ htmlcov/
 *.db
 *.log
 .claude/
+mutants/
