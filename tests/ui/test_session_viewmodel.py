@@ -49,7 +49,7 @@ def test_full_session_parts(full: DiagnosisViewModel) -> None:
     assert facts["Hersteller"] == "Volkswagen"
     assert facts["Land"] == "Deutschland"
     assert facts["Modelljahr"] == "2006 (aus Stelle 10, ohne Gewähr)"
-    assert facts["Prüfziffer"] == "nicht vorgeschrieben (passt nicht, kein Fehler)"
+    assert facts["Prüfziffer"] == "nicht vorgeschrieben (weicht ab)"
     assert vehicle["modelYearAlternatives"] == []
     assert vehicle["online"] == [
         {"label": "Modell", "value": "Golf"},
@@ -139,7 +139,7 @@ def test_entries_edge_cases() -> None:
                 model_year_alternatives=(1996,),
             ),
             "2026 oder 1996 (aus Stelle 10, ohne Gewähr)",
-            "nicht vorgeschrieben (passt nicht, kein Fehler)",
+            "nicht vorgeschrieben (weicht ab)",
         ),
         (  # nicht vorgeschrieben, stimmt aber
             VinInfo("WBA3A5C53CF256551", True, True, "WBA", model_year=2012),

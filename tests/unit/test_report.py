@@ -159,7 +159,7 @@ def test_pdf_low_voltage_and_ready(tmp_path: Path, font: str) -> None:
             {},
             [
                 "2006 (aus Stelle 10, ohne Gewähr)",
-                "nicht vorgeschrieben (passt nicht, kein Fehler)",
+                "nicht vorgeschrieben (weicht ab)",
             ],
         ),
         ({"checksum_ok": True}, ["Prüfziffer stimmt Hersteller"]),

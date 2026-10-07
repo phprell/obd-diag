@@ -87,7 +87,7 @@ def checksum_text(info: VinInfo) -> str:
     if not info.valid:
         return "nicht prüfbar (FIN ungültig)"
     if info.checksum_ok is None:
-        return "nicht vorgeschrieben (passt nicht, kein Fehler)"
+        return "nicht vorgeschrieben (weicht ab)"
     return "stimmt" if info.checksum_ok else "stimmt nicht"
 
 

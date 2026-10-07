@@ -301,7 +301,7 @@ def test_diagnose_table(
     assert out.startswith(
         "Fahrzeug:\n"
         "  FIN:        WVWZZZ1KZ6W123456\n"
-        "  Prüfziffer: nicht vorgeschrieben (passt nicht, kein Fehler)\n"
+        "  Prüfziffer: nicht vorgeschrieben (weicht ab)\n"
         "  Hersteller: Volkswagen\n"
         "  Land:       Deutschland\n"
         "  Modelljahr: 2006 (aus Stelle 10, ohne Gewähr)\n"
@@ -461,7 +461,7 @@ def test_vin_from_can_car_drops_implausible_year(
 @pytest.mark.parametrize(
     ("vin", "line"),
     [
-        ("WVWZZZ1KZ6W123456", "  Prüfziffer: nicht vorgeschrieben (passt nicht, kein Fehler)\n"),
+        ("WVWZZZ1KZ6W123456", "  Prüfziffer: nicht vorgeschrieben (weicht ab)\n"),
         ("WBA3A5C53CF256551", "  Prüfziffer: stimmt\n"),  # Europa, stimmt freiwillig
     ],
 )

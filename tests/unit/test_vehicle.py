@@ -508,7 +508,7 @@ def test_model_year_text(vin: str, text: str | None) -> None:
         ("1M8GDM9AXKP042788", True, "stimmt"),  # Nordamerika, vorgeschrieben
         ("1M8GDM9A1KP042788", False, "stimmt nicht"),
         ("WBA3A5C53CF256551", True, "stimmt"),  # Europa: nicht vorgeschrieben, stimmt aber
-        ("WVWZZZ1KZ6W123456", None, "nicht vorgeschrieben (passt nicht, kein Fehler)"),
+        ("WVWZZZ1KZ6W123456", None, "nicht vorgeschrieben (weicht ab)"),
         ("WVWZZZ1KZ6W12345", None, "nicht prüfbar (FIN ungültig)"),
     ],
 )
