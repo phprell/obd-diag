@@ -12,3 +12,4 @@ htmlcov/
 *.sqlite
 *.db
 *.log
+.claude/
