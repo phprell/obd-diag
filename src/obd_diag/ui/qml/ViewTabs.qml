@@ -76,7 +76,7 @@ TabBar {
         objectName: "tabReadiness"
         text: "Readiness"
         dot: !bar.vm.readiness.available ? "transparent"
-             : bar.vm.readiness.ready ? Theme.okDot : Theme.warnText  // offen ist kein Fehler
+             : bar.vm.readiness.ready ? Theme.okDot : Theme.warnDot  // offen ist kein Fehler
     }
     ViewTab {
         objectName: "tabFreezeFrame"
