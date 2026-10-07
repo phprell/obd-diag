@@ -37,3 +37,28 @@ def test_pending_codes_mode_07() -> None:
 def test_wrong_mode_raises() -> None:
     with pytest.raises(ValueError):
         parse_dtc_response("41 00 BE 3F A8 13")
+
+
+def test_can_multi_frame_with_byte_count() -> None:
+    response = "008\n0: 43 03 01 33 03 00\n1: 01 71 00 00 00 00 00"
+    assert parse_dtc_response(response, can=True) == ["P0133", "P0300", "P0171"]
+
+
+def test_can_multi_frame_without_spaces_and_second_ecu() -> None:
+    response = "008\n0:430301330300\n1:01710000000000\n4301C100"
+    assert parse_dtc_response(response, can=True) == ["P0133", "P0300", "P0171", "U0100"]
+
+
+def test_can_without_count_byte() -> None:
+    # ELM327-emulator 4.0.0 lässt das Zählbyte weg
+    assert parse_dtc_response("470420", mode=0x07, can=True) == ["P0420"]
+    assert parse_dtc_response("43013303000171", can=True) == ["P0133", "P0300", "P0171"]
+
+
+def test_can_no_codes() -> None:
+    assert parse_dtc_response("4A00", mode=0x0A, can=True) == []
+
+
+def test_negative_response_is_skipped() -> None:
+    assert parse_dtc_response("7F0A11", mode=0x0A, can=True) == []
+    assert parse_dtc_response("7F0311\n43010133", can=True) == ["P0133"]

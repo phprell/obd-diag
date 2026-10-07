@@ -9,6 +9,7 @@ Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/ar
 
 Roadmap-Schritt 1 (Grundgerüst): Transport-Schicht für USB-Seriell, minimaler
 ELM327-Treiber, DTC-Dekodierung, Tests gegen Fake und Emulator, CI.
+Roadmap-Schritt 2: `obd-diag scan` liest Fehlercodes und erklärt sie.
 
 ## Entwicklung
 
@@ -40,13 +41,31 @@ obd-diag info --port /dev/ttyUSB0
 Rechte: unter Arch heißt die Gruppe `uucp` (Debian/Ubuntu: `dialout`):
 `sudo usermod -aG uucp $USER` – oder die udev-Regel aus `packaging/` installieren.
 
+### Fehlercodes lesen
+
+```sh
+obd-diag scan --port /dev/ttyUSB0              # Tabelle, Texte auf Deutsch
+obd-diag scan --port /dev/ttyUSB0 --lang en    # Texte auf Englisch
+obd-diag scan --port /dev/ttyUSB0 --json       # maschinenlesbar
+```
+
+`scan` zeigt Adapter, Fahrzeugprotokoll und Bordspannung (mit Warnung unter 11,8 V)
+und listet gespeicherte (Mode 03), ausstehende (Mode 07) und permanente (Mode 0A)
+Fehlercodes mit Klartext aus dem Offline-Katalog. Fehlt der Katalog, erscheinen die
+Codes ohne Beschreibung (bauen mit `uv run python tools/build_dtc_db.py`). Es wird
+nur gelesen, nichts gelöscht.
+
+Im Emulator sind standardmäßig keine Codes gesetzt; die Tests geben sie über die
+Listen `DTC_STORED`, `DTC_PENDING` und `DTC_PERMANENT` in `elm.obd_message` vor
+(siehe `tests/integration/test_scan_emulator.py`).
+
 ## Struktur
 
 ```
 src/obd_diag/
 ├── transport/   # Byte-Kanal zum Adapter (Protocol + USB-Seriell)
 ├── protocol/    # ELM327-Befehle, OBD-II-Dekodierung
-├── services/    # Diagnose-Abläufe (folgt)
+├── services/    # Diagnose-Abläufe (Scan)
 ├── data/        # DTC-Katalog, FIN (folgt)
 ├── ui/          # QML (folgt)
 └── cli.py
