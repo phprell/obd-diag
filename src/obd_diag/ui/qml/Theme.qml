@@ -25,6 +25,26 @@ QtObject {
     readonly property color infoText: "#1e3a8a"
     readonly property color infoBg: "#eff6ff"
     readonly property color infoBorder: "#bfdbfe"
+    readonly property color divider: "#ececef"
+    readonly property color okDot: "#16a34a"
+    readonly property color errorDot: "#dc2626"
+
+    // Readiness-Monitor: abgeschlossen, nicht abgeschlossen, nicht unterstützt
+    function monitorText(state) {
+        if (state === "complete")
+            return okText
+        if (state === "incomplete")
+            return errorText
+        return muted
+    }
+
+    function monitorBg(state) {
+        if (state === "complete")
+            return okBg
+        if (state === "incomplete")
+            return errorBg
+        return background
+    }
 
     // Art des Codes: gespeichert (bestätigt), ausstehend, permanent
     function kindColor(kind) {

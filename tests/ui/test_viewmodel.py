@@ -10,6 +10,7 @@ from pytestqt.qtbot import QtBot
 from obd_diag.protocol.elm327 import ElmError
 from obd_diag.services.clear import ClearRefused, ClearResult
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
+from obd_diag.services.session import Session
 from obd_diag.transport import TransportError
 from obd_diag.transport.discovery import PortInfo
 from obd_diag.ui.jobs import ThreadPoolRunner
@@ -24,13 +25,13 @@ def _vm(backend: FakeBackend) -> DiagnosisViewModel:
 
 def test_scan_runs_off_the_gui_thread(qtbot: QtBot, fake_backend: FakeBackend) -> None:
     threads: list[int] = []
-    original = fake_backend.scan
+    original = fake_backend.diagnose
 
-    def scan(port: str, baud: int) -> ScanResult:
+    def diagnose(port: str, baud: int, online_vin_lookup: bool) -> Session:
         threads.append(threading.get_ident())
-        return original(port, baud)
+        return original(port, baud, online_vin_lookup)
 
-    fake_backend.scan = scan  # type: ignore[method-assign]
+    fake_backend.diagnose = diagnose  # type: ignore[method-assign]
     runner = ThreadPoolRunner()
     vm = DiagnosisViewModel(fake_backend.as_backend(), runner)
     with qtbot.waitSignal(vm.scanFinished, timeout=5000):
@@ -39,7 +40,7 @@ def test_scan_runs_off_the_gui_thread(qtbot: QtBot, fake_backend: FakeBackend) -
         assert "/dev/pts/5" in vm.property("busyText")
     runner.wait()
     assert threads and threads[0] != threading.get_ident()
-    assert fake_backend.calls == [("scan", "/dev/pts/5", 9600)]
+    assert fake_backend.calls == [("diagnose", "/dev/pts/5", 9600)]
     assert not vm.property("busy")
     assert vm.property("hasResult")
     assert vm.property("adapter") == "ELM327 v1.5"
@@ -53,13 +54,13 @@ def test_scan_runs_off_the_gui_thread(qtbot: QtBot, fake_backend: FakeBackend) -
 
 def test_second_scan_is_ignored_while_busy(qtbot: QtBot, fake_backend: FakeBackend) -> None:
     release = threading.Event()
-    original = fake_backend.scan
+    original = fake_backend.diagnose
 
-    def slow_scan(port: str, baud: int) -> ScanResult:
+    def slow_diagnose(port: str, baud: int, online_vin_lookup: bool) -> Session:
         release.wait(5)
-        return original(port, baud)
+        return original(port, baud, online_vin_lookup)
 
-    fake_backend.scan = slow_scan  # type: ignore[method-assign]
+    fake_backend.diagnose = slow_diagnose  # type: ignore[method-assign]
     runner = ThreadPoolRunner()
     vm = DiagnosisViewModel(fake_backend.as_backend(), runner)
     with qtbot.waitSignal(vm.scanFinished, timeout=5000):
@@ -163,7 +164,7 @@ def test_unknown_voltage() -> None:
 def test_scan_errors_are_shown(
     qtbot: QtBot, fake_backend: FakeBackend, error: Exception, message: str
 ) -> None:
-    fake_backend.scan_error = error
+    fake_backend.diagnose_error = error
     runner = ThreadPoolRunner()
     vm = DiagnosisViewModel(fake_backend.as_backend(), runner)
     with qtbot.waitSignal(vm.jobFailed, timeout=5000) as blocker:
@@ -207,7 +208,7 @@ def test_clear_without_codes_does_nothing() -> None:
     vm.clearCodes()  # noch kein Scan
     vm.connectAndScan("/dev/ttyUSB0", 38400)
     vm.clearCodes()
-    assert [c[0] for c in backend.calls] == ["scan"]
+    assert [c[0] for c in backend.calls] == ["diagnose"]
 
 
 def test_clear_success_shows_backup_and_after_scan(qtbot: QtBot, fake_backend: FakeBackend) -> None:
@@ -220,7 +221,11 @@ def test_clear_success_shows_backup_and_after_scan(qtbot: QtBot, fake_backend: F
     with qtbot.waitSignal(vm.clearSucceeded, timeout=5000) as blocker:
         vm.clearCodes()
     runner.wait()
-    assert fake_backend.calls[-1] == ("clear", "/dev/pts/7", 38400)
+    # Nach dem Löschen wird die Diagnose am selben Port neu gelesen
+    assert fake_backend.calls[-2:] == [
+        ("clear", "/dev/pts/7", 38400),
+        ("diagnose", "/dev/pts/7", 38400),
+    ]
     assert blocker.args == ["/var/backup/2026.json"]
     assert "Sicherung: /var/backup/2026.json" in vm.property("notice")
     assert "1 permanente(r) Code(s) bleiben" in vm.property("notice")
@@ -265,4 +270,4 @@ def test_only_permanent_codes_cannot_be_cleared() -> None:
     assert vm.property("hasCodes")
     assert not vm.property("canClear")
     vm.clearCodes()
-    assert [c[0] for c in backend.calls] == ["scan"]
+    assert [c[0] for c in backend.calls] == ["diagnose"]

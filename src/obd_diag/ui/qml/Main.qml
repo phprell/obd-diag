@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 
 ApplicationWindow {
@@ -16,6 +17,74 @@ ApplicationWindow {
     title: "OBD-Diagnose"
     color: Theme.background
 
+    // --- Aktionen (Menü, Tastenkürzel und Schaltflächen teilen sie sich) ---
+
+    Action {
+        id: openAction
+        text: "Sitzung öffnen …"
+        shortcut: StandardKey.Open
+        enabled: !window.vm.busy
+        onTriggered: openDialog.open()
+    }
+    Action {
+        id: saveAction
+        text: "Sitzung speichern"
+        shortcut: StandardKey.Save
+        enabled: window.vm.canSave
+        onTriggered: window.vm.saveSession()
+    }
+    Action {
+        id: pdfAction
+        text: "Bericht als PDF …"
+        shortcut: "Ctrl+P"
+        enabled: window.vm.canExport
+        onTriggered: exportDialog.start("pdf")
+    }
+    Action {
+        id: csvAction
+        text: "CSV exportieren …"
+        enabled: window.vm.canExport
+        onTriggered: exportDialog.start("csv")
+    }
+
+    menuBar: MenuBar {
+        objectName: "menuBar"
+        Menu {
+            objectName: "fileMenu"
+            title: "&Datei"
+            MenuItem {
+                action: openAction
+            }
+            MenuItem {
+                objectName: "saveMenuItem"
+                action: saveAction
+            }
+            MenuSeparator {}
+            MenuItem {
+                objectName: "pdfMenuItem"
+                action: pdfAction
+            }
+            MenuItem {
+                action: csvAction
+            }
+            MenuSeparator {}
+            MenuItem {
+                text: "Beenden"
+                onTriggered: Qt.quit()
+            }
+        }
+        Menu {
+            title: "&Optionen"
+            MenuItem {
+                objectName: "onlineVinMenuItem"
+                text: "FIN online nachschlagen (NHTSA)"
+                checkable: true
+                checked: window.vm.onlineVinLookup
+                onToggled: window.vm.onlineVinLookup = checked
+            }
+        }
+    }
+
     header: ConnectionBar {
         vm: window.vm
     }
@@ -24,7 +93,53 @@ ApplicationWindow {
         anchors.fill: parent
         spacing: 0
 
-        // Hinweise über der Liste
+        // Reiter und, sobald bekannt, das Fahrzeug
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: tabs.implicitHeight + 1
+            color: Theme.surface
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Theme.gap
+                anchors.rightMargin: Theme.pad
+                anchors.bottomMargin: 1
+                spacing: Theme.pad
+
+                ViewTabs {
+                    id: tabs
+                    objectName: "viewTabs"
+                    vm: window.vm
+                    Layout.alignment: Qt.AlignBottom
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                Chip {
+                    visible: window.vm.viewOnly
+                    text: "Gespeicherte Sitzung · nur ansehen"
+                    textColor: Theme.infoText
+                    fill: Theme.infoBg
+                }
+                Label {
+                    objectName: "vehicleHeader"
+                    Layout.maximumWidth: 360
+                    visible: text !== ""
+                    text: window.vm.vehicleText
+                    elide: Text.ElideMiddle
+                    font.bold: true
+                    color: palette.text
+                }
+            }
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: Theme.border
+            }
+        }
+
+        // Hinweise über dem Inhalt
         ColumnLayout {
             id: banners
             Layout.fillHeight: false
@@ -73,25 +188,47 @@ ApplicationWindow {
             }
         }
 
-        SplitView {
+        // Rahmenlinie über dem Inhalt, wenn Hinweise darüber stehen
+        Rectangle {
+            visible: banners.shown
+            Layout.fillWidth: true
+            implicitHeight: 1
+            color: Theme.border
+        }
+
+        StackLayout {
+            objectName: "viewStack"
             Layout.fillWidth: true
             Layout.fillHeight: true
-            orientation: Qt.Horizontal
+            currentIndex: tabs.currentIndex
 
-            handle: Rectangle {
-                implicitWidth: 1
-                color: Theme.border
-            }
+            SplitView {
+                orientation: Qt.Horizontal
 
-            CodeList {
-                vm: window.vm
-                SplitView.preferredWidth: 360
-                SplitView.minimumWidth: 260
+                handle: Rectangle {
+                    implicitWidth: 1
+                    color: Theme.border
+                }
+
+                CodeList {
+                    vm: window.vm
+                    SplitView.preferredWidth: 360
+                    SplitView.minimumWidth: 260
+                }
+                CodeDetail {
+                    vm: window.vm
+                    SplitView.fillWidth: true
+                    SplitView.minimumWidth: 360
+                }
             }
-            CodeDetail {
+            ReadinessView {
                 vm: window.vm
-                SplitView.fillWidth: true
-                SplitView.minimumWidth: 360
+            }
+            FreezeFrameView {
+                vm: window.vm
+            }
+            VehicleView {
+                vm: window.vm
             }
         }
     }
@@ -112,7 +249,7 @@ ApplicationWindow {
 
         RowLayout {
             width: parent.width
-            spacing: Theme.pad
+            spacing: Theme.gap
 
             Label {
                 objectName: "statusLine"
@@ -129,21 +266,49 @@ ApplicationWindow {
                         ? "<font color=\"" + Theme.errorText + "\"><b>" + window.vm.voltageText
                           + " (niedrig)</b></font>"
                         : window.vm.voltageText
-                    return "Adapter: " + window.vm.adapter
+                    const prefix = window.vm.viewOnly
+                        ? "Sitzung vom " + window.vm.createdText + "  ·  "
+                        : ""
+                    return prefix + "Adapter: " + window.vm.adapter
                          + "  ·  Protokoll: " + window.vm.protocol
                          + "  ·  Bordspannung: " + voltage
                 }
             }
-            Label {
-                visible: window.vm.hasResult && !window.vm.busy
-                text: window.vm.codeCount === 1 ? "1 Code" : window.vm.codeCount + " Codes"
-                color: Theme.muted
+            Button {
+                objectName: "saveButton"
+                action: saveAction
+                ToolTip.visible: hovered && window.vm.sessionPath !== ""
+                ToolTip.delay: 400
+                ToolTip.text: "Gespeichert: " + window.vm.sessionPath
             }
             Button {
-                objectName: "clearButton"
-                text: "Fehlercodes löschen …"
-                enabled: window.vm.canClear
-                onClicked: clearDialog.open()
+                objectName: "pdfButton"
+                action: pdfAction
+            }
+
+            // Ein deaktivierter Button meldet kein hovered; den Tooltip trägt daher die Hülle.
+            Item {
+                implicitWidth: clearButton.implicitWidth
+                implicitHeight: clearButton.implicitHeight
+                Layout.leftMargin: Theme.gap
+
+                Button {
+                    id: clearButton
+                    objectName: "clearButton"
+                    anchors.fill: parent
+                    text: "Fehlercodes löschen …"
+                    enabled: window.vm.canClear
+                    onClicked: clearDialog.open()
+                }
+                HoverHandler {
+                    id: clearHover
+                }
+                ToolTip {
+                    objectName: "clearTooltip"
+                    visible: clearHover.hovered && window.vm.viewOnly
+                    delay: 400
+                    text: "nur bei verbundenem Fahrzeug"
+                }
             }
         }
     }
@@ -169,6 +334,44 @@ ApplicationWindow {
             id: refusedLabel
             width: parent.width
             wrapMode: Text.Wrap
+        }
+    }
+
+    FileDialog {
+        id: openDialog
+        objectName: "openDialog"
+        title: "Diagnosesitzung öffnen"
+        fileMode: FileDialog.OpenFile
+        nameFilters: ["Diagnosesitzungen (*.json)", "Alle Dateien (*)"]
+        currentFolder: window.vm.sessionFolder
+        onAccepted: window.vm.openSession(selectedFile.toString())
+    }
+
+    FileDialog {
+        id: exportDialog
+        objectName: "exportDialog"
+
+        property string kind: "pdf"
+
+        function start(what) {
+            kind = what
+            const name = window.vm.reportBaseName + "." + what
+            currentFolder = window.vm.reportFolder
+            selectedFile = window.vm.reportFolder + "/" + name
+            open()
+            // Qt-eigener Ersatzdialog: Namensfeld füllen (siehe DialogHelper in window.py)
+            Qt.callLater(dialogHelper.prefillFileName, name)
+        }
+
+        title: kind === "pdf" ? "Bericht als PDF speichern" : "Fehlercodes als CSV speichern"
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: kind
+        nameFilters: kind === "pdf" ? ["PDF-Dokumente (*.pdf)"] : ["CSV-Dateien (*.csv)"]
+        onAccepted: {
+            if (kind === "pdf")
+                window.vm.exportPdf(selectedFile.toString())
+            else
+                window.vm.exportCsv(selectedFile.toString())
         }
     }
 

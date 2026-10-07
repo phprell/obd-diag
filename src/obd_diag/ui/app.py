@@ -21,13 +21,14 @@ def main(argv: list[str] | None = None) -> int:
     from obd_diag.ui.backend import serial_backend
     from obd_diag.ui.jobs import ThreadPoolRunner
     from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel
-    from obd_diag.ui.window import load_main_window, set_style
+    from obd_diag.ui.window import install_translations, load_main_window, set_style
 
     app = QGuiApplication(sys.argv if argv is None else argv)
     app.setApplicationName("obd-diag")
     app.setApplicationDisplayName("OBD-Diagnose")
     app.setApplicationVersion(__version__)
     set_style()
+    install_translations(app)
 
     runner = ThreadPoolRunner()
     vm = DiagnosisViewModel(serial_backend(), runner)

@@ -2,13 +2,15 @@
 
 import gc
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 pytest.importorskip("PySide6.QtQuick")
 
-from PySide6.QtCore import QMetaObject, QObject
+from PySide6.QtCore import Q_ARG, QMetaObject, QObject
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine, QQmlError
 from PySide6.QtQuick import QQuickWindow
 from pytestqt.qtbot import QtBot
@@ -16,6 +18,7 @@ from pytestqt.qtbot import QtBot
 from obd_diag.services.clear import ClearRefused
 from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel
 from obd_diag.ui.window import load_main_window, set_style
+from tests.samples import full_session, minimal_session
 from tests.ui.conftest import FakeBackend, SyncRunner
 
 
@@ -102,10 +105,10 @@ def test_clear_dialog_requires_confirmation(
     assert accept.property("enabled") is False
     ui.find("clearConfirm").setProperty("checked", True)
     assert accept.property("enabled") is True
-    assert [c[0] for c in fake_backend.calls] == ["scan"]
+    assert [c[0] for c in fake_backend.calls] == ["diagnose"]
     QMetaObject.invokeMethod(dialog, "accept")
     qtbot.waitUntil(lambda: ui.prop("noticeBanner", "visible") is True)
-    assert [c[0] for c in fake_backend.calls] == ["scan", "clear"]
+    assert [c[0] for c in fake_backend.calls] == ["diagnose", "clear", "diagnose"]
     assert "Sicherung: /tmp/backup.json" in ui.prop("noticeBanner", "text")
     assert ui.prop("codeList", "count") == 0
     assert ui.warnings == []
@@ -125,4 +128,110 @@ def test_error_banner(qtbot: QtBot, ui: Ui) -> None:
     ui.vm.connectAndScan("", 38400)
     qtbot.waitUntil(lambda: ui.prop("errorBanner", "visible") is True)
     assert "Port" in ui.prop("errorBanner", "text")
+    assert ui.warnings == []
+
+
+def _tab(ui: Ui, index: int) -> None:
+    ui.find("viewTabs").setProperty("currentIndex", index)
+
+
+def test_tabs_show_session_parts(qtbot: QtBot, ui: Ui, fake_backend: FakeBackend) -> None:
+    fake_backend.session = full_session()
+    ui.vm.connectAndScan("/dev/ttyUSB0", 38400)
+    qtbot.waitUntil(lambda: ui.prop("codeList", "count") == 5)
+    assert ui.prop("vehicleHeader", "text") == "Volkswagen · WVWZZZ1KZ6W123456"
+    assert ui.prop("vehicleHeader", "visible") is True
+    _tab(ui, 1)
+    qtbot.waitUntil(lambda: ui.prop("readinessHeadline", "visible") is True)
+    assert ui.prop("readinessHeadline", "text") == "Nicht AU-bereit"
+    assert ui.prop("monitorRepeater", "count") == 10
+    assert ui.prop("readinessEmpty", "visible") is False
+    _tab(ui, 2)
+    qtbot.waitUntil(lambda: ui.prop("freezeDtc", "visible") is True)
+    assert ui.prop("freezeDtc", "text") == "P0300"
+    assert ui.prop("freezeRows", "count") == 4
+    _tab(ui, 3)
+    qtbot.waitUntil(lambda: ui.prop("vehicleVin", "visible") is True)
+    assert ui.prop("vehicleVin", "text") == "WVWZZZ1KZ6W123456"
+    assert ui.prop("vehicleFacts", "count") == 5
+    assert ui.prop("vehicleOnline", "count") == 2
+    ui.find("onlineVinCheck").setProperty("checked", True)
+    QMetaObject.invokeMethod(ui.find("onlineVinCheck"), "toggled")
+    assert ui.vm.property("onlineVinLookup") is True
+    assert ui.prop("onlineVinMenuItem", "checked") is True
+    assert ui.warnings == []
+
+
+@pytest.mark.parametrize(
+    ("index", "name"), [(1, "readinessEmpty"), (2, "freezeEmpty"), (3, "vehicleEmpty")]
+)
+def test_tabs_empty_states(
+    qtbot: QtBot, ui: Ui, fake_backend: FakeBackend, index: int, name: str
+) -> None:
+    _tab(ui, index)
+    qtbot.waitUntil(lambda: ui.prop(name, "visible") is True)
+    assert ui.prop(name, "title") == "Noch nicht verbunden"
+    fake_backend.session = minimal_session()
+    ui.vm.connectAndScan("/dev/ttyUSB0", 38400)
+    qtbot.waitUntil(lambda: ui.prop(name, "title") != "Noch nicht verbunden")
+    assert ui.prop(name, "title") == "Nicht verfügbar – Steuergerät hat nicht geantwortet"  # noqa: RUF001
+    assert ui.prop(name, "visible") is True
+    assert ui.prop("vehicleHeader", "visible") is False
+    assert ui.warnings == []
+
+
+def test_opened_session_is_view_only(qtbot: QtBot, ui: Ui, fake_backend: FakeBackend) -> None:
+    path = fake_backend.as_backend().save_session(full_session())
+    ui.vm.openSession(path.as_uri())
+    qtbot.waitUntil(lambda: ui.prop("codeList", "count") == 5)
+    assert ui.prop("clearButton", "enabled") is False
+    assert ui.prop("clearTooltip", "text") == "nur bei verbundenem Fahrzeug"
+    assert ui.prop("saveButton", "enabled") is False
+    assert ui.prop("pdfButton", "enabled") is True
+    assert ui.prop("statusLine", "text").startswith("Sitzung vom 07.10.2026, 14:32")
+    assert ui.prop("scanButton", "text") == "Verbinden && Scannen"
+    assert "nur ansehen" in ui.prop("noticeBanner", "text")
+    assert ui.warnings == []
+
+
+def test_save_button_shows_path(qtbot: QtBot, ui: Ui) -> None:
+    ui.vm.connectAndScan("/dev/ttyUSB0", 38400)
+    assert ui.prop("saveButton", "enabled") is True
+    QMetaObject.invokeMethod(ui.find("saveButton"), "click")
+    qtbot.waitUntil(lambda: ui.prop("noticeBanner", "visible") is True)
+    assert ui.prop("noticeBanner", "text").startswith("Sitzung gespeichert: ")
+    assert ui.prop("saveButton", "enabled") is False
+    assert ui.warnings == []
+
+
+def test_export_dialog_suggests_name_and_writes_pdf(
+    qtbot: QtBot, ui: Ui, fake_backend: FakeBackend, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Startordner des Dialogs (Dokumente bzw. Home) liegt hier in tmp_path
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
+    fake_backend.session = full_session()
+    ui.vm.connectAndScan("/dev/ttyUSB0", 38400)
+    dialog = ui.find("exportDialog")
+    QMetaObject.invokeMethod(dialog, "start", Q_ARG("QVariant", "pdf"))
+    qtbot.waitUntil(lambda: dialog.property("visible") is True)
+    assert dialog.property("title") == "Bericht als PDF speichern"
+    name = "obd-bericht-20261007-1432.pdf"
+    assert dialog.property("selectedFile").toLocalFile() == str(tmp_path / name)
+
+    # Offscreen gibt es keinen Systemdialog; Qt nimmt seinen eigenen. Dort füllt
+    # DialogHelper das Namensfeld.
+    def name_field_text() -> str | None:
+        for win in QGuiApplication.allWindows():
+            field = win.findChild(QObject, "fileNameTextField")
+            if field is not None:
+                text: str = field.property("text")
+                return text
+        return None
+
+    qtbot.waitUntil(lambda: name_field_text() == name)
+    QMetaObject.invokeMethod(dialog, "accept")
+    qtbot.waitUntil(lambda: ui.prop("noticeBanner", "visible") is True)
+    assert (tmp_path / name).read_bytes().startswith(b"%PDF")
+    assert ui.prop("noticeBanner", "text") == f"PDF-Bericht gespeichert: {tmp_path / name}"
     assert ui.warnings == []

@@ -87,7 +87,7 @@ Rectangle {
                     x: Theme.pad
                     width: parent.width - Theme.pad
                     height: 1
-                    color: "#ececef"
+                    color: Theme.divider
                 }
             }
 

@@ -6,3 +6,10 @@ CodeDetail 1.0 CodeDetail.qml
 ClearDialog 1.0 ClearDialog.qml
 SectionTitle 1.0 SectionTitle.qml
 Chip 1.0 Chip.qml
+Card 1.0 Card.qml
+EmptyState 1.0 EmptyState.qml
+FactRow 1.0 FactRow.qml
+ViewTabs 1.0 ViewTabs.qml
+ReadinessView 1.0 ReadinessView.qml
+FreezeFrameView 1.0 FreezeFrameView.qml
+VehicleView 1.0 VehicleView.qml

@@ -103,7 +103,7 @@ ToolBar {
 
         Button {
             objectName: "scanButton"
-            text: bar.vm.hasResult ? "Erneut scannen" : "Verbinden && Scannen"
+            text: bar.vm.hasResult && !bar.vm.viewOnly ? "Erneut scannen" : "Verbinden && Scannen"
             enabled: !bar.vm.busy
             palette.button: Qt.darker(Theme.accent, 1.35)
             palette.buttonText: "white"

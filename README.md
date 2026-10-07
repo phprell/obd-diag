@@ -14,7 +14,8 @@ Roadmap-Schritt 3: `obd-diag clear` löscht Codes nach Sicherung, `obd-diag port
 findet Adapter; dazu die Desktop-Oberfläche (PySide6/QML) mit Verbinden, Fehlerliste,
 Detailansicht und Löschen.
 Roadmap-Schritt 4 (in Arbeit): Diagnosesitzungen speichern, `obd-diag export` als
-PDF-Bericht und CSV.
+PDF-Bericht und CSV; die Oberfläche zeigt Readiness, Freeze Frame und Fahrzeug und
+kann Sitzungen speichern, öffnen und exportieren.
 
 ## Entwicklung
 
@@ -167,6 +168,8 @@ obd-diag export ~/.local/share/obd-diag/sessions/session-20261007-143205.json \
   Datei per Doppelklick mit Umlauten und Spalten richtig öffnet.
 
 
+### Oberfläche
+
 ```sh
 uv run obd-diag-gui
 ```
@@ -175,14 +178,46 @@ Installiert wird die Oberfläche über das Extra `gui` (`pip install 'obd-diag[g
 ohne es bleibt eine Kopfzeilen-Installation (z. B. auf dem Raspberry Pi) klein.
 
 Oben Port und Baudrate wählen – die Liste zeigt gefundene Adapter, ein Pfad lässt sich
-auch eintippen – und „Verbinden & Scannen“ drücken. Links stehen die Codes nach
-gespeichert, ausstehend und permanent gruppiert, rechts die Erklärung des gewählten
-Codes mit Ursachen, Symptomen und Kostenrahmen. Unten: Adapter, Protokoll,
-Bordspannung (rot bei niedriger Spannung).
+auch eintippen – und „Verbinden & Scannen“ drücken. Das liest in einem Durchgang
+Fehlercodes, Readiness, Freeze Frame und FIN (nur lesend). Rechts oben steht dann das
+Fahrzeug (Hersteller und FIN), darunter vier Reiter:
+
+- **Fehlercodes**: links die Codes nach gespeichert, ausstehend und permanent
+  gruppiert, rechts die Erklärung des gewählten Codes mit Ursachen, Symptomen und
+  Kostenrahmen.
+- **Readiness**: „AU-bereit“ (grün) oder „Nicht AU-bereit“ (rot) mit den offenen
+  Tests, Motorkontrollleuchte, und jeder Monitor als abgeschlossen, nicht
+  abgeschlossen oder nicht unterstützt.
+- **Freeze Frame**: auslösender Code und die Messwerte beim Speichern des Codes
+  (Motorlast, Kühlmitteltemperatur, Drehzahl, Geschwindigkeit).
+- **Fahrzeug**: FIN, Hersteller, Land, Modelljahr, Prüfziffer; auf Wunsch Angaben aus
+  NHTSA vPIC (Modell, Motor …).
+
+Antwortet das Steuergerät auf einen Teil nicht, zeigt der Reiter „Nicht verfügbar“.
+Unten: Adapter, Protokoll, Bordspannung (rot bei niedriger Spannung).
+
+„FIN online nachschlagen (NHTSA)“ (Menü *Optionen* oder Reiter *Fahrzeug*) ist
+standardmäßig aus. Eingeschaltet geht beim nächsten Scan nur die FIN an die
+US-Behörde NHTSA; die Einstellung wird je Nutzer gespeichert
+(`~/.config/obd-diag/obd-diag.conf`).
+
+Menü *Datei* und Schaltflächen unten:
+
+- **Sitzung speichern** (Strg+S) legt die Diagnose als JSON ab (siehe oben) und zeigt
+  den Pfad.
+- **Sitzung öffnen …** (Strg+O) zeigt eine gespeicherte Sitzung nur zum Ansehen;
+  Löschen geht dann nicht („nur bei verbundenem Fahrzeug“).
+- **Bericht als PDF …** (Strg+P) und **CSV exportieren …** fragen nach dem Ziel
+  (Vorschlag `obd-bericht-JJJJMMTT-HHMM.pdf` bzw. `.csv` im Ordner Dokumente) und
+  schreiben im Hintergrund.
+
+Die Dateidialoge kommen vom Desktop (xdg-desktop-portal oder GTK); fehlt beides,
+nimmt Qt einen eigenen Dialog.
 
 „Fehlercodes löschen …“ fragt vorher nach (Zündung an, Motor aus; Codes und Freeze
 Frame werden gesichert; die Readiness für die Abgasuntersuchung wird zurückgesetzt),
-zeigt danach den Pfad der Sicherung und das Ergebnis des Kontroll-Scans.
+zeigt danach den Pfad der Sicherung und liest die Diagnose neu ein – Readiness und
+Freeze Frame zeigen also den Stand nach dem Löschen.
 
 Gegen den Emulator:
 
