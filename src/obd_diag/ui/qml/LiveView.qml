@@ -370,6 +370,39 @@ Rectangle {
                 property var points: tile.history
                 property color lineColor: Theme.accent
                 property color gridColor: Theme.divider
+                // Skala nach den gezeigten Werten statt nach dem vollen Bereich der Norm
+                // (Drehzahl 0 bis 16384 1/min ließe jede Kurve flach erscheinen).
+                readonly property var scale: autoScale(points)
+
+                function autoScale(values) {
+                    let lo = Infinity
+                    let hi = -Infinity
+                    for (let i = 0; values && i < values.length; ++i) {
+                        const v = values[i]
+                        if (v === null || isNaN(v))
+                            continue
+                        lo = Math.min(lo, v)
+                        hi = Math.max(hi, v)
+                    }
+                    if (lo > hi)
+                        return null
+                    // Mindestspanne, damit Rauschen eines fast konstanten Werts nicht
+                    // bildfüllend wird: 2 % des Normbereichs bzw. 5 % des Betrags.
+                    const minSpan = Math.max((tile.maximum - tile.minimum) * 0.02,
+                                             Math.abs(hi) * 0.05, 1e-6)
+                    if (hi - lo < minSpan) {
+                        const mid = (hi + lo) / 2
+                        lo = mid - minSpan / 2
+                        hi = mid + minSpan / 2
+                    }
+                    const pad = (hi - lo) * 0.1
+                    return [Math.max(tile.minimum, lo - pad), Math.min(tile.maximum, hi + pad)]
+                }
+
+                function scaleText(v) {
+                    const digits = Math.abs(v) >= 100 ? 0 : 1
+                    return Number(v).toLocaleString(Qt.locale("de_DE"), "f", digits)
+                }
 
                 onPointsChanged: requestPaint()
                 onLineColorChanged: requestPaint()
@@ -389,12 +422,15 @@ Rectangle {
                     ctx.stroke()
 
                     const n = points ? points.length : 0
-                    const span = tile.maximum - tile.minimum
-                    if (n === 0 || !(span > 0))
+                    if (n === 0 || scale === null)
+                        return
+                    const low = scale[0]
+                    const span = scale[1] - scale[0]
+                    if (!(span > 0))
                         return
                     const step = width / Math.max(1, tile.historyLength - 1)
                     const y = v => {
-                        const t = Math.min(1, Math.max(0, (v - tile.minimum) / span))
+                        const t = Math.min(1, Math.max(0, (v - low) / span))
                         return 2 + (height - 4) * (1 - t)
                     }
                     ctx.strokeStyle = lineColor
@@ -431,7 +467,8 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 4
                 Label {
-                    text: tile.minimumText
+                    // untere/obere Kante der Kurve
+                    text: spark.scale === null ? tile.minimumText : spark.scaleText(spark.scale[0])
                     color: Theme.muted
                     font.pixelSize: 11
                 }
@@ -445,7 +482,7 @@ Rectangle {
                     elide: Text.ElideRight
                 }
                 Label {
-                    text: tile.maximumText
+                    text: spark.scale === null ? tile.maximumText : spark.scaleText(spark.scale[1])
                     color: Theme.muted
                     font.pixelSize: 11
                 }

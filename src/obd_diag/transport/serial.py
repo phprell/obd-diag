@@ -29,16 +29,29 @@ class SerialTransport:
         port = self._port()
         # Reste einer früheren Antwort (z. B. ein zweiter Prompt nach STOPPED) würden
         # sonst als Antwort auf diesen Befehl gelesen und alles Weitere verschieben.
-        port.reset_input_buffer()
-        port.write(data)
+        try:
+            port.reset_input_buffer()
+            port.write(data)
+        except (serial.SerialException, OSError) as e:
+            raise self._lost(e) from e
 
     def read_until(self, terminator: bytes, timeout: float) -> bytes:
         port = self._port()
-        port.timeout = timeout
-        data = port.read_until(terminator)
+        try:
+            port.timeout = timeout
+            data = port.read_until(terminator)
+        except (serial.SerialException, OSError) as e:
+            raise self._lost(e) from e
         if not data.endswith(terminator):
             raise TransportTimeout(f"keine Antwort von {self.port} nach {timeout} s")
         return bytes(data)
+
+    def _lost(self, error: Exception) -> TransportError:
+        """Ein-/Ausgabefehler (z. B. Adapter abgezogen) als verständlicher TransportError."""
+        reason = (error.strerror if isinstance(error, OSError) else None) or str(error)
+        return TransportError(
+            f"Verbindung zu {self.port} unterbrochen ({reason}). Adapter abgezogen?"
+        )
 
     def _port(self) -> serial.Serial:
         if self._serial is None:
