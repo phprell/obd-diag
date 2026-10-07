@@ -57,14 +57,25 @@ gebaut ist.
 ### Ohne Auto testen
 
 Der [ELM327-emulator](https://github.com/Ircama/ELM327-emulator) stellt ein virtuelles
-serielles Gerät bereit:
+serielles Gerät bereit. `tools/emulator.py` startet ihn mit standardgemäßen Antworten
+(der Emulator lässt sonst bei CAN das Zählbyte der Fehlercodes weg und beantwortet den
+Freeze Frame nicht nach SAE J1979, siehe `tests/emulator_patches.py`):
 
 ```sh
-uv run elm -s car      # zeigt das pty an, z. B. /dev/pts/5
-uv run obd-diag info --port /dev/pts/5
+uv run python tools/emulator.py                    # zeigt das pty an, z. B. /dev/pts/5
+uv run python tools/emulator.py --stored P0420,P0300 --pending P0171 --engine-off
+uv run obd-diag diagnose --port /dev/pts/5
 ```
 
+`--engine-off` meldet Drehzahl 0, damit sich das Löschen ausprobieren lässt.
+`uv run elm -s car` direkt funktioniert für `info`, aber nicht für Fehlercodes.
+
 ### Echter Adapter
+
+Für den ersten Test am Auto: Motor aus, Zündung an, und nur lesende Befehle
+(`info`, `diagnose`), noch kein `clear`. Mit `--trace` wird die Kommunikation mit dem
+Adapter mitgeschnitten (siehe unten), damit sich Probleme ohne Auto nachvollziehen
+lassen.
 
 ```sh
 obd-diag info --port /dev/ttyUSB0
@@ -286,12 +297,36 @@ Freeze Frame zeigen also den Stand nach dem Löschen.
 Gegen den Emulator:
 
 ```sh
-uv run elm -s car      # zeigt das pty an, z. B. /dev/pts/5
-uv run obd-diag-gui    # /dev/pts/5 ins Port-Feld eintragen, verbinden
+uv run python tools/emulator.py   # zeigt das pty an, z. B. /dev/pts/5
+uv run obd-diag-gui               # /dev/pts/5 ins Port-Feld eintragen, verbinden
 ```
 
 Jede Aktion öffnet den Port, arbeitet in einem Hintergrund-Thread und schließt ihn
 wieder; die Oberfläche bleibt dabei bedienbar.
+
+### Mitschnitt (`--trace`)
+
+Alle Befehle mit Adapter (`info`, `scan`, `diagnose`, `vin`, `clear`) schneiden mit
+`--trace` jede gesendete und empfangene Zeile mit Zeitstempel mit:
+
+```sh
+uv run obd-diag diagnose --port /dev/ttyUSB0 --trace            # ~/.local/share/obd-diag/traces/
+uv run obd-diag diagnose --port /dev/ttyUSB0 --trace auto.log   # eigene Datei
+```
+
+```
+# obd-diag 0.0.1 Mitschnitt 2026-10-07T16:09:33+02:00 /dev/ttyUSB0 38400 Baud
+    0.000 >> ATZ\r
+    0.508 << ATZ\r\r\rELM327 v1.5\r\r>
+    3.013 >> 03\r
+    3.016 << 00A\r0: 430404200133\r1: 0300C100\r\r>
+```
+
+Steuerzeichen stehen als `\r`, `\xNN`; `>>` ist gesendet, `<<` empfangen, `!!` ein
+Fehler. In der Oberfläche schaltet „Optionen → Adapter-Mitschnitt aufzeichnen“ das
+für jede Aktion ein (eine Datei je Aktion). Der Mitschnitt enthält ggf. die FIN und
+bleibt lokal. `ReplayTransport` in `transport/trace.py` spielt ihn ohne Adapter wieder
+ab, z. B. als Test-Fixture.
 
 ## Struktur
 

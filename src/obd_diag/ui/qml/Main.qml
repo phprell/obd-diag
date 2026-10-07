@@ -82,6 +82,18 @@ ApplicationWindow {
                 checked: window.vm.onlineVinLookup
                 onToggled: window.vm.onlineVinLookup = checked
             }
+            MenuSeparator {}
+            MenuItem {
+                objectName: "traceMenuItem"
+                text: "Adapter-Mitschnitt aufzeichnen"
+                checkable: true
+                checked: window.vm.traceAdapter
+                onToggled: window.vm.traceAdapter = checked
+            }
+            MenuItem {
+                text: "Mitschnitt-Ordner öffnen"
+                onTriggered: window.vm.openTraceFolder()
+            }
         }
     }
 

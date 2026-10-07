@@ -14,10 +14,12 @@ from obd_diag.services.clear import ClearRefused, check_preconditions, clear_cod
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult, scan, scan_to_dict
 from obd_diag.services.readiness import MonitorState, ReadinessStatus
 from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
+from obd_diag.services.storage import trace_dir
 from obd_diag.services.vehicle import VPIC_FIELDS, VinInfo, decode_vin, lookup_vpic, read_vin
-from obd_diag.transport import TransportError
+from obd_diag.transport import Transport, TransportError
 from obd_diag.transport.discovery import list_ports
 from obd_diag.transport.serial import SerialTransport
+from obd_diag.transport.trace import FileTracingTransport, new_trace_path
 
 LOW_VOLTAGE_WARNING = "Batteriespannung niedrig – Ergebnisse können unzuverlässig sein"  # noqa: RUF001
 
@@ -57,6 +59,19 @@ def _scan_json(result: ScanResult) -> str:
     return json.dumps(scan_to_dict(result), ensure_ascii=False, indent=2)
 
 
+_AUTO_TRACE = "auto"
+
+
+def _transport(args: argparse.Namespace) -> Transport:
+    """Serieller Transport aus ``--port``/``--baud``, bei ``--trace`` mit Mitschnitt."""
+    transport: Transport = SerialTransport(args.port, args.baud)
+    if args.trace is None:
+        return transport
+    path = new_trace_path(trace_dir()) if args.trace == _AUTO_TRACE else Path(args.trace)
+    print(f"Mitschnitt: {path}", file=sys.stderr)
+    return FileTracingTransport(transport, path, f"{args.port} {args.baud} Baud")
+
+
 def _open_catalog() -> DtcCatalog | None:
     catalog = DtcCatalog.default()
     if catalog is None:
@@ -71,7 +86,7 @@ def _open_catalog() -> DtcCatalog | None:
 def _run_scan(args: argparse.Namespace) -> None:
     catalog = _open_catalog()
     try:
-        with SerialTransport(args.port, args.baud) as transport:
+        with _transport(args) as transport:
             result = scan(Elm327(transport), catalog, args.lang)
     finally:
         if catalog is not None:
@@ -103,7 +118,7 @@ def _confirm() -> bool:
 def _run_clear(args: argparse.Namespace) -> int:
     catalog = _open_catalog()
     try:
-        with SerialTransport(args.port, args.baud) as transport:
+        with _transport(args) as transport:
             elm = Elm327(transport)
             preview = scan(elm, catalog, args.lang)
             _print_scan(preview)
@@ -233,7 +248,7 @@ def _export(session: Session, pdf: Path | None, csv: Path | None) -> None:
 def _run_diagnose(args: argparse.Namespace) -> int:
     catalog = _open_catalog()
     try:
-        with SerialTransport(args.port, args.baud) as transport:
+        with _transport(args) as transport:
             session = run_diagnosis(
                 Elm327(transport), catalog, args.lang, online_vin_lookup=args.online_vin
             )
@@ -258,7 +273,7 @@ def _run_diagnose(args: argparse.Namespace) -> int:
 def _run_vin(args: argparse.Namespace) -> int:
     vin = args.vin
     if vin is None:
-        with SerialTransport(args.port, args.baud) as transport:
+        with _transport(args) as transport:
             elm = Elm327(transport)
             elm.initialize()
             elm.protocol()
@@ -308,6 +323,14 @@ def main(argv: list[str] | None = None) -> int:
     connection = argparse.ArgumentParser(add_help=False)
     connection.add_argument("--port", default="/dev/ttyUSB0")
     connection.add_argument("--baud", type=int, default=38400)
+    connection.add_argument(
+        "--trace",
+        nargs="?",
+        const=_AUTO_TRACE,
+        metavar="DATEI",
+        help="Adapter-Kommunikation mitschneiden (ohne DATEI: unter "
+        "$XDG_DATA_HOME/obd-diag/traces); enthält ggf. die FIN",
+    )
 
     sub.add_parser("info", parents=[connection], help="Adapter-Version und Bordspannung anzeigen")
     scan_parser = sub.add_parser(
@@ -363,7 +386,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "info":
-            with SerialTransport(args.port, args.baud) as transport:
+            with _transport(args) as transport:
                 elm = Elm327(transport)
                 print(f"Adapter:      {elm.initialize()}")
                 print(f"Bordspannung: {elm.voltage():.1f} V")

@@ -112,6 +112,7 @@ class FakeBackend:
         self.clear_result: ClearResult | None = None
         self.calls: list[tuple[str, str, int]] = []
         self.online_flags: list[bool] = []
+        self.tracing: list[bool] = []
         self.exports: list[tuple[str, Path]] = []
 
     def diagnose(self, port: str, baud: int, online_vin_lookup: bool) -> Session:
@@ -157,6 +158,7 @@ class FakeBackend:
             catalog_available=self.catalog_available,
             export_pdf=self.export_pdf,
             export_csv=self.export_csv,
+            set_tracing=self.tracing.append,
         )
 
 

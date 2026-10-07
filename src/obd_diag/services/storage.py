@@ -1,4 +1,4 @@
-"""Ablage von JSON-Dateien unter ``$XDG_DATA_HOME/obd-diag`` (Sicherungen, Sitzungen)."""
+"""Ablage unter ``$XDG_DATA_HOME/obd-diag`` (Sicherungen, Sitzungen, Mitschnitte)."""
 
 import json
 import os
@@ -13,6 +13,11 @@ def data_dir() -> Path:
     # Laut XDG-Spezifikation gelten nur absolute Pfade.
     base = Path(data_home) if os.path.isabs(data_home) else Path.home() / ".local" / "share"
     return base / "obd-diag"
+
+
+def trace_dir() -> Path:
+    """Ablage der Adapter-Mitschnitte (``obd-diag ... --trace``)."""
+    return data_dir() / "traces"
 
 
 def write_new_json(directory: Path, stem: str, data: dict[str, Any]) -> Path:

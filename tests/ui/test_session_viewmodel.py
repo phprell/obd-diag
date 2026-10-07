@@ -138,6 +138,19 @@ def test_online_vin_lookup_setting_is_passed_and_persisted() -> None:
     assert _vm(FakeBackend()).property("onlineVinLookup") is False
 
 
+def test_trace_setting_reaches_backend_and_is_persisted() -> None:
+    backend = FakeBackend(full_session())
+    vm = _vm(backend)
+    assert vm.property("traceAdapter") is False  # Standard: aus
+    assert backend.tracing == [False]  # beim Start an das Backend gemeldet
+    vm.setProperty("traceAdapter", True)
+    assert backend.tracing == [False, True]
+    restored = FakeBackend()
+    assert _vm(restored).property("traceAdapter") is True
+    assert restored.tracing == [True]
+    vm.setProperty("traceAdapter", False)
+
+
 def test_clear_rereads_the_diagnosis(qtbot: QtBot) -> None:
     backend = FakeBackend(full_session())
     runner = ThreadPoolRunner()

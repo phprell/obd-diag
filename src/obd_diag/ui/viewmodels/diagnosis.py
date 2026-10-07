@@ -6,11 +6,13 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import Property, QObject, QSettings, QStandardPaths, QUrl, Signal, Slot
+from PySide6.QtGui import QDesktopServices
 
 from obd_diag.protocol.elm327 import ElmError
 from obd_diag.services.clear import ClearRefused, ClearResult, clearable_codes
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
 from obd_diag.services.session import Session, default_session_dir
+from obd_diag.services.storage import trace_dir
 from obd_diag.transport import TransportError
 from obd_diag.ui.backend import Backend
 from obd_diag.ui.jobs import JobRunner
@@ -34,6 +36,7 @@ LOW_VOLTAGE_WARNING = (
 SETTINGS_ORG = "obd-diag"
 SETTINGS_APP = "obd-diag"
 ONLINE_VIN_KEY = "fin/onlineNachschlagen"
+TRACE_KEY = "adapter/mitschnitt"
 
 _EXPORT_KINDS = {"pdf": "PDF-Bericht", "csv": "CSV-Datei"}
 
@@ -112,6 +115,8 @@ class DiagnosisViewModel(QObject):
         self._port = DEFAULT_PORT
         self._baud = DEFAULT_BAUD
         self._online_vin = self._settings.value(ONLINE_VIN_KEY, False, type=bool) is True
+        self._trace = self._settings.value(TRACE_KEY, False, type=bool) is True
+        backend.set_tracing(self._trace)
         try:
             self._catalog_missing = not backend.catalog_available()
         except Exception:
@@ -322,6 +327,26 @@ class DiagnosisViewModel(QObject):
 
     # Opt-in: die FIN geht nur dann an NHTSA vPIC, wenn hier eingeschaltet
     onlineVinLookup = Property(bool, _get_online_vin, _set_online_vin, notify=settingsChanged)
+
+    def _get_trace(self) -> bool:
+        return self._trace
+
+    def _set_trace(self, enabled: bool) -> None:
+        if enabled != self._trace:
+            self._trace = enabled
+            self._backend.set_tracing(enabled)
+            self._settings.setValue(TRACE_KEY, enabled)
+            self._settings.sync()
+            self.settingsChanged.emit()
+
+    # Mitschnitt der Adapter-Kommunikation je Job in eine eigene Datei
+    traceAdapter = Property(bool, _get_trace, _set_trace, notify=settingsChanged)
+
+    @Slot()
+    def openTraceFolder(self) -> None:
+        folder = trace_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
 
     # --- Aktionen ------------------------------------------------------------
 
