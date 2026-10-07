@@ -111,12 +111,18 @@ ToolBar {
             opacity: enabled ? 1 : 0.5
             onClicked: bar.scan()
         }
-        BusyIndicator {
+        Item {
             // Platz immer freihalten, damit die Leiste beim Start nicht springt
-            objectName: "busyIndicator"
             Layout.preferredWidth: 24
             Layout.preferredHeight: 24
-            running: bar.vm.busy
+            BusyIndicator {
+                // visible statt nur running: der Stil blendet sonst langsam aus und
+                // bleibt nach kurzen Jobs als blasser Kringel stehen.
+                objectName: "busyIndicator"
+                anchors.fill: parent
+                running: bar.vm.busy
+                visible: bar.vm.busy
+            }
         }
 
         Item {
