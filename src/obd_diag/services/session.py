@@ -64,7 +64,7 @@ def run_diagnosis(
     if freeze is not None and freeze.dtc is None and not freeze.values:
         freeze = None
     vin = _optional("FIN", read_vin, elm)
-    vehicle = None if vin is None else decode_vin(vin)
+    vehicle = None if vin is None else decode_vin(vin, protocol=result.protocol)
     if vehicle is not None and online_vin_lookup and vehicle.valid:
         vehicle = dataclasses.replace(vehicle, online=lookup_vpic(vehicle.vin))
     return Session(
@@ -98,7 +98,9 @@ def session_to_dict(session: Session) -> dict[str, Any]:
     readiness: dict[str, Any] | None = None
     if session.readiness is not None:
         readiness = dataclasses.asdict(session.readiness)
-        readiness["ready"] = session.readiness.ready  # nur zur Information, wird berechnet
+        # nur zur Information, wird beim Laden neu berechnet; "ready" ist der alte Name
+        readiness["all_complete"] = session.readiness.all_complete
+        readiness["ready"] = session.readiness.all_complete
     return {
         "format": SESSION_FORMAT,
         "version": SESSION_VERSION,
@@ -176,6 +178,8 @@ def _vehicle(data: dict[str, Any]) -> VinInfo:
         country=data.get("country"),
         model_year=None if year is None else int(year),
         online={str(k): str(v) for k, v in data.get("online", {}).items()},
+        # fehlt in Sitzungen älterer Versionen
+        model_year_alternatives=tuple(int(y) for y in data.get("model_year_alternatives", ())),
     )
 
 

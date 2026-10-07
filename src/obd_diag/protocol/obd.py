@@ -3,21 +3,47 @@
 Bis auf ``clear_dtcs`` (Mode 04) nur lesend.
 """
 
+import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from obd_diag.protocol.dtc_decode import decode_dtc, parse_dtc_response
-from obd_diag.protocol.elm327 import Elm327, ElmError
-from obd_diag.protocol.frames import split_messages
+from obd_diag.protocol.dtc_decode import decode_dtc, parse_dtc_messages, parse_dtc_response
+from obd_diag.protocol.elm327 import Elm327, ElmError, NoDataError
+from obd_diag.protocol.frames import FrameSequenceError, split_messages
+from obd_diag.protocol.headers import EcuMessage, parse_header_response
+from obd_diag.transport import TransportError
+
+log = logging.getLogger(__name__)
 
 # Modes, die Fehlercodes liefern: gespeichert, ausstehend, permanent.
 DTC_MODES = (0x03, 0x07, 0x0A)
 
 
+def read_with_headers(elm: Elm327, cmd: str, reason: Exception) -> list[EcuMessage]:
+    """Wiederholt die lesende Anfrage ``cmd`` mit Headern und zerlegt je Steuergerät.
+
+    Für Antworten, deren Frames sich ohne Header nicht zuordnen lassen (``reason``).
+    Reihenfolge: nach Steuergeräte-Adresse, dann Eingang (siehe ``protocol.headers``).
+    Wirft ``ElmError``, wenn auch das nicht gelingt oder diesmal keine Antwort kommt.
+    """
+    log.info("%s: %s; wiederhole mit Headern (ATH1)", cmd, reason)
+    response = elm.query_with_headers(cmd)
+    if response is None:
+        raise ElmError(f"{cmd}: {reason}; mit Headern wiederholt: NO DATA")
+    try:
+        return parse_header_response(response)
+    except ValueError as e:
+        raise ElmError(f"{cmd}: {reason}; auch mit Headern nicht lesbar: {e}") from e
+
+
 def read_dtcs(elm: Elm327, mode: int, *, can: bool) -> list[str]:
     """Fehlercodes aller Steuergeräte für Mode 03, 07 oder 0A.
 
-    ``NO DATA`` heißt: kein Code gespeichert, also eine leere Liste.
+    ``NO DATA`` heißt: kein Code gespeichert, also eine leere Liste. Sind Frames
+    mehrerer Steuergeräte vermischt (ohne Header nicht zuzuordnen), wird die Anfrage
+    einmal mit Headern (``ATH1``) wiederholt; die Codes kommen dann nach
+    Steuergeräte-Adresse geordnet (z. B. 7E8 vor 7E9), sonst in Eingangsreihenfolge.
     """
     if mode not in DTC_MODES:
         raise ValueError(f"Mode {mode:02X} liefert keine Fehlercodes")
@@ -27,8 +53,16 @@ def read_dtcs(elm: Elm327, mode: int, *, can: bool) -> list[str]:
         return []
     try:
         return parse_dtc_response(response, mode, can=can)
+    except FrameSequenceError as e:
+        reason: Exception = e
     except ValueError as e:
         raise ElmError(f"{cmd}: {e}") from e
+    # Vermischte mehrteilige Antworten gibt es nur bei CAN; dort steht das Zählbyte.
+    messages = read_with_headers(elm, cmd, reason)
+    try:
+        return parse_dtc_messages([m.data for m in messages], mode, can=True)
+    except ValueError as e:
+        raise ElmError(f"{cmd} (mit Headern): {e}") from e
 
 
 # Gründe negativer Antworten (``7F <Mode> <NRC>``, ISO 14229 bzw. ISO 15031-5)
@@ -61,24 +95,61 @@ def _messages(cmd: str, response: str) -> list[bytes]:
         raise ElmError(f"{cmd}: {e}") from e
 
 
-def clear_dtcs(elm: Elm327) -> None:
+# Höchstens so lange auf die endgültige Antwort nach ``7F 04 78`` warten (Sekunden)
+CLEAR_PENDING_TIMEOUT = 10.0
+
+
+def _clear_answers(cmd: str, response: str) -> tuple[bool, bool]:
+    """(bestätigt, wartet noch) für eine Antwort auf Mode 04; wirft bei Ablehnung."""
+    confirmed = pending = False
+    for message in _messages(cmd, response):
+        if len(message) >= 3 and message[0] == 0x7F and message[1] == 0x04:
+            if message[2] == _RESPONSE_PENDING:
+                pending = True
+                continue
+            raise NegativeResponseError(0x04, message[2])
+        if message[:1] != b"\x44":
+            raise ElmError(f"04: unerwartete Antwort {message.hex(' ').upper()!r}")
+        confirmed = True
+        pending = False  # die endgültige Antwort folgt auf die Zwischenmeldung
+    return confirmed, pending
+
+
+def clear_dtcs(elm: Elm327, *, pending_timeout: float = CLEAR_PENDING_TIMEOUT) -> None:
     """Mode 04: gespeicherte und ausstehende Codes, Freeze Frame und Readiness löschen.
 
     Schreibender Befehl! Vorbedingungen prüfen und sichern muss der Aufrufer (siehe
     ``services.clear``). Erfolg heißt: mindestens ein Steuergerät bestätigt mit ``44``
     und keines lehnt ab. Wirft ``NegativeResponseError`` bei ``7F 04 xx``,
     ``NoDataError`` ohne Antwort und ``ElmError`` bei unerwarteter Antwort.
+
+    ``7F 04 78`` (ISO 14229: Anfrage erhalten, Antwort folgt) ist keine Ablehnung: steht
+    danach noch keine endgültige Antwort, wird ohne erneutes Senden weitergelesen, bis
+    ``44`` oder ``7F 04 xx`` kommt oder ``pending_timeout`` Sekunden (ab dem Senden)
+    vergangen sind. Ohne Bestätigung bis dahin ``ElmError`` („nicht bestätigt“); ist
+    bereits ein anderes Steuergerät bestätigt, gilt das Löschen als bestätigt (mit
+    Log-Warnung). Mode 04 wird nie wiederholt.
     """
+    deadline = time.monotonic() + pending_timeout
     response = elm.command("04")
-    confirmed = False
-    for message in _messages("04", response):
-        if len(message) >= 3 and message[0] == 0x7F and message[1] == 0x04:
-            if message[2] == _RESPONSE_PENDING:
-                continue
-            raise NegativeResponseError(0x04, message[2])
-        if message[:1] != b"\x44":
-            raise ElmError(f"04: unerwartete Antwort {message.hex(' ').upper()!r}")
-        confirmed = True
+    confirmed, pending = _clear_answers("04", response)
+    while pending:
+        remaining = deadline - time.monotonic()
+        try:
+            if remaining <= 0:
+                raise TimeoutError
+            more = elm.read_more("04", remaining)
+        except (TimeoutError, TransportError, NoDataError) as e:
+            if confirmed:
+                log.warning("04: ein Steuergerät meldet weiter 7F 04 78 (%s)", str(e) or "Zeit um")
+                return
+            raise ElmError(
+                f"04: nicht bestätigt (nur 7F 04 78, Antwort folgt; nach {pending_timeout:g} s "
+                "keine endgültige Antwort)"
+            ) from e
+        response += "\n" + more
+        now_confirmed, pending = _clear_answers("04", more)
+        confirmed = confirmed or now_confirmed
     if not confirmed:
         raise ElmError(f"04: keine Bestätigung ({response!r})")
 
@@ -127,7 +198,9 @@ class FreezeFrame:
     """Momentaufnahme (Mode 02, Frame 00) beim Setzen eines Fehlercodes.
 
     ``raw`` enthält die Antworten wie empfangen (Befehl -> Hex-Text), ``values`` die
-    daraus dekodierten Werte. Unbeantwortete PIDs fehlen in beiden.
+    daraus dekodierten Werte. Unbeantwortete PIDs fehlen in beiden. Die Schlüssel von
+    ``raw`` zeigen das verwendete Anfrageformat: ``020C00`` (SAE J1979, mit
+    Frame-Nummer) oder ``020C`` (ohne, Rückfallebene für manche Steuergeräte).
     """
 
     dtc: str | None = None  # PID 02: Code, der den Freeze Frame ausgelöst hat
@@ -135,35 +208,85 @@ class FreezeFrame:
     values: dict[str, float] = field(default_factory=dict)
 
 
-def _freeze_data(elm: Elm327, pid: int) -> tuple[str, str, bytes] | None:
-    """Befehl, Antwort und Datenbytes zu ``02 <pid> 00``; ``None``, wenn nicht vorhanden."""
-    cmd = f"02{pid:02X}00"
+_FREEZE_DTC_SIZE = 2  # PID 02: zwei Bytes des auslösenden Codes
+
+
+def _freeze_cmd(pid: int, frame_byte: bool) -> str:
+    return f"02{pid:02X}00" if frame_byte else f"02{pid:02X}"
+
+
+def _freeze_payload(message: bytes, pid: int, size: int, frame_byte: bool) -> bytes | None:
+    """Datenbytes einer Antwort ``42 <pid> 00 …``; ohne Frame-Byte in der Anfrage auch
+    ``42 <pid> …`` (nur bei genau ``size`` Datenbytes, sonst mehrdeutig)."""
+    if len(message) < 2 or message[0] != 0x42 or message[1] != pid:
+        return None
+    if len(message) >= 3 and message[2] == 0x00 and (frame_byte or len(message) >= 3 + size):
+        return message[3:]
+    if not frame_byte and len(message) == 2 + size:
+        return message[2:]
+    return None
+
+
+def _freeze_data(
+    elm: Elm327, pid: int, size: int, frame_byte: bool
+) -> tuple[str, str | None, bytes | None, bool]:
+    """Befehl, Antwort, Datenbytes und „Format abgelehnt“ (``7F 02 12``) zu einem PID.
+
+    Antwort ``None`` bei ``NO DATA``, Daten ``None``, wenn keine passende Antwort kam.
+    """
+    cmd = _freeze_cmd(pid, frame_byte)
     response = elm.query(cmd)
     if response is None:
-        return None
+        return cmd, None, None, False
+    rejected = False
     for message in _messages(cmd, response):
-        if len(message) >= 3 and message[:3] == bytes((0x42, pid, 0x00)):
-            return cmd, response, message[3:]
-    return None  # z. B. 7F 02 12: dieser PID ist nicht gespeichert
+        data = _freeze_payload(message, pid, size, frame_byte)
+        if data is not None:
+            return cmd, response, data, False
+        if message[:3] == b"\x7f\x02\x12":
+            rejected = True  # Unterfunktion/Format nicht unterstützt
+    return cmd, response, None, rejected
 
 
-def read_freeze_frame(elm: Elm327) -> FreezeFrame:
-    """Liest Frame 00 von Mode 02: auslösender Code und einige häufige Werte."""
+def _read_frame(
+    elm: Elm327, frame_byte: bool, first: tuple[str, str | None, bytes | None, bool]
+) -> FreezeFrame:
     dtc: str | None = None
     raw: dict[str, str] = {}
     values: dict[str, float] = {}
-    found = _freeze_data(elm, 0x02)
-    if found is not None:
-        cmd, response, data = found
+    cmd, response, data, _ = first
+    if data is not None and response is not None:
         raw[cmd] = response
         if len(data) >= 2 and (data[0] or data[1]):
             dtc = decode_dtc(data[0], data[1])
     for pid, (name, size, decode) in _FREEZE_PIDS.items():
-        found = _freeze_data(elm, pid)
-        if found is None:
-            continue
-        cmd, response, data = found
+        cmd, response, data, _ = _freeze_data(elm, pid, size, frame_byte)
+        if data is None or response is None:
+            continue  # z. B. 7F 02 12: dieser PID ist nicht gespeichert
         raw[cmd] = response
         if len(data) >= size:
             values[name] = decode(data)
     return FreezeFrame(dtc, raw, values)
+
+
+def read_freeze_frame(elm: Elm327) -> FreezeFrame:
+    """Liest Frame 00 von Mode 02: auslösender Code und einige häufige Werte.
+
+    Angefragt wird nach SAE J1979 mit Frame-Nummer (``02 <PID> 00``). Antwortet das
+    Fahrzeug auf ``020200`` mit ``NO DATA`` oder ``7F 02 12`` (Format nicht
+    unterstützt), wird ``0202`` ohne Frame-Nummer versucht, wie es python-OBD sendet
+    und manche Steuergeräte bzw. Adapter erwarten. Liefert das eine Antwort, folgt der
+    ganze Freeze Frame in diesem Format; sonst (auch bei ``?`` oder unbrauchbarer
+    Antwort) bleibt es beim J1979-Format für die übrigen PIDs.
+    """
+    first = _freeze_data(elm, 0x02, _FREEZE_DTC_SIZE, frame_byte=True)
+    _, response, data, rejected = first
+    if data is None and (response is None or rejected):
+        try:
+            short = _freeze_data(elm, 0x02, _FREEZE_DTC_SIZE, frame_byte=False)
+        except ElmError as e:
+            log.info("0202: %s; bleibe beim Format mit Frame-Nummer", e)
+        else:
+            if short[2] is not None:
+                return _read_frame(elm, False, short)
+    return _read_frame(elm, True, first)

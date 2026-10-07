@@ -2,6 +2,8 @@ import pytest
 
 from obd_diag.protocol.elm327 import Elm327, ElmError
 from obd_diag.services.readiness import (
+    ALL_COMPLETE_LABEL,
+    AU_NOTE,
     Monitor,
     MonitorState,
     ReadinessStatus,
@@ -195,3 +197,15 @@ def test_combine_needs_input() -> None:
 def test_combine_single_is_identity() -> None:
     assert combine_readiness([READINESS]) == READINESS
     assert READINESS.monitors[0] == Monitor("misfire", "Verbrennungsaussetzer", C)
+
+
+def test_all_complete_and_compatible_alias() -> None:
+    done = decode_readiness(bytes((0, 0x07, 0x65, 0x00)))
+    open_ = decode_readiness(bytes((0, 0x07, 0x65, 0x21)))
+    assert done.all_complete and done.ready
+    assert not open_.all_complete and not open_.ready
+
+
+def test_no_au_claim_in_labels() -> None:
+    assert "AU" not in ALL_COMPLETE_LABEL
+    assert "keine AU-Bewertung" in AU_NOTE

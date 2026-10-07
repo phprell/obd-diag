@@ -12,10 +12,18 @@ from obd_diag.protocol.elm327 import Elm327, ElmError
 from obd_diag.protocol.obd import FreezeFrame
 from obd_diag.services.clear import ClearRefused, check_preconditions, clear_codes, clearable_codes
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult, scan, scan_to_dict
-from obd_diag.services.readiness import MonitorState, ReadinessStatus
+from obd_diag.services.readiness import ALL_COMPLETE_LABEL, AU_NOTE, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
 from obd_diag.services.storage import trace_dir
-from obd_diag.services.vehicle import VPIC_FIELDS, VinInfo, decode_vin, lookup_vpic, read_vin
+from obd_diag.services.vehicle import (
+    VPIC_FIELDS,
+    VinInfo,
+    checksum_text,
+    decode_vin,
+    lookup_vpic,
+    model_year_text,
+    read_vin,
+)
 from obd_diag.transport import Transport, TransportError
 from obd_diag.transport.discovery import list_ports
 from obd_diag.transport.serial import SerialTransport
@@ -181,16 +189,13 @@ def _print_vehicle(vehicle: VinInfo | None) -> None:
     rows = [("FIN", vehicle.vin)]
     if not vehicle.valid:
         rows.append(("Hinweis", "FIN ungültig (Länge oder Zeichen)"))
-    elif vehicle.checksum_ok is False:
-        rows.append(("Prüfziffer", "stimmt nicht"))
-    elif vehicle.checksum_ok:
-        rows.append(("Prüfziffer", "stimmt"))
     else:
-        rows.append(("Prüfziffer", "nicht vorgeschrieben"))
+        rows.append(("Prüfziffer", checksum_text(vehicle)))
     rows.append(("Hersteller", vehicle.manufacturer or "unbekannt"))
     rows.append(("Land", vehicle.country or "unbekannt"))
-    if vehicle.model_year is not None:
-        rows.append(("Modelljahr", f"{vehicle.model_year} (aus Stelle 10, ohne Gewähr)"))
+    year = model_year_text(vehicle)
+    if year is not None:
+        rows.append(("Modelljahr", year))
     rows += [
         (label, vehicle.online[key]) for key, label in VPIC_FIELDS.items() if key in vehicle.online
     ]
@@ -210,7 +215,8 @@ def _print_readiness(readiness: ReadinessStatus | None) -> None:
     width = max(len(m.name) for m in readiness.monitors) + 1
     for m in readiness.monitors:
         print(f"  {m.name + ':':<{width}} {_MONITOR_STATES[m.state]}")
-    print(f"  AU-bereit: {'ja' if readiness.ready else 'nein'}")
+    print(f"  {ALL_COMPLETE_LABEL}: {'ja' if readiness.all_complete else 'nein'}")
+    print(f"  Hinweis: {AU_NOTE}")
 
 
 def _print_freeze_frame(freeze: FreezeFrame | None) -> None:
@@ -272,16 +278,17 @@ def _run_diagnose(args: argparse.Namespace) -> int:
 
 def _run_vin(args: argparse.Namespace) -> int:
     vin = args.vin
+    protocol: str | None = None  # nur bekannt, wenn die FIN aus dem Fahrzeug kommt
     if vin is None:
         with _transport(args) as transport:
             elm = Elm327(transport)
             elm.initialize()
-            elm.protocol()
+            protocol = elm.protocol().name
             vin = read_vin(elm)
         if vin is None:
             print("Fehler: Fahrzeug liefert keine FIN (Mode 09 PID 02).", file=sys.stderr)
             return 1
-    info = decode_vin(vin)
+    info = decode_vin(vin, protocol=protocol)
     if args.online_vin and info.valid:
         info = dataclasses.replace(info, online=lookup_vpic(info.vin))
     if args.json:

@@ -16,14 +16,23 @@ eines anderen Steuergeräts).
 Senden zwei Steuergeräte gleichzeitig mehrteilige Nachrichten, mischt der ELM327 ohne
 Header deren Frames (Datenblatt ELM327DS, „Multiline Responses“, Beispiel ``09 04``);
 eine Zuordnung ist dann unmöglich. Das wird an Lücken in der Frame-Nummerierung und an
-unvollständigen Nachrichten erkannt und als ``ValueError`` gemeldet, statt falsche
-Daten zu liefern.
+unvollständigen Nachrichten erkannt und als ``FrameSequenceError`` (ein ``ValueError``)
+gemeldet, statt falsche Daten zu liefern. Die Dienste wiederholen die Anfrage dann mit
+Headern (``ATH1``) und ordnen die Frames über die CAN-ID zu (``protocol.headers``).
 """
 
 import re
 
 _BYTE_COUNT = re.compile(r"^[0-9A-F]{3}$")
 _FRAME = re.compile(r"^([0-9A-F]):\s*(.*)$")
+
+
+class FrameSequenceError(ValueError):
+    """Frames einer mehrteiligen Nachricht fehlen, sind vertauscht oder vermischt.
+
+    Ohne Header nicht zu unterscheiden: verlorene Frames oder gleichzeitige mehrteilige
+    Antworten mehrerer Steuergeräte. Mit Headern (``ATH1``) lässt sich das klären.
+    """
 
 
 def _hex(text: str) -> bytes:
@@ -55,7 +64,7 @@ class _Collector:
         """Schließt die offene Nachricht; fehlen Frames, ist die Antwort unbrauchbar."""
         index = self.open
         if index is not None and self.lengths[index] is not None and not self.complete(index):
-            raise ValueError(
+            raise FrameSequenceError(
                 f"mehrteilige Nachricht unvollständig ({len(self.messages[index])} von "
                 f"{self.lengths[index]} Bytes): Frames fehlen oder stammen von mehreren "
                 "Steuergeräten"
@@ -72,12 +81,12 @@ class _Collector:
         ):
             index = None  # nächste Nachricht ohne Längenzeile (ELM327-emulator)
         if index is not None and self.complete(index):
-            raise ValueError(f"Frame {seq:X} nach vollständiger Nachricht")
+            raise FrameSequenceError(f"Frame {seq:X} nach vollständiger Nachricht")
         if index is None:
             index = self.open = self.add(b"", None)
             self.next_seq = 0
         if seq != self.next_seq:
-            raise ValueError(
+            raise FrameSequenceError(
                 f"Frame {seq:X} statt {self.next_seq:X}; Antworten mehrerer Steuergeräte "
                 "vermischt? Nur mit Headern (ATH1) zuzuordnen"
             )
@@ -88,8 +97,9 @@ class _Collector:
 def split_messages(response: str) -> list[bytes]:
     """Liefert die Nutzdaten jeder Nachricht in ``response``.
 
-    Wirft ``ValueError`` bei Zeilen, die keine Hex-Daten sind, und bei mehrteiligen
-    Nachrichten mit fehlenden oder vertauschten Frames.
+    Wirft ``ValueError`` bei Zeilen, die keine Hex-Daten sind, und
+    ``FrameSequenceError`` (Unterklasse von ``ValueError``) bei mehrteiligen Nachrichten
+    mit fehlenden, vertauschten oder vermischten Frames.
     """
     collector = _Collector()
     for raw in response.upper().splitlines():

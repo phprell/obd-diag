@@ -301,7 +301,7 @@ def test_diagnose_table(
     assert out.startswith(
         "Fahrzeug:\n"
         "  FIN:        WVWZZZ1KZ6W123456\n"
-        "  Prüfziffer: nicht vorgeschrieben\n"
+        "  Prüfziffer: nicht vorgeschrieben (weicht ab)\n"
         "  Hersteller: Volkswagen\n"
         "  Land:       Deutschland\n"
         "  Modelljahr: 2006 (aus Stelle 10, ohne Gewähr)\n"
@@ -314,7 +314,8 @@ def test_diagnose_table(
     assert "  Katalysator:               nicht abgeschlossen\n" in out
     assert "  Katalysatorheizung:        nicht unterstützt\n" in out
     assert "  Tankentlüftung:            abgeschlossen\n" in out
-    assert "  AU-bereit: nein\n" in out
+    assert "  Alle Tests abgeschlossen: nein\n  Hinweis: Das ist keine AU-Bewertung" in out
+    assert "AU-bereit" not in out
     assert out.endswith(
         "Freeze Frame (ausgelöst durch P0133):\n"
         "  Kühlmitteltemperatur:  75 °C\n"
@@ -333,6 +334,7 @@ def test_diagnose_json_and_save(
     assert data["format"] == "obd-diag-session"
     assert data["vehicle"]["vin"] == "WVWZZZ1KZ6W123456"
     assert data["readiness"]["ready"] is False
+    assert data["readiness"]["all_complete"] is False
     assert data["freeze_frame"]["dtc"] == "P0133"
     (saved,) = (tmp_path / "data" / "obd-diag" / "sessions").iterdir()
     assert err == f"Sitzung gespeichert: {saved}\n"
@@ -430,7 +432,44 @@ def test_vin_offline_argument(capsys: pytest.CaptureFixture[str]) -> None:
         "country": "USA",
         "model_year": 1989,
         "online": {},
+        "model_year_alternatives": [],
     }
+
+
+def test_vin_ambiguous_model_year_offline(capsys: pytest.CaptureFixture[str]) -> None:
+    # Europa, Stelle 10 „T“: 2026 oder 1996; ohne Fahrzeug kein Protokoll, beide möglich
+    assert main(["vin", "WVWZZZ1KZTW123456"]) == 0
+    out = capsys.readouterr().out
+    assert "  Modelljahr: 2026 oder 1996 (aus Stelle 10, ohne Gewähr)\n" in out
+
+
+def test_vin_from_can_car_drops_implausible_year(
+    full_car: list[FakeTransport],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Stelle 10 „T“ über CAN gelesen: 1996 ist für CAN-OBD unplausibel
+    vin_t = "014\r0:490201575657\r1:5A5A5A314B5A54\r2:57313233343536"
+    car = dict(CAN_CAR_FULL, **{"0902": vin_t})
+    monkeypatch.setattr(cli, "SerialTransport", lambda port, baud: FakeTransport(car))
+    assert main(["vin"]) == 0
+    out = capsys.readouterr().out
+    assert "WVWZZZ1KZTW123456" in out
+    assert "  Modelljahr: 2026 (aus Stelle 10, ohne Gewähr)\n" in out
+
+
+@pytest.mark.parametrize(
+    ("vin", "line"),
+    [
+        ("WVWZZZ1KZ6W123456", "  Prüfziffer: nicht vorgeschrieben (weicht ab)\n"),
+        ("WBA3A5C53CF256551", "  Prüfziffer: stimmt\n"),  # Europa, stimmt freiwillig
+    ],
+)
+def test_vin_checksum_lines_outside_north_america(
+    vin: str, line: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["vin", vin]) == 0
+    assert line in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(

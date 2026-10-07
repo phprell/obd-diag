@@ -135,10 +135,20 @@ def test_vpic_with_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
     assert session.vehicle is not None and session.vehicle.online == {"Model": "Golf"}
 
 
-def test_readiness_monitors_complete_for_au() -> None:
+def test_vehicle_model_year_uses_protocol() -> None:
+    # Stelle 10 „T“ = 2026 oder 1996; über CAN (ISO 15765-4) ist 1996 unplausibel
+    vin_t = "014\r0:490201575657\r1:5A5A5A314B5A54\r2:57313233343536"
+    session, _ = _run({**FULL_CAR, "0902": vin_t})
+    assert session.vehicle is not None
+    assert session.vehicle.vin == "WVWZZZ1KZTW123456"
+    assert session.vehicle.model_year == 2026
+    assert session.vehicle.model_year_alternatives == ()
+
+
+def test_readiness_monitors_all_complete() -> None:
     session, _ = _run({**FULL_CAR, "0101": "4101 0007 6500"})
     assert session.readiness is not None
-    assert session.readiness.ready
+    assert session.readiness.all_complete
     assert {m.state for m in session.readiness.monitors} == {
         MonitorState.COMPLETE,
         MonitorState.NOT_SUPPORTED,

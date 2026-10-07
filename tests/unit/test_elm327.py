@@ -7,6 +7,7 @@ from obd_diag.protocol.elm327 import (
     ObdProtocol,
     UnknownCommandError,
 )
+from obd_diag.transport import TransportError, TransportTimeout
 from tests.fakes import FakeTransport
 from tests.verification.helpers import RawTransport
 
@@ -114,3 +115,124 @@ def test_error_lines_raise(raw: str) -> None:
     # Auch nach Teildaten: die Antwort ist unvollständig oder fehlerhaft.
     with pytest.raises(ElmError):
         Elm327(FakeTransport({"03": raw})).command("03")
+
+
+@pytest.mark.parametrize(
+    ("cmd", "echo"),
+    [
+        ("ATDPN", "atdpn"),
+        ("ATDPN", "AT DPN"),
+        ("0902", "09 02"),
+        ("ATSP0", "at sp 0"),
+        ("03", " 03"),
+    ],
+)
+def test_echo_variants_are_stripped(cmd: str, echo: str) -> None:
+    transport = RawTransport({cmd: f"{echo}\rA6\r\r>".encode("ascii")})
+    assert Elm327(transport).command(cmd) == "A6"
+
+
+def test_echo_only_before_answer() -> None:
+    # Eine Datenzeile, die zufällig dem Befehl gleicht, bleibt erhalten.
+    transport = RawTransport({"4300": b"4300\r4300\r\r>"})
+    assert Elm327(transport).command("4300") == "4300"
+
+
+def test_read_more_reads_without_writing() -> None:
+    transport = RawTransport({"04": b"7F 04 78\r\r>44\r\r>"})
+    elm = Elm327(transport)
+    assert elm.command("04") == "7F 04 78"
+    assert elm.read_more("04", 1.0) == "44"
+    assert transport.sent == ["04"]
+    with pytest.raises(TransportTimeout):
+        elm.read_more("04", 1.0)
+
+
+def test_query_with_headers_switches_back() -> None:
+    transport = FakeTransport({"0100": "4100"}, headers_on={"0100": "7E8 06 41 00 BE 3F A8 13"})
+    elm = Elm327(transport)
+    assert elm.query_with_headers("0100") == "7E8 06 41 00 BE 3F A8 13"
+    assert transport.sent == ["ATH1", "0100", "ATH0"]
+    assert elm.query("0100") == "4100"
+
+
+class _Sequence(FakeTransport):
+    """Antwortet auf wiederholte Befehle der Reihe nach (die letzte Antwort bleibt)."""
+
+    def __init__(self, answers: dict[str, list[str]]) -> None:
+        super().__init__({})
+        self.answers = answers
+
+    def write(self, data: bytes) -> None:
+        cmd = data.decode("ascii").strip()
+        queue = self.answers.get(cmd, ["OK"])
+        self.responses = {cmd: queue.pop(0) if len(queue) > 1 else queue[0]}
+        super().write(data)
+
+
+@pytest.mark.parametrize("dpn", ["A0", "0", "?", "", "XYZ"])
+def test_protocol_unknown_asks_again(dpn: str) -> None:
+    transport = _Sequence(
+        {"0100": ["4100BE3FA813"], "ATDPN": [dpn, "A6"], "ATDP": ["AUTO, ISO 15765-4"]}
+    )
+    protocol = Elm327(transport).protocol()
+    assert transport.sent == ["0100", "ATDPN", "ATDPN", "ATDP"]
+    assert protocol == ObdProtocol("6", "ISO 15765-4")
+    assert protocol.is_can
+
+
+@pytest.mark.parametrize(
+    ("headers", "inferred", "is_can"),
+    [
+        ("SEARCHING...\r7E9 06 41 00 88 18 00 13 \r7E8 06 41 00 BE 3F A8 13 ", "CAN 11 Bit", True),
+        ("7E8064100BE3FA813", "CAN 11 Bit", True),
+        ("18DAF110064100BE3FA813", "CAN 29 Bit", True),
+        ("48 6B 13 41 00 BE 1F B8 11 AD ", "J1850/ISO 9141/KWP", False),
+        ("BUS INIT: OK\r86 F1 10 41 00 BE 3E B8 11 8D ", "J1850/ISO 9141/KWP", False),
+    ],
+)
+def test_protocol_inferred_from_headers(headers: str, inferred: str, is_can: bool) -> None:
+    transport = FakeTransport(
+        {"0100": "4100BE3FA813", "ATDPN": "A0", "ATDP": "AUTO"}, headers_on={"0100": headers}
+    )
+    protocol = Elm327(transport).protocol()
+    assert transport.sent == ["0100", "ATDPN", "ATDPN", "ATH1", "0100", "ATH0", "ATDP"]
+    assert protocol.number == "0"
+    assert protocol.inferred == inferred
+    assert protocol.is_can is is_can
+    assert protocol.name == f"AUTO (laut Headern {inferred})"
+
+
+def test_protocol_no_data_retries_0100_once() -> None:
+    transport = FakeTransport({"0100": "NO DATA", "ATDPN": "0", "ATDP": "AUTO"})
+    protocol = Elm327(transport).protocol()
+    # ohne Antwort keine Header-Probe: bleibt „kein CAN“
+    assert transport.sent == ["0100", "ATDPN", "0100", "ATDPN", "ATDP"]
+    assert protocol == ObdProtocol("0", "AUTO")
+    assert not protocol.is_can
+
+
+def test_protocol_unreadable_headers_stay_unknown() -> None:
+    transport = FakeTransport(
+        {"0100": "4100BE3FA813", "ATDPN": "?", "ATDP": "?"}, headers_on={"0100": "GARBAGE"}
+    )
+    protocol = Elm327(transport).protocol()
+    assert protocol == ObdProtocol("", "")
+    assert not protocol.is_can
+
+
+def test_failed_header_restore_aborts_instead_of_misreading() -> None:
+    """Bleibt der Adapter nach dem Header-Fallback auf ATH1, würde alles Weitere falsch
+    gelesen; das darf kein Aufrufer als bloß fehlende Angabe abfangen."""
+
+    class StuckInHeaders(FakeTransport):
+        def write(self, data: bytes) -> None:
+            super().write(data)
+            if self.sent[-1] == "ATH0" and self.sent.count("ATH0") > 1:
+                self._pending = b"?\r\r>"
+
+    transport = StuckInHeaders({"ATZ": "ELM327 v1.5", "ATDPN": "0", "0100": "4100BE3FA813"})
+    elm = Elm327(transport)
+    elm.initialize()
+    with pytest.raises(TransportError, match="ATH0"):
+        elm.protocol()

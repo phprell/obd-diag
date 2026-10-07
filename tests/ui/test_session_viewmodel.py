@@ -48,8 +48,9 @@ def test_full_session_parts(full: DiagnosisViewModel) -> None:
     facts = {f["label"]: f["value"] for f in vehicle["facts"]}
     assert facts["Hersteller"] == "Volkswagen"
     assert facts["Land"] == "Deutschland"
-    assert facts["Modelljahr"] == "2006 (ohne Gewähr)"
-    assert facts["Prüfziffer"] == "nicht vorgeschrieben"
+    assert facts["Modelljahr"] == "2006 (aus Stelle 10, ohne Gewähr)"
+    assert facts["Prüfziffer"] == "nicht vorgeschrieben (weicht ab)"
+    assert vehicle["modelYearAlternatives"] == []
     assert vehicle["online"] == [
         {"label": "Modell", "value": "Golf"},
         {"label": "Zylinder", "value": "4"},
@@ -57,7 +58,8 @@ def test_full_session_parts(full: DiagnosisViewModel) -> None:
 
     readiness = full.property("readiness")
     assert readiness["available"] and not readiness["ready"]
-    assert readiness["readyLabel"] == "Nicht AU-bereit"
+    assert readiness["readyLabel"] == "Nicht alle Tests abgeschlossen"
+    assert "keine AU-Bewertung" in readiness["auNote"]
     assert readiness["summary"] == "2 Tests nicht abgeschlossen: Katalysator, Lambdasonde."
     assert readiness["milOn"] and readiness["dtcCount"] == 2
     assert (readiness["completeCount"], readiness["supportedCount"]) == (5, 7)
@@ -108,7 +110,7 @@ def test_entries_edge_cases() -> None:
     ready = readiness_entry(
         replace(READINESS, mil_on=False, compression_ignition=True, monitors=done)
     )
-    assert ready["ready"] and ready["readyLabel"] == "AU-bereit"
+    assert ready["ready"] and ready["readyLabel"] == "Alle Tests abgeschlossen"
     assert ready["summary"] == "Alle 5 unterstützten Tests abgeschlossen."
     assert ready["engineLabel"] == "Diesel (Selbstzünder)" and ready["milLabel"] == "aus"
     empty = freeze_frame_entry(FreezeFrame())
@@ -122,6 +124,40 @@ def test_entries_edge_cases() -> None:
     assert facts["Prüfziffer"] == "stimmt nicht" and facts["Hersteller"] == "unbekannt"
     assert vin["checksumOk"] is False and vin["online"] == []
     assert number_text(1234.5, 1) == "1.234,5"
+
+
+@pytest.mark.parametrize(
+    ("info", "year", "checksum"),
+    [
+        (  # Europa, Stelle 10 mehrdeutig
+            VinInfo(
+                "WVWZZZ1KZTW123456",
+                True,
+                None,
+                "WVW",
+                model_year=2026,
+                model_year_alternatives=(1996,),
+            ),
+            "2026 oder 1996 (aus Stelle 10, ohne Gewähr)",
+            "nicht vorgeschrieben (weicht ab)",
+        ),
+        (  # nicht vorgeschrieben, stimmt aber
+            VinInfo("WBA3A5C53CF256551", True, True, "WBA", model_year=2012),
+            "2012 (aus Stelle 10, ohne Gewähr)",
+            "stimmt",
+        ),
+        (  # ungültig: weder Modelljahr noch Prüfziffer
+            VinInfo("WVWZZZ1KZ6W12345", False, None, "WVW"),
+            "unbekannt",
+            "nicht prüfbar (FIN ungültig)",
+        ),
+    ],
+)
+def test_vehicle_entry_wording(info: VinInfo, year: str, checksum: str) -> None:
+    entry = vehicle_entry(info)
+    facts = {f["label"]: f["value"] for f in entry["facts"]}
+    assert (facts["Modelljahr"], facts["Prüfziffer"]) == (year, checksum)
+    assert entry["modelYearAlternatives"] == list(info.model_year_alternatives)
 
 
 def test_online_vin_lookup_setting_is_passed_and_persisted() -> None:
@@ -221,7 +257,7 @@ def test_save_and_open_session(qtbot: QtBot, full: DiagnosisViewModel, tmp_path:
     assert vm.property("viewOnly") and vm.property("hasResult")
     assert vm.property("codeCount") == 5
     assert vm.property("vehicleText") == "Volkswagen · WVWZZZ1KZ6W123456"
-    assert vm.property("readiness")["readyLabel"] == "Nicht AU-bereit"
+    assert vm.property("readiness")["readyLabel"] == "Nicht alle Tests abgeschlossen"
     assert "07.10.2026, 14:32 geöffnet (nur ansehen)" in vm.property("notice")
     # Nur ansehen: nicht löschen, nicht erneut speichern, aber exportieren
     assert vm.property("uniqueCodes") and not vm.property("canClear")

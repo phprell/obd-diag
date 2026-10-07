@@ -17,6 +17,9 @@ Roadmap-Schritt 4 (in Arbeit): Diagnosesitzungen speichern, `obd-diag export` al
 PDF-Bericht und CSV, `obd-diag diagnose` (Fehlercodes, Readiness, Freeze Frame, FIN in
 einem Durchgang) und `obd-diag vin`; die Oberfläche zeigt Readiness, Freeze Frame und
 Fahrzeug und kann Sitzungen speichern, öffnen und exportieren.
+Dazu robustere Adapter-Kommunikation: vermischte mehrteilige Antworten mehrerer
+Steuergeräte, Freeze Frame ohne Frame-Nummer, verzögerte Bestätigung beim Löschen,
+unklare Protokollnummer und abweichendes Echo (siehe „Protokoll-Details“).
 
 ## Entwicklung
 
@@ -170,9 +173,20 @@ obd-diag diagnose --port /dev/ttyUSB0 --online-vin      # FIN zusätzlich bei NH
    Schlägt er fehl, bricht `diagnose` ab.
 2. Readiness (Mode 01 PID 01): MIL, gemeldete Codezahl, Motorart (Otto/Diesel) und je
    Monitor „abgeschlossen“, „nicht abgeschlossen“ oder „nicht unterstützt“, dazu
-   „AU-bereit: ja/nein“ (ja, wenn kein unterstützter Monitor offen ist). Antworten
-   mehrere Steuergeräte, zählt je Monitor der schlechteste Stand, die MIL ist an, wenn
-   ein Steuergerät sie meldet, und die Codezahlen werden addiert.
+   „Alle Tests abgeschlossen: ja/nein“ (ja, wenn kein unterstützter Monitor offen
+   ist). Antworten mehrere Steuergeräte, zählt je Monitor der schlechteste Stand, die
+   MIL ist an, wenn ein Steuergerät sie meldet, und die Codezahlen werden addiert.
+
+   Das ist bewusst **keine AU-Bewertung** (früher „AU-bereit“): Seit der AU-Richtlinie
+   von 2017 (Verkehrsblatt 19/2017, Leitfaden 5.01, ab 01.01.2018) gehört zur AU bei
+   allen OBD-Fahrzeugen neben der OBD-Prüfung wieder die Endrohrmessung; offene
+   Monitore führen nicht pauschal zum Nichtbestehen. Eine allgemeine, zitierfähige
+   Liste, welche offenen Monitore toleriert werden, gibt es nicht – das hängt vom
+   Fahrzeug und vom Prüfablauf des AU-Geräts ab. Quellen: Hella Gutmann,
+   [Informationen zum Leitfaden 5.01](https://www.hella-gutmann.com/fileadmin/user_upload/Download-Dateien/X_Downloads/downloads_instructions/downloads_manuals_quickstarts/DE/BD0059_HG4_Info_Leitfaden_5-01.pdf)
+   (12/2017); zur Regelung ab 2010 (Readiness nicht gesetzt → Abgasmessung statt
+   Mangel) die [Zusammenfassung bei werner-austen.de](http://www.werner-austen.de/plaintext/informationen/regelung-abgasuntersuchung-112010/index.php). In JSON heißt das Feld
+   `all_complete`; `ready` bleibt als alter Name erhalten.
 3. Freeze Frame (Mode 02, Frame 00): auslösender Code, Last, Kühlmitteltemperatur,
    Drehzahl, Geschwindigkeit. Ohne gespeicherten Code ist er leer und erscheint als
    „keiner gespeichert“.
@@ -197,13 +211,19 @@ Die Dekodierung ist offline:
 - gültig: 17 Zeichen, nur 0-9 und A-Z ohne I, O, Q;
 - Prüfziffer (Stelle 9, ISO 3779 / 49 CFR 565): Pflicht nur in Nordamerika (FIN
   beginnt mit 1-5) und China (`L`), dort „stimmt“/„stimmt nicht“; sonst „stimmt“, wenn
-  sie zufällig oder freiwillig passt, und „nicht vorgeschrieben“ andernfalls;
+  sie zufällig oder freiwillig passt, und „nicht vorgeschrieben (passt nicht, kein
+  Fehler)“ andernfalls;
 - Hersteller aus einer Tabelle häufiger Herstellerkennungen (WMI, Stellen 1-3,
-  `src/obd_diag/data/wmi.py`), Land aus den ISO-3780-Regionsbereichen der Stellen 1-2;
+  `src/obd_diag/data/wmi.py`, geprüft gegen Wikipedia und NHTSA vPIC, Quellen dort),
+  Land aus den ISO-3780-Regionsbereichen der Stellen 1-2 (ISO-Übersicht 2021);
 - Modelljahr aus Stelle 10. Der Code wiederholt sich alle 30 Jahre; in Nordamerika
   entscheidet Stelle 7 (Ziffer: 1980-2009, Buchstabe: 2010-2039), sonst gilt das
-  jüngste Jahr bis höchstens ein Jahr in der Zukunft. Europäische Hersteller nutzen
-  Stelle 10 nicht alle als Modelljahr, die Angabe ist dort ohne Gewähr.
+  jüngste Jahr bis höchstens ein Jahr in der Zukunft als beste Schätzung, und das 30
+  Jahre ältere wird mitgenannt: „2026 oder 1996 (aus Stelle 10, ohne Gewähr)“. Kommt
+  die FIN aus dem Fahrzeug, fallen ältere Jahre weg, die zum OBD-Protokoll nicht
+  passen (OBD-II-Protokolle: nicht vor 1994; CAN nach ISO 15765-4: nicht vor 2000).
+  Europäische Hersteller nutzen Stelle 10 nicht alle als Modelljahr, die Angabe ist
+  dort ohne Gewähr. In JSON steht das zweite Jahr in `model_year_alternatives`.
 
 **Datenschutz:** Die FIN bleibt auf dem Rechner. Nur mit `--online-vin` wird sie an die
 NHTSA-Datenbank [vPIC](https://vpic.nhtsa.dot.gov/api/) (USA) geschickt; übernommen
@@ -234,9 +254,9 @@ obd-diag export ~/.local/share/obd-diag/sessions/session-20261007-143205.json \
     --pdf bericht.pdf --csv fehlercodes.csv
 ```
 
-- **PDF** (DIN A4, Deutsch): Fahrzeug (FIN, Hersteller, Land, Modelljahr),
+- **PDF** (DIN A4, Deutsch): Fahrzeug (FIN, Prüfziffer, Hersteller, Land, Modelljahr),
   Adapter, Protokoll und Bordspannung (mit Warnung bei niedriger Spannung),
-  Kurzübersicht, Readiness mit „AU-bereit: ja/nein“, Fehlercodes nach Art mit
+  Kurzübersicht, Readiness mit „Alle Tests abgeschlossen: ja/nein“, Fehlercodes nach Art mit
   Erklärung, Ursachen samt Wahrscheinlichkeit, Symptomen und Kostenrahmen, Freeze
   Frame. Fehlende Teile erscheinen als „nicht verfügbar“. Erzeugt mit
   [ReportLab](https://www.reportlab.com/) (BSD-Lizenz). Schrift: DejaVu Sans,
@@ -267,7 +287,7 @@ Fahrzeug (Hersteller und FIN), darunter vier Reiter:
 - **Fehlercodes**: links die Codes nach gespeichert, ausstehend und permanent
   gruppiert, rechts die Erklärung des gewählten Codes mit Ursachen, Symptomen und
   Kostenrahmen.
-- **Readiness**: „AU-bereit“ (grün) oder „Nicht AU-bereit“ (rot) mit den offenen
+- **Readiness**: „Alle Tests abgeschlossen“ (grün) oder „Nicht alle Tests abgeschlossen“ (gelb) mit den offenen
   Tests, Motorkontrollleuchte, und jeder Monitor als abgeschlossen, nicht
   abgeschlossen oder nicht unterstützt.
 - **Freeze Frame**: auslösender Code und die Messwerte beim Speichern des Codes
@@ -334,6 +354,36 @@ Fehler. In der Oberfläche schaltet „Optionen → Adapter-Mitschnitt aufzeichn
 für jede Aktion ein (eine Datei je Aktion). Der Mitschnitt enthält ggf. die FIN und
 bleibt lokal. `ReplayTransport` in `transport/trace.py` spielt ihn ohne Adapter wieder
 ab, z. B. als Test-Fixture.
+
+### Protokoll-Details
+
+Der Adapter läuft ohne Header (`ATH0`), ohne Leerzeichen und ohne Echo. Abweichungen
+echter Adapter und Steuergeräte fängt das Tool so ab:
+
+- **Vermischte mehrteilige Antworten:** Senden zwei Steuergeräte gleichzeitig
+  mehrteilige CAN-Nachrichten, mischt der ELM327 ohne Header deren Frames (Datenblatt
+  ELM327DS S. 45). Erkennt das Zerlegen das (Lücken in der Frame-Nummerierung,
+  unvollständige Nachricht), wird die lesende Anfrage (Mode 03/07/0A, FIN `0902`) einmal
+  mit `ATH1` wiederholt, die Frames werden je CAN-ID nach ISO 15765-2 zusammengesetzt
+  (11 Bit `7E8 …`, 29 Bit `18 DA F1 10 …`), danach wieder `ATH0`
+  (`protocol/headers.py`). Die Codes stehen dann nach Steuergeräte-Adresse geordnet
+  (7E8 vor 7E9), sonst in Eingangsreihenfolge. Ältere Protokolle mit Header
+  (`48 6B 10 … <Prüfbyte>`) werden ebenfalls zerlegt; das Prüfbyte wird entfernt, aber
+  nicht geprüft. Dort tritt das Mischen nicht auf (eine Zeile je Nachricht).
+- **Freeze Frame:** angefragt nach SAE J1979 mit Frame-Nummer (`020C00`). Antwortet
+  das Fahrzeug auf `020200` mit `NO DATA` oder `7F 02 12`, wird `0202` ohne
+  Frame-Nummer versucht (wie python-OBD) und bei Erfolg der ganze Freeze Frame so
+  gelesen. Die Schlüssel in `raw` (Sicherung, Sitzung) zeigen das benutzte Format.
+- **Löschen mit `7F 04 78`** (Steuergerät meldet „Antwort folgt“): es wird ohne
+  erneutes Senden bis zu 10 s auf `44` oder eine Ablehnung gewartet. Kommt nichts,
+  gilt das Löschen als nicht bestätigt (Hinweis auf `obd-diag scan`, Sicherung bleibt).
+  Mode 04 wird nie wiederholt.
+- **Protokollnummer unklar** (`ATDPN` meldet `0`, `?` o. Ä.): `ATDPN` wird erneut
+  gefragt; bleibt sie unklar, wird `0100` einmal mit Headern gesendet und an deren
+  Form erkannt, ob CAN 11 Bit, CAN 29 Bit oder ein älteres Protokoll vorliegt. Die
+  Protokollangabe trägt dann den Zusatz „laut Headern …“.
+- **Echo:** eine erste Zeile, die dem Befehl ohne Rücksicht auf Groß-/Kleinschreibung
+  und Leerzeichen gleicht (`at dpn` für `ATDPN`), wird entfernt.
 
 ## Struktur
 

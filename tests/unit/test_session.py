@@ -74,6 +74,28 @@ def test_dict_round_trip_minimal_vin_and_freeze_fields() -> None:
     assert session_from_dict(json.loads(json.dumps(session_to_dict(session)))) == session
 
 
+def test_dict_round_trip_model_year_alternatives() -> None:
+    vehicle = dataclasses.replace(VEHICLE, model_year=2026, model_year_alternatives=(1996,))
+    session = dataclasses.replace(full_session(), vehicle=vehicle)
+    data = json.loads(json.dumps(session_to_dict(session)))
+    assert data["vehicle"]["model_year_alternatives"] == [1996]
+    restored = session_from_dict(data)
+    assert restored == session
+    assert restored.vehicle is not None
+    assert restored.vehicle.model_year_alternatives == (1996,)
+
+
+def test_old_session_without_new_fields_loads() -> None:
+    """Sitzungen älterer Versionen: ohne ``model_year_alternatives``/``all_complete``."""
+    data = json.loads(json.dumps(session_to_dict(full_session())))
+    del data["vehicle"]["model_year_alternatives"]
+    del data["readiness"]["all_complete"]
+    restored = session_from_dict(data)
+    assert restored.vehicle is not None
+    assert restored.vehicle.model_year_alternatives == ()
+    assert restored == full_session()
+
+
 def test_dict_layout() -> None:
     session = full_session()
     data = session_to_dict(session)
@@ -82,6 +104,7 @@ def test_dict_layout() -> None:
     assert data["created"] == "2026-10-07T14:32:05+02:00"
     assert data["scan"] == scan_to_dict(session.scan)  # dieselbe Form wie scan --json
     assert data["readiness"]["ready"] is False
+    assert data["readiness"]["all_complete"] is False
     assert data["readiness"]["monitors"][3] == {
         "key": "catalyst",
         "name": "Katalysator",
