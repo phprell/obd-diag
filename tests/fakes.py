@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from types import TracebackType
 from typing import Self
 
@@ -16,12 +17,36 @@ CAN_CAR = {
     "0A": "NO DATA",
 }
 
+# Dasselbe Fahrzeug mit Motor aus und Zündung an, bereit zum Löschen: Freeze Frame zu
+# P0133, Mode 04 wird bestätigt.
+CAN_CAR_ENGINE_OFF = {
+    **CAN_CAR,
+    "010C": "410C0000",
+    "020200": "4202000133",
+    "020400": "NO DATA",
+    "020500": "42050073",
+    "020C00": "420C001AF8",
+    "020D00": "7F0212",
+    "04": "44",
+}
+
+# Antworten, die nach bestätigtem Mode 04 gelten (``FakeTransport(after_clear=...)``)
+CLEARED = {"03": "4300", "07": "4700", "020200": "4202000000"}
+
 
 class FakeTransport:
-    """Spielt vorbereitete Adapter-Antworten ab und merkt sich gesendete Befehle."""
+    """Spielt vorbereitete Adapter-Antworten ab und merkt sich gesendete Befehle.
 
-    def __init__(self, responses: dict[str, str]) -> None:
+    Unbekannte Befehle beantwortet der Fake mit ``OK``. Sobald ``04`` mit ``44``
+    bestätigt ist, gelten zusätzlich die Antworten aus ``after_clear``.
+    """
+
+    def __init__(
+        self, responses: Mapping[str, str], after_clear: Mapping[str, str] | None = None
+    ) -> None:
         self.responses = responses
+        self.after_clear = after_clear or {}
+        self.cleared = False
         self.sent: list[str] = []
         self._pending = b""
 
@@ -34,7 +59,13 @@ class FakeTransport:
     def write(self, data: bytes) -> None:
         cmd = data.decode("ascii").strip()
         self.sent.append(cmd)
-        self._pending = f"{self.responses.get(cmd, 'OK')}\r\r>".encode("ascii")
+        if self.cleared and cmd in self.after_clear:
+            response = self.after_clear[cmd]
+        else:
+            response = self.responses.get(cmd, "OK")
+        if cmd == "04" and response.replace(" ", "").startswith("44"):
+            self.cleared = True
+        self._pending = f"{response}\r\r>".encode("ascii")
 
     def read_until(self, terminator: bytes, timeout: float) -> bytes:
         data, self._pending = self._pending, b""

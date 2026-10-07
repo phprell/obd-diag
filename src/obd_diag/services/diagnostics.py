@@ -1,8 +1,9 @@
 """Diagnose-Abläufe: Fehlercodes lesen und mit Klartext anreichern."""
 
+import dataclasses
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Protocol
+from typing import Any, Protocol
 
 from obd_diag.data.dtc_catalog import DtcInfo
 from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
@@ -70,3 +71,10 @@ def scan(elm: Elm327, catalog: DtcLookup | None, lang: str = "de") -> ScanResult
                 infos[code] = catalog.lookup(code, lang) if catalog is not None else None
             result.codes.append(DiagnosticCode(code, kind, infos[code]))
     return result
+
+
+def scan_to_dict(result: ScanResult) -> dict[str, Any]:
+    """JSON-taugliche Form eines Scans (wie ``obd-diag scan --json``)."""
+    data = dataclasses.asdict(result)
+    data["low_voltage"] = result.low_voltage
+    return data

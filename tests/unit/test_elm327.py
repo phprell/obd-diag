@@ -17,8 +17,7 @@ def test_initialize_returns_version_and_configures(fake_transport: FakeTransport
 
 
 def test_echo_is_stripped() -> None:
-    transport = FakeTransport({})
-    transport.responses["03"] = "03\r43 01 33 00 00 00 00"
+    transport = FakeTransport({"03": "03\r43 01 33 00 00 00 00"})
     assert Elm327(transport).command("03") == "43 01 33 00 00 00 00"
 
 

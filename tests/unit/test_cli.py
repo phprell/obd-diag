@@ -1,11 +1,13 @@
 import json
+from pathlib import Path
 
 import pytest
 
 from obd_diag import cli
 from obd_diag.cli import main
 from obd_diag.data.dtc_catalog import DtcCatalog
-from tests.fakes import CAN_CAR, FakeCatalog, FakeTransport
+from obd_diag.transport.discovery import PortInfo
+from tests.fakes import CAN_CAR, CAN_CAR_ENGINE_OFF, CLEARED, FakeCatalog, FakeTransport
 
 
 def test_missing_port_gives_clean_error(capsys: pytest.CaptureFixture[str]) -> None:
@@ -74,3 +76,140 @@ def test_scan_adapter_error(
     car["0100"] = "SEARCHING...\rUNABLE TO CONNECT"
     assert main(["scan"]) == 1
     assert capsys.readouterr().err.endswith("Fehler: 0100: UNABLE TO CONNECT\n")
+
+
+Car = tuple[dict[str, str], list[FakeTransport]]
+
+
+@pytest.fixture
+def ready_car(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Car:
+    """Fahrzeug mit Motor aus; Sicherungen landen unter ``tmp_path``."""
+    responses = dict(CAN_CAR_ENGINE_OFF)
+    transports: list[FakeTransport] = []
+
+    def open_port(port: str, baud: int) -> FakeTransport:
+        transports.append(FakeTransport(responses, CLEARED))
+        return transports[-1]
+
+    monkeypatch.setattr(cli, "SerialTransport", open_port)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    _use_catalog(monkeypatch, FakeCatalog({"P0133": "Lambdasonde reagiert zu langsam"}))
+    return responses, transports
+
+
+def _sent(transports: list[FakeTransport]) -> list[str]:
+    return [cmd for t in transports for cmd in t.sent]
+
+
+def _answer(monkeypatch: pytest.MonkeyPatch, text: str | None) -> list[str]:
+    """Beantwortet die Rückfrage mit ``text`` (``None``: Eingabe beendet, Strg+D)."""
+    prompts: list[str] = []
+
+    def fake_input(prompt: str) -> str:
+        prompts.append(prompt)
+        if text is None:
+            raise EOFError
+        return text
+
+    monkeypatch.setattr("builtins.input", fake_input)
+    return prompts
+
+
+def test_clear_after_confirmation(
+    ready_car: Car,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    prompts = _answer(monkeypatch, " Ja\n")
+    assert main(["clear"]) == 0
+    out, err = capsys.readouterr()
+    assert err == ""
+    assert prompts == ['Wirklich löschen? Zum Bestätigen "ja" eingeben: ']
+    assert (
+        "Folgende Fehlercodes werden im Steuergerät gelöscht:\n"
+        "  P0133  Lambdasonde reagiert zu langsam\n"
+        "  P0300  (keine Beschreibung im Katalog)\n"
+        "  P0171  (keine Beschreibung im Katalog)\n"
+        "Achtung:"
+    ) in out
+    assert "Freeze Frame und Readiness-Status" in out
+    (backup,) = (tmp_path / "obd-diag" / "backups").iterdir()
+    assert f"Gelöscht. Sicherung: {backup}\n" in out
+    assert out.split("Kontroll-Scan:\n")[1].endswith("\nKeine Fehlercodes gespeichert.\n")
+    assert _sent(ready_car[1]).count("04") == 1
+
+
+@pytest.mark.parametrize("answer", ["nein", "", "j", "yes", None])
+def test_clear_declined(
+    ready_car: Car,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    answer: str | None,
+) -> None:
+    _answer(monkeypatch, answer)
+    assert main(["clear"]) == 1
+    assert capsys.readouterr().out.endswith("Abgebrochen, nichts gelöscht.\n")
+    assert "04" not in _sent(ready_car[1])
+    assert not (tmp_path / "obd-diag").exists()
+
+
+def test_clear_yes_skips_prompt(
+    ready_car: Car, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    prompts = _answer(monkeypatch, "nein")
+    assert main(["clear", "--yes", "--lang", "en"]) == 0
+    assert prompts == []
+    assert "Gelöscht. Sicherung: " in capsys.readouterr().out
+    assert _sent(ready_car[1]).count("04") == 1
+
+
+def test_clear_nothing_to_do(
+    ready_car: Car, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    prompts = _answer(monkeypatch, "ja")
+    ready_car[0].update({"03": "4300", "07": "4700"})
+    assert main(["clear"]) == 0
+    assert capsys.readouterr().out.endswith(
+        "Keine gespeicherten oder ausstehenden Fehlercodes, es wird nichts gelöscht.\n"
+    )
+    assert prompts == []
+    assert "04" not in _sent(ready_car[1])
+
+
+def test_clear_refused_while_engine_runs(
+    ready_car: Car, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    prompts = _answer(monkeypatch, "ja")
+    ready_car[0]["010C"] = "410C0C80"
+    assert main(["clear"]) == 1
+    assert capsys.readouterr().err.startswith("Fehler: Motor läuft (800 1/min).")
+    assert prompts == []  # abgelehnt, bevor überhaupt gefragt wird
+    assert "04" not in _sent(ready_car[1])
+
+
+def test_clear_refused_by_ecu(ready_car: Car, capsys: pytest.CaptureFixture[str]) -> None:
+    ready_car[0]["04"] = "7F0422"
+    assert main(["clear", "--yes"]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("Fehler: Steuergerät lehnt das Löschen ab: Bedingungen nicht erfüllt")
+    assert "Sicherung: " in err
+
+
+def test_ports(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    ports = [
+        PortInfo("/dev/rfcomm0", "Bluetooth (RFCOMM)"),
+        PortInfo("/dev/ttyUSB10", "FT232R USB UART (FTDI)"),
+    ]
+    monkeypatch.setattr(cli, "list_ports", lambda: ports)
+    assert main(["ports"]) == 0
+    assert capsys.readouterr().out == (
+        "/dev/rfcomm0   Bluetooth (RFCOMM)\n/dev/ttyUSB10  FT232R USB UART (FTDI)\n"
+    )
+
+
+def test_no_ports(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setattr(cli, "list_ports", lambda: [])
+    assert main(["ports"]) == 0
+    assert capsys.readouterr().out.startswith("Keine Adapter gefunden")
