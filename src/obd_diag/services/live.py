@@ -131,7 +131,8 @@ class LiveRecorder:
         self._writer.writerow(header)
         self._file.flush()
 
-    def write(self, sample: LiveSample) -> None:
+    def add(self, sample: LiveSample) -> None:
+        """Hängt eine Runde als Zeile an (sofort auf die Platte)."""
         row = [
             _csv_number(sample.elapsed),
             *(_csv_number(sample.values.get(p.key)) for p in self.pids),
@@ -211,9 +212,6 @@ def run_live(
     Sekunden (``throttled``). Runden beginnen im Abstand ``interval`` ab Rundenbeginn;
     dauert eine Runde länger, folgt die nächste sofort. Liefert die Anzahl der Runden.
     """
-    # Gebunden statt ``recorder.write(...)``: test_command_guard sucht ``.write(``-Aufrufe
-    # als mögliche Schreibzugriffe auf den Adapter; die CSV-Datei ist keiner.
-    record = None if recorder is None else recorder.write
     start = clock()
     count = 0
     voltage: float | None = None
@@ -225,8 +223,8 @@ def run_live(
             throttled = voltage is not None and voltage < LOW_VOLTAGE
         values = {spec.key: _read_value(elm, spec) for spec in pids}
         sample = LiveSample(round_start - start, values, voltage, throttled)
-        if record is not None:
-            record(sample)
+        if recorder is not None:
+            recorder.add(sample)
         on_sample(sample)
         count += 1
         if max_samples is not None and count >= max_samples:

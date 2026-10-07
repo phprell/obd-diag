@@ -331,9 +331,9 @@ def test_recorder_writes_csv_like_export(tmp_path: Path) -> None:
 def test_recorder_number_format(tmp_path: Path) -> None:
     path = tmp_path / "live.csv"
     with LiveRecorder(path, [COOLANT]) as recorder:
-        recorder.write(LiveSample(1234.5678, {"coolant_temp": -40.0}, None, False))
-        recorder.write(LiveSample(0.0004, {"coolant_temp": -0.0001}, 13.95, True))
-        recorder.write(LiveSample(2.0, {}, 12.0, False))  # fehlender Schlüssel: leer
+        recorder.add(LiveSample(1234.5678, {"coolant_temp": -40.0}, None, False))
+        recorder.add(LiveSample(0.0004, {"coolant_temp": -0.0001}, 13.95, True))
+        recorder.add(LiveSample(2.0, {}, 12.0, False))  # fehlender Schlüssel: leer
     assert path.read_text(encoding="utf-8-sig").splitlines()[1:] == [
         "1234,568;-40;",
         "0;0;13,95",
@@ -349,7 +349,7 @@ def test_recorder_flushes_every_row(tmp_path: Path) -> None:
             path.read_bytes()
             == "\ufeffZeit (s);Motordrehzahl (1/min);Bordspannung (V)\r\n".encode()
         )
-        recorder.write(LiveSample(0.0, {"rpm": 800.0}, 14.1, False))
+        recorder.add(LiveSample(0.0, {"rpm": 800.0}, 14.1, False))
         assert path.read_bytes().endswith(b"\r\n0;800;14,1\r\n")
     finally:
         recorder.close()
