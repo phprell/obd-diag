@@ -18,7 +18,7 @@ class SerialTransport:
         try:
             self._serial = serial.Serial(self.port, self.baudrate, timeout=1)
         except serial.SerialException as e:
-            raise TransportError(f"{self.port} lässt sich nicht öffnen: {e}") from e
+            raise TransportError(f"{self.port} lässt sich nicht öffnen ({e.strerror or e})") from e
 
     def close(self) -> None:
         if self._serial is not None:
