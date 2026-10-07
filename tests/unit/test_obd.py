@@ -9,6 +9,7 @@ from obd_diag.protocol.obd import (
     read_freeze_frame,
     read_pid,
     read_rpm,
+    read_rpms,
 )
 from tests.fakes import FakeTransport
 
@@ -81,6 +82,25 @@ def test_read_rpm(response: str, rpm: float) -> None:
 @pytest.mark.parametrize("response", ["NO DATA", "7F0112", "410C", "410D00"])
 def test_read_rpm_unavailable(response: str) -> None:
     assert read_rpm(Elm327(FakeTransport({"010C": response}))) is None
+
+
+@pytest.mark.parametrize(
+    ("response", "rpms"),
+    [
+        ("NO DATA", []),
+        ("410C0000", [0.0]),
+        ("41 0C 1A F8", [1726.0]),
+        ("410C0000\r410C0FA0", [0.0, 1000.0]),  # jedes Steuergerät einzeln
+        ("410C0000\r410C00", [0.0, None]),  # ein Datenbyte zu wenig
+        ("7F010C12\r410C0000", [None, 0.0]),
+        ("410D0000", [None]),
+        ("420C0000", [None]),
+    ],
+)
+def test_read_rpms(response: str, rpms: list[float | None]) -> None:
+    transport = FakeTransport({"010C": response})
+    assert read_rpms(Elm327(transport)) == rpms
+    assert transport.sent == ["010C"]
 
 
 def test_read_pid_garbage_is_elm_error() -> None:

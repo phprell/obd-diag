@@ -18,7 +18,7 @@ from obd_diag.protocol.obd import (
     NegativeResponseError,
     clear_dtcs,
     read_freeze_frame,
-    read_rpm,
+    read_rpms,
 )
 from obd_diag.services.diagnostics import (
     LOW_VOLTAGE,
@@ -62,8 +62,9 @@ def check_preconditions(elm: Elm327) -> None:
     """Wirft ``ClearRefused``, wenn nicht gelöscht werden darf (z. B. Motor läuft).
 
     Geprüft wird: das Steuergerät antwortet (Zündung an), die Bordspannung ist nicht
-    zu niedrig und die Drehzahl ist 0 (Motor aus). Ist die Drehzahl nicht lesbar, wird
-    vorsichtshalber ebenfalls abgelehnt. Sendet nur lesende Befehle.
+    zu niedrig und die Drehzahl ist 0 (Motor aus), bei mehreren antwortenden
+    Steuergeräten bei jedem. Ist eine Drehzahl nicht lesbar, wird vorsichtshalber
+    ebenfalls abgelehnt. Sendet nur lesende Befehle.
     """
     try:
         answer = elm.query("0100")
@@ -85,14 +86,16 @@ def check_preconditions(elm: Elm327) -> None:
             "Batterie laden oder Ladegerät anschließen."
         )
 
+    # Jedes Steuergerät, das antwortet, muss 0 melden (z. B. Motor und Getriebe).
     try:
-        rpm = read_rpm(elm)
+        rpms = read_rpms(elm)
     except ElmError as e:
         raise ClearRefused(f"Drehzahl nicht lesbar ({e}). Motor aus, Zündung an?") from e
-    if rpm is None:
+    if not rpms or None in rpms:
         raise ClearRefused(
             "Drehzahl nicht lesbar, daher wird nicht gelöscht. Motor aus, Zündung an?"
         )
+    rpm = max(r for r in rpms if r is not None)
     if rpm > 0:
         raise ClearRefused(f"Motor läuft ({rpm:.0f} 1/min). Motor abstellen, Zündung an lassen.")
 

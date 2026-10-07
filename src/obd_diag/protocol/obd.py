@@ -185,6 +185,23 @@ def read_rpm(elm: Elm327) -> float | None:
     return decode_rpm(data)
 
 
+def read_rpms(elm: Elm327) -> list[float | None]:
+    """Motordrehzahl je Antwort auf ``010C``, in der Reihenfolge der Antworten.
+
+    Antworten mehrere Steuergeräte (z. B. Motor und Getriebe), steht jedes einzeln
+    darin; ``None`` für eine Antwort, die keine gültige Drehzahl ist (Ablehnung,
+    zu kurz, andere PID). Leer bei ``NO DATA``.
+    """
+    response = elm.query("010C")
+    if response is None:
+        return []
+    rpms: list[float | None] = []
+    for message in _messages("010C", response):
+        valid = len(message) >= 4 and message[0] == 0x41 and message[1] == 0x0C
+        rpms.append(decode_rpm(message[2:]) if valid else None)
+    return rpms
+
+
 # PIDs im Freeze Frame: Schlüssel in ``FreezeFrame.values``, Datenbytes, Umrechnung
 _FREEZE_PIDS: dict[int, tuple[str, int, Callable[[bytes], float]]] = {
     0x04: ("engine_load_pct", 1, lambda d: round(d[0] * 100 / 255, 1)),

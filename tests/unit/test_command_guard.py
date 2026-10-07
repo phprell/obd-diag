@@ -15,6 +15,7 @@ aus dem Code abgeschrieben:
 """
 
 import contextlib
+import os
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -179,6 +180,7 @@ def test_any_text_is_either_allowed_or_never_sent(cmd: str) -> None:
         ("read_dtcs 07", lambda e: obd.read_dtcs(e, 0x07, can=True), ["07"]),
         ("read_dtcs 0A", lambda e: obd.read_dtcs(e, 0x0A, can=True), ["0A"]),
         ("read_rpm", obd.read_rpm, ["010C"]),
+        ("read_rpms", obd.read_rpms, ["010C"]),
         ("read_pid", lambda e: obd.read_pid(e, 0x0C), ["010C"]),
         ("read_freeze_frame", obd.read_freeze_frame, FREEZE),
         ("read_readiness", readiness.read_readiness, ["0101"]),
@@ -285,7 +287,14 @@ def test_read_paths_never_write_even_on_broken_answers(broken: dict[str, str], w
 
 SRC = Path(__file__).resolve().parents[2] / "src" / "obd_diag"
 
+# mutmut schreibt den Quelltext für seine Mutanten um; Prüfungen des Quelltexts selbst
+# laufen dort nicht (sie prüfen den Aufbau, nicht das Verhalten).
+source_check = pytest.mark.skipif(
+    "MUTANT_UNDER_TEST" in os.environ, reason="Quelltext von mutmut umgeschrieben"
+)
 
+
+@source_check
 def test_only_elm327_command_writes_to_the_adapter() -> None:
     """Außer ``Elm327.command`` (nach ``_check``) schreibt niemand an einen Transport.
     ``transport/`` selbst reicht nur Bytes weiter (seriell, Mitschnitt)."""

@@ -25,7 +25,7 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
 - `uv sync` – Umgebung; danach Katalog bauen: `uv run python tools/build_dtc_db.py`
   (lädt OBDex-YAML von GitHub, ~9 s; `--source DIR` für einen lokalen Klon)
 - `uv run ruff format . && uv run ruff check . && uv run mypy` (strict)
-- `uv run pytest` – ca. 780 Tests, ~2,5 min (Emulator-Tests sind langsam).
+- `uv run pytest` – ca. 875 Tests, ~2,5 min (Emulator-Tests sind langsam).
   **Exit-Code von pytest selbst prüfen**, nicht durch `| tail` (hat schon einmal
   einen roten Stand auf main gebracht).
 - `uv run python tools/emulator.py [--stored P0420,P0300 --pending P0171 --engine-off]`
@@ -82,9 +82,14 @@ und dunkles Design.
 - **Löschen** (`clear_codes`): Scan → Vorbedingungen (`0100` antwortet, Spannung
   ≥ 11,8 V falls lesbar, Drehzahl genau 0, unlesbare Drehzahl = Abbruch) → Freeze
   Frame → Sicherung (`~/.local/share/obd-diag/backups`, nie überschreiben) → erst dann
-  Mode 04 → Kontroll-Scan. Tests prüfen für jeden Fehlerfall, dass `04` nie gesendet
-  wird; Mutationstests von `clear.py`: 124/124 erkannt. Diese Garantien nicht
-  aufweichen.
+  Mode 04 → Kontroll-Scan. Drehzahl: jedes auf `010C` antwortende Steuergerät muss
+  gültig 0 melden (`read_rpms`). Tests prüfen für jeden Fehlerfall, dass `04` nie
+  gesendet wird; `tests/unit/test_write_safety.py` zusätzlich per Hypothesis mit
+  beliebig kaputten Antworten (04 höchstens einmal, nur bei erfüllten Vorbedingungen
+  und vorhandener Sicherung) und per AST, wer `allow_clear`/`clear_dtcs`/`clear_codes`/
+  `.transport`/pyserial erreichen darf. Mutationstests von `clear.py`: alle erkannt;
+  in `elm327.py`/`obd.py` überleben beim Löschpfad nur Text- und Timeout-Mutanten.
+  Diese Garantien nicht aufweichen.
 - **CAN-Zählbyte**: Bei CAN wird das Zählbyte nach dem Mode-Byte immer gelesen,
   Füllbytes danach werden ignoriert, zu wenige Codes → `ValueError`. Ob CAN, kommt
   aus `ATDPN` (unklar → nachfragen, notfalls Header-Form per `ATH1 0100`). Legacy-

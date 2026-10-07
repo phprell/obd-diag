@@ -69,10 +69,12 @@ markers = ["integration: braucht den ELM327-Emulator"]
 qt_api = "pyside6"
 
 [tool.mutmut]
-# Mutationstests für Löschen, Ablage, Scan, Sitzung, Katalog und Mitschnitt; nur die
+# Mutationstests für Freigabeliste, Löschen, Ablage, Scan, Sitzung, Katalog und Mitschnitt; nur die
 # schnellen Unit-Tests. Aufruf: uv run --with mutmut mutmut run (siehe README).
 source_paths = ["src/obd_diag"]
 only_mutate = [
+    "src/obd_diag/protocol/elm327.py",
+    "src/obd_diag/protocol/obd.py",
     "src/obd_diag/services/clear.py",
     "src/obd_diag/services/storage.py",
     "src/obd_diag/services/diagnostics.py",
