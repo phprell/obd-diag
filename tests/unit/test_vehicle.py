@@ -268,7 +268,20 @@ def test_unknown_wmi_still_gives_country() -> None:
         ("YS", "Schweden"),
         ("ZA", "Italien"),
         ("NM", "Türkei"),
-        ("7A", "Neuseeland"),
+        ("6Y", "Neuseeland"),
+        ("61", "Neuseeland"),
+        ("6A", "Australien"),
+        ("7A", "USA"),
+        ("VX", "Frankreich"),  # z. B. VXK Opel seit PSA
+        ("XA", "Bulgarien"),
+        ("XF", "Griechenland"),
+        ("UA", "Spanien"),
+        ("T7", "Niederlande"),
+        ("EA", "Russland"),
+        ("KS", "Jordanien"),
+        ("ZS", "Italien"),
+        ("3X", "Mexiko"),
+        ("84", "Costa Rica"),
         ("93", "Brasilien"),
     ],
 )
@@ -276,7 +289,7 @@ def test_country_regions(prefix: str, country: str) -> None:
     assert wmi.country_for(prefix + "X") == country
 
 
-@pytest.mark.parametrize("prefix", ["", "W", "IA", "ZS", "Ö1", "C1"])
+@pytest.mark.parametrize("prefix", ["", "W", "IA", "ZW", "Ö1", "C1", "BW"])
 def test_country_unknown(prefix: str) -> None:
     assert wmi.country_for(prefix) is None
 
@@ -288,6 +301,73 @@ def test_wmi_table_is_large_and_well_formed() -> None:
         assert not set(code) & set("IOQ"), code
         assert name
         assert wmi.country_for(code) is not None, code
+
+
+# Bekannte WMIs, geprüft 2026-10-07 gegen Wikipedia (en/de) und NHTSA vPIC DecodeWMI
+PINNED_WMIS = {
+    "WVW": "Volkswagen",
+    "WAU": "Audi",
+    "WBA": "BMW",
+    "WDB": "Mercedes-Benz",
+    "WDD": "Mercedes-Benz",
+    "W1K": "Mercedes-Benz",
+    "WP0": "Porsche",
+    "W0L": "Opel",
+    "VXK": "Opel (seit Übernahme durch PSA)",
+    "TMB": "Škoda",
+    "VSS": "SEAT",
+    "VF1": "Renault",
+    "VF3": "Peugeot",
+    "VF7": "Citroën",
+    "ZFA": "Fiat",
+    "ZFF": "Ferrari",
+    "SAJ": "Jaguar",
+    "SAL": "Land Rover",
+    "YV1": "Volvo",
+    "JTD": "Toyota",
+    "JHM": "Honda",
+    "KMH": "Hyundai",
+    "KNA": "Kia",
+    "KMT": "Genesis",
+    "1G1": "Chevrolet",
+    "1FA": "Ford",
+    "5YJ": "Tesla",
+    "7SA": "Tesla",
+    "LRW": "Tesla (Shanghai)",
+    "WUA": "Audi Sport (quattro GmbH)",
+}
+
+
+@pytest.mark.parametrize(("code", "name"), PINNED_WMIS.items())
+def test_pinned_wmis(code: str, name: str) -> None:
+    assert wmi.manufacturer_for(code) == name
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "VF9",  # Kleinserienhersteller: Stelle 3 = 9, Hersteller erst aus Stelle 12-14
+        "VWV",  # in keiner Quelle bestätigt
+    ],
+)
+def test_unverified_or_shared_wmis_removed(code: str) -> None:
+    assert wmi.manufacturer_for(code) is None
+
+
+def test_no_small_manufacturer_wmis() -> None:
+    assert not [code for code in wmi.MANUFACTURERS if code[2] == "9"]
+
+
+@pytest.mark.parametrize(
+    ("code", "name"),
+    [
+        ("ZFC", "Ram 1200 (Fiat)"),  # vorher fälschlich „Fiat (Nutzfahrzeuge)“
+        ("SFD", "Dennis"),  # vorher „Alexander Dennis“
+        ("WV3", "Volkswagen Nutzfahrzeuge (Fahrgestell)"),  # vPIC: Incomplete Vehicle
+    ],
+)
+def test_corrected_wmis(code: str, name: str) -> None:
+    assert wmi.manufacturer_for(code) == name
 
 
 # --- Modelljahr ---
@@ -329,6 +409,96 @@ def test_model_year_elsewhere_most_recent(code: str, today: date, year: int) -> 
 @pytest.mark.parametrize("code", ["0", "Z", "U"])
 def test_model_year_unknown_code(code: str) -> None:
     assert model_year(f"WVWZZZ1KZ{code}W123456") is None
+
+
+TODAY = date(2026, 10, 7)
+
+
+@pytest.mark.parametrize(
+    ("code", "years"),
+    [
+        ("T", (2026, 1996)),
+        ("V", (2027, 1997)),
+        ("A", (2010, 1980)),
+        ("S", (2025, 1995)),
+        ("W", (1998,)),  # 2028 liegt zu weit in der Zukunft
+        ("6", (2006,)),  # 1976: vor den Modelljahr-Codes
+        ("Y", (2000,)),
+    ],
+)
+def test_model_years_elsewhere(code: str, years: tuple[int, ...]) -> None:
+    assert vehicle.model_years(f"WVWZZZ1KZ{code}W123456", today=TODAY) == years
+
+
+def test_model_years_north_america_unambiguous() -> None:
+    assert vehicle.model_years("5YJ3E1EA0KF000000", today=TODAY) == (2019,)
+    assert vehicle.model_years("1M8GDM9AXKP042788", today=TODAY) == (1989,)
+
+
+@pytest.mark.parametrize(
+    ("protocol", "earliest"),
+    [
+        (None, 1980),
+        ("", 1980),
+        ("ISO 15765-4 (CAN 11/500)", 2000),
+        ("ISO 15765-4 (CAN 29/250)", 2000),
+        ("ISO 9141-2", 1994),
+        ("ISO 14230-4 (KWP FAST)", 1994),
+        ("SAE J1850 PWM", 1994),
+        ("SAE J1939 (CAN 29/250)", 1980),  # Nutzfahrzeuge, keine Einschränkung
+        ("unbekannt", 1980),
+    ],
+)
+def test_earliest_plausible_year(protocol: str | None, earliest: int) -> None:
+    assert vehicle.earliest_plausible_year(protocol) == earliest
+
+
+@pytest.mark.parametrize(
+    ("vin", "protocol", "year", "alternatives"),
+    [
+        ("WVWZZZ1KZTW123456", None, 2026, (1996,)),
+        ("WVWZZZ1KZTW123456", "ISO 9141-2", 2026, (1996,)),  # OBD-II ab ca. 1994
+        ("WVWZZZ1KZTW123456", "ISO 15765-4 (CAN 11/500)", 2026, ()),  # CAN nicht 1996
+        ("WVWZZZ1KZAW123456", None, 2010, (1980,)),
+        ("WVWZZZ1KZAW123456", "ISO 14230-4 (KWP FAST)", 2010, ()),  # 1980 kein OBD-II
+        ("WVWZZZ1KZ6W123456", None, 2006, ()),
+        ("1HGCM82633A004352", None, 2003, ()),  # Nordamerika: Stelle 7 entscheidet
+        ("WVWZZZ1KZ6W12345", None, None, ()),  # ungültig
+    ],
+)
+def test_decode_vin_model_year_alternatives(
+    vin: str, protocol: str | None, year: int | None, alternatives: tuple[int, ...]
+) -> None:
+    info = decode_vin(vin, protocol=protocol, today=TODAY)
+    assert (info.model_year, info.model_year_alternatives) == (year, alternatives)
+
+
+@pytest.mark.parametrize(
+    ("vin", "text"),
+    [
+        ("WVWZZZ1KZTW123456", "2026 oder 1996 (aus Stelle 10, ohne Gewähr)"),
+        ("WVWZZZ1KZ6W123456", "2006 (aus Stelle 10, ohne Gewähr)"),
+        ("WVWZZZ1KZ0W123456", None),
+    ],
+)
+def test_model_year_text(vin: str, text: str | None) -> None:
+    assert vehicle.model_year_text(decode_vin(vin, today=TODAY)) == text
+
+
+@pytest.mark.parametrize(
+    ("vin", "checksum_ok", "text"),
+    [
+        ("1M8GDM9AXKP042788", True, "stimmt"),  # Nordamerika, vorgeschrieben
+        ("1M8GDM9A1KP042788", False, "stimmt nicht"),
+        ("WBA3A5C53CF256551", True, "stimmt"),  # Europa: nicht vorgeschrieben, stimmt aber
+        ("WVWZZZ1KZ6W123456", None, "nicht vorgeschrieben (passt nicht, kein Fehler)"),
+        ("WVWZZZ1KZ6W12345", None, "nicht prüfbar (FIN ungültig)"),
+    ],
+)
+def test_checksum_text(vin: str, checksum_ok: bool | None, text: str) -> None:
+    info = decode_vin(vin)
+    assert info.checksum_ok is checksum_ok
+    assert vehicle.checksum_text(info) == text
 
 
 # --- vPIC ---

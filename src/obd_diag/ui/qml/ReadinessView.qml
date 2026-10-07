@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Readiness (Mode 01, PID 01): AU-bereit ja/nein und Status der einzelnen Monitore.
+// Readiness (Mode 01, PID 01): alle Tests abgeschlossen ja/nein und Status der Monitore.
 Rectangle {
     id: pane
 
@@ -22,8 +22,8 @@ Rectangle {
              : "Nicht verfügbar – Steuergerät hat nicht geantwortet"
         text: pane.vm.busy ? ""
             : !pane.vm.hasResult
-              ? "Nach „Verbinden & Scannen“ steht hier, ob das Fahrzeug für die "
-                + "Abgasuntersuchung (AU) bereit ist."
+              ? "Nach „Verbinden & Scannen“ steht hier, ob alle Eigendiagnosen "
+                + "für das Abgassystem (Readiness) abgeschlossen sind."
               : "Das Steuergerät hat den Readiness-Status (Mode 01, PID 01) nicht gemeldet."
     }
 
@@ -43,7 +43,7 @@ Rectangle {
                 implicitHeight: 1
             }
 
-            // Ergebnis: AU-bereit ja/nein
+            // Ergebnis: alle unterstützten Tests abgeschlossen ja/nein (kein AU-Urteil)
             Card {
                 Layout.fillWidth: true
 
@@ -56,14 +56,15 @@ Rectangle {
                         implicitWidth: 44
                         implicitHeight: 44
                         radius: 22
-                        color: pane.info.ready ? Theme.okBg : Theme.errorBg
-                        border.color: pane.info.ready ? Theme.okBorder : Theme.errorBorder
+                        // offene Tests sind kein Fehler, nur „noch nicht fertig“: Warnfarbe
+                        color: pane.info.ready ? Theme.okBg : Theme.warnBg
+                        border.color: pane.info.ready ? Theme.okBorder : Theme.warnBorder
                         Label {
                             anchors.centerIn: parent
-                            text: pane.info.ready ? "✓" : "✕"
+                            text: pane.info.ready ? "✓" : "!"
                             font.pixelSize: 22
                             font.bold: true
-                            color: pane.info.ready ? Theme.okText : Theme.errorText
+                            color: pane.info.ready ? Theme.okText : Theme.warnText
                         }
                     }
                     ColumnLayout {
@@ -74,7 +75,7 @@ Rectangle {
                             text: pane.info.readyLabel ?? ""
                             font.pixelSize: 22
                             font.bold: true
-                            color: pane.info.ready ? Theme.okText : Theme.errorText
+                            color: pane.info.ready ? Theme.okText : Theme.warnText
                         }
                         Label {
                             objectName: "readinessSummary"
@@ -106,9 +107,11 @@ Rectangle {
                 Label {
                     Layout.fillWidth: true
                     Layout.topMargin: 2
-                    text: "AU-bereit heißt: alle Eigendiagnosen, die das Fahrzeug unterstützt, "
-                          + "sind abgeschlossen. Offene Tests laufen bei normaler Fahrt von selbst; "
-                          + "nach dem Löschen von Fehlercodes dauert das einige Fahrzyklen."
+                    objectName: "readinessNote"
+                    text: "Abgeschlossen heißt: alle Eigendiagnosen, die das Fahrzeug unterstützt, "
+                          + "sind gelaufen. Offene Tests laufen bei normaler Fahrt von selbst; "
+                          + "nach dem Löschen von Fehlercodes dauert das einige Fahrzyklen. "
+                          + (pane.info.auNote ?? "")
                     color: Theme.muted
                     font.pixelSize: 12
                     wrapMode: Text.Wrap

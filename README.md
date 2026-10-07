@@ -163,9 +163,20 @@ obd-diag diagnose --port /dev/ttyUSB0 --online-vin      # FIN zusätzlich bei NH
    Schlägt er fehl, bricht `diagnose` ab.
 2. Readiness (Mode 01 PID 01): MIL, gemeldete Codezahl, Motorart (Otto/Diesel) und je
    Monitor „abgeschlossen“, „nicht abgeschlossen“ oder „nicht unterstützt“, dazu
-   „AU-bereit: ja/nein“ (ja, wenn kein unterstützter Monitor offen ist). Antworten
-   mehrere Steuergeräte, zählt je Monitor der schlechteste Stand, die MIL ist an, wenn
-   ein Steuergerät sie meldet, und die Codezahlen werden addiert.
+   „Alle Tests abgeschlossen: ja/nein“ (ja, wenn kein unterstützter Monitor offen
+   ist). Antworten mehrere Steuergeräte, zählt je Monitor der schlechteste Stand, die
+   MIL ist an, wenn ein Steuergerät sie meldet, und die Codezahlen werden addiert.
+
+   Das ist bewusst **keine AU-Bewertung** (früher „AU-bereit“): Seit der AU-Richtlinie
+   von 2017 (Verkehrsblatt 19/2017, Leitfaden 5.01, ab 01.01.2018) gehört zur AU bei
+   allen OBD-Fahrzeugen neben der OBD-Prüfung wieder die Endrohrmessung; offene
+   Monitore führen nicht pauschal zum Nichtbestehen. Eine allgemeine, zitierfähige
+   Liste, welche offenen Monitore toleriert werden, gibt es nicht – das hängt vom
+   Fahrzeug und vom Prüfablauf des AU-Geräts ab. Quellen: Hella Gutmann,
+   [Informationen zum Leitfaden 5.01](https://www.hella-gutmann.com/fileadmin/user_upload/Download-Dateien/X_Downloads/downloads_instructions/downloads_manuals_quickstarts/DE/BD0059_HG4_Info_Leitfaden_5-01.pdf)
+   (12/2017); zur Regelung ab 2010 (Readiness nicht gesetzt → Abgasmessung statt
+   Mangel) die [Zusammenfassung bei werner-austen.de](http://www.werner-austen.de/plaintext/informationen/regelung-abgasuntersuchung-112010/index.php). In JSON heißt das Feld
+   `all_complete`; `ready` bleibt als alter Name erhalten.
 3. Freeze Frame (Mode 02, Frame 00): auslösender Code, Last, Kühlmitteltemperatur,
    Drehzahl, Geschwindigkeit. Ohne gespeicherten Code ist er leer und erscheint als
    „keiner gespeichert“.
@@ -190,13 +201,19 @@ Die Dekodierung ist offline:
 - gültig: 17 Zeichen, nur 0-9 und A-Z ohne I, O, Q;
 - Prüfziffer (Stelle 9, ISO 3779 / 49 CFR 565): Pflicht nur in Nordamerika (FIN
   beginnt mit 1-5) und China (`L`), dort „stimmt“/„stimmt nicht“; sonst „stimmt“, wenn
-  sie zufällig oder freiwillig passt, und „nicht vorgeschrieben“ andernfalls;
+  sie zufällig oder freiwillig passt, und „nicht vorgeschrieben (passt nicht, kein
+  Fehler)“ andernfalls;
 - Hersteller aus einer Tabelle häufiger Herstellerkennungen (WMI, Stellen 1-3,
-  `src/obd_diag/data/wmi.py`), Land aus den ISO-3780-Regionsbereichen der Stellen 1-2;
+  `src/obd_diag/data/wmi.py`, geprüft gegen Wikipedia und NHTSA vPIC, Quellen dort),
+  Land aus den ISO-3780-Regionsbereichen der Stellen 1-2 (ISO-Übersicht 2021);
 - Modelljahr aus Stelle 10. Der Code wiederholt sich alle 30 Jahre; in Nordamerika
   entscheidet Stelle 7 (Ziffer: 1980-2009, Buchstabe: 2010-2039), sonst gilt das
-  jüngste Jahr bis höchstens ein Jahr in der Zukunft. Europäische Hersteller nutzen
-  Stelle 10 nicht alle als Modelljahr, die Angabe ist dort ohne Gewähr.
+  jüngste Jahr bis höchstens ein Jahr in der Zukunft als beste Schätzung, und das 30
+  Jahre ältere wird mitgenannt: „2026 oder 1996 (aus Stelle 10, ohne Gewähr)“. Kommt
+  die FIN aus dem Fahrzeug, fallen ältere Jahre weg, die zum OBD-Protokoll nicht
+  passen (OBD-II-Protokolle: nicht vor 1994; CAN nach ISO 15765-4: nicht vor 2000).
+  Europäische Hersteller nutzen Stelle 10 nicht alle als Modelljahr, die Angabe ist
+  dort ohne Gewähr. In JSON steht das zweite Jahr in `model_year_alternatives`.
 
 **Datenschutz:** Die FIN bleibt auf dem Rechner. Nur mit `--online-vin` wird sie an die
 NHTSA-Datenbank [vPIC](https://vpic.nhtsa.dot.gov/api/) (USA) geschickt; übernommen
@@ -227,9 +244,9 @@ obd-diag export ~/.local/share/obd-diag/sessions/session-20261007-143205.json \
     --pdf bericht.pdf --csv fehlercodes.csv
 ```
 
-- **PDF** (DIN A4, Deutsch): Fahrzeug (FIN, Hersteller, Land, Modelljahr),
+- **PDF** (DIN A4, Deutsch): Fahrzeug (FIN, Prüfziffer, Hersteller, Land, Modelljahr),
   Adapter, Protokoll und Bordspannung (mit Warnung bei niedriger Spannung),
-  Kurzübersicht, Readiness mit „AU-bereit: ja/nein“, Fehlercodes nach Art mit
+  Kurzübersicht, Readiness mit „Alle Tests abgeschlossen: ja/nein“, Fehlercodes nach Art mit
   Erklärung, Ursachen samt Wahrscheinlichkeit, Symptomen und Kostenrahmen, Freeze
   Frame. Fehlende Teile erscheinen als „nicht verfügbar“. Erzeugt mit
   [ReportLab](https://www.reportlab.com/) (BSD-Lizenz). Schrift: DejaVu Sans,
@@ -260,7 +277,7 @@ Fahrzeug (Hersteller und FIN), darunter vier Reiter:
 - **Fehlercodes**: links die Codes nach gespeichert, ausstehend und permanent
   gruppiert, rechts die Erklärung des gewählten Codes mit Ursachen, Symptomen und
   Kostenrahmen.
-- **Readiness**: „AU-bereit“ (grün) oder „Nicht AU-bereit“ (rot) mit den offenen
+- **Readiness**: „Alle Tests abgeschlossen“ (grün) oder „Nicht alle Tests abgeschlossen“ (gelb) mit den offenen
   Tests, Motorkontrollleuchte, und jeder Monitor als abgeschlossen, nicht
   abgeschlossen oder nicht unterstützt.
 - **Freeze Frame**: auslösender Code und die Messwerte beim Speichern des Codes

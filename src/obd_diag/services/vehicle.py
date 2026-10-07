@@ -13,10 +13,25 @@ Regeln der Dekodierung (``decode_vin``):
   kein Fehler.
 - Modelljahr (Stelle 10): der Code wiederholt sich alle 30 Jahre (``A`` = 1980 oder
   2010). In Nordamerika entscheidet Stelle 7 (49 CFR 565.15: Ziffer = 1980-2009,
-  Buchstabe = 2010-2039). Sonst gilt das jüngste Jahr, das nicht mehr als ein Jahr in
-  der Zukunft liegt (Modelljahre beginnen vor dem Kalenderjahr). Außerhalb
-  Nordamerikas ist Stelle 10 nicht überall als Modelljahr genutzt, die Angabe ist dort
-  ein Hinweis, keine Gewissheit.
+  Buchstabe = 2010-2039); das gilt dort für Pkw, MPV und Lkw bis 10.000 lb, nicht
+  für schwerere Fahrzeuge, Busse und Motorräder, wird hier aber für alle FIN mit
+  ``1``-``5`` angewandt. Sonst gilt als beste Schätzung (``model_year``) das jüngste
+  Jahr, das nicht mehr als ein Jahr in der Zukunft liegt (Modelljahre beginnen vor dem
+  Kalenderjahr); das 30 Jahre ältere Jahr steht dann in ``model_year_alternatives``,
+  sofern es nicht vor 1980 liegt (Beginn der Codes) und zum Protokoll passt (unten).
+  Außerhalb Nordamerikas ist Stelle 10 nicht überall als Modelljahr genutzt, die
+  Angabe ist dort ein Hinweis, keine Gewissheit.
+- Plausibilität über das OBD-Protokoll (``decode_vin(vin, protocol=...)``, nur wenn die
+  FIN aus dem Fahrzeug gelesen wurde): Spricht das Fahrzeug ein OBD-II-Protokoll
+  (SAE J1850, ISO 9141-2, ISO 14230-4, ISO 15765-4), sind Modelljahre vor 1994
+  unplausibel (die OBD-II-Spezifikation entstand um 1994, Pflicht in den USA ab
+  Modelljahr 1996, EOBD in der EU ab 2001 Benziner/2004 Diesel). Bei CAN nach
+  ISO 15765-4 sind Jahre vor 2000 unplausibel (CAN war für OBD-II in den USA erst ab
+  Modelljahr 2003 zulässig; 2000 lässt Spielraum). Quelle: Wikipedia „On-board
+  diagnostics“ (https://en.wikipedia.org/wiki/On-board_diagnostics, abgerufen
+  2026-10-07). Solche Jahre fallen aus den Alternativen; die beste Schätzung bleibt
+  unverändert, sie ist ohnehin das jüngere Jahr. SAE J1939 (Nutzfahrzeuge) und
+  unbekannte Protokolle schränken nichts ein.
 """
 
 import json
@@ -42,12 +57,37 @@ log = logging.getLogger(__name__)
 class VinInfo:
     vin: str
     valid: bool  # 17 Zeichen, erlaubte Zeichen (kein I, O, Q)
-    checksum_ok: bool | None  # Prüfziffer Stelle 9; None, wo sie nicht vorgeschrieben ist
+    # Prüfziffer Stelle 9: True stimmt; False stimmt nicht, obwohl vorgeschrieben; None
+    # stimmt nicht, ist hier aber nicht vorgeschrieben (oder FIN ungültig)
+    checksum_ok: bool | None
     wmi: str
     manufacturer: str | None = None
     country: str | None = None
-    model_year: int | None = None  # Stelle 10; mehrdeutig im 30-Jahres-Zyklus
+    model_year: int | None = None  # Stelle 10, beste Schätzung im 30-Jahres-Zyklus
     online: dict[str, str] = field(default_factory=dict)  # Zusatzangaben aus vPIC
+    # ebenfalls mögliche Modelljahre (30 Jahre früher), leer wenn eindeutig
+    model_year_alternatives: tuple[int, ...] = ()
+
+
+def model_year_text(info: VinInfo) -> str | None:
+    """z. B. „2026 oder 1996 (aus Stelle 10, ohne Gewähr)“; ``None`` ohne Modelljahr."""
+    if info.model_year is None:
+        return None
+    years = " oder ".join(str(y) for y in (info.model_year, *info.model_year_alternatives))
+    return f"{years} (aus Stelle 10, ohne Gewähr)"
+
+
+def checksum_text(info: VinInfo) -> str:
+    """Prüfziffer als Text, gleich in Kommandozeile, Bericht und Oberfläche.
+
+    „stimmt“ auch dort, wo sie nicht vorgeschrieben ist; „nicht vorgeschrieben“ nur,
+    wenn sie nicht stimmt, das aber kein Fehler ist (z. B. in Europa).
+    """
+    if not info.valid:
+        return "nicht prüfbar (FIN ungültig)"
+    if info.checksum_ok is None:
+        return "nicht vorgeschrieben (passt nicht, kein Fehler)"
+    return "stimmt" if info.checksum_ok else "stimmt nicht"
 
 
 # --- FIN lesen ---
@@ -169,25 +209,68 @@ def _checksum(vin: str) -> bool | None:
     return True if matches else None
 
 
-def model_year(vin: str, *, today: date | None = None) -> int | None:
-    """Modelljahr aus Stelle 10 einer gültigen FIN, ``None`` bei unbekanntem Code."""
+_FIRST_CODE_YEAR = 1980  # erster Zyklus der Modelljahr-Codes
+_OBD2_EARLIEST = 1994  # OBD-II-Spezifikation (CARB) um 1994, Pflicht ab Modelljahr 1996
+_CAN_EARLIEST = 2000  # CAN (ISO 15765-4) für OBD-II in den USA erst ab Modelljahr 2003
+_OBD2_PROTOCOLS = ("J1850", "9141", "14230", "15765")
+
+
+def earliest_plausible_year(protocol: str | None) -> int:
+    """Frühestes plausibles Modelljahr für ein Fahrzeug, das dieses Protokoll spricht.
+
+    ``protocol`` ist die Bezeichnung laut Adapter (``ATDP``, z. B. „ISO 15765-4 (CAN
+    11/500)“); ``None``, leer, SAE J1939 oder unbekannt schränken nichts ein.
+    """
+    if not protocol:
+        return _FIRST_CODE_YEAR
+    if "15765" in protocol:
+        return _CAN_EARLIEST
+    if any(name in protocol for name in _OBD2_PROTOCOLS):
+        return _OBD2_EARLIEST
+    return _FIRST_CODE_YEAR
+
+
+def model_years(
+    vin: str, *, today: date | None = None, earliest: int = _FIRST_CODE_YEAR
+) -> tuple[int, ...]:
+    """Mögliche Modelljahre aus Stelle 10, beste Schätzung zuerst; ``()`` bei unbekanntem Code.
+
+    Nordamerika: nur das Jahr nach Stelle 7. Sonst das jüngste Jahr bis ein Jahr in der
+    Zukunft und, falls nicht vor ``earliest``, das 30 Jahre ältere.
+    """
     pos = _YEAR_CODES.find(vin[9])
     if pos < 0:
-        return None
+        return ()
     if _north_america(vin):
-        return 1980 + pos + (0 if vin[6].isdigit() else 30)
+        return (_FIRST_CODE_YEAR + pos + (0 if vin[6].isdigit() else 30),)
     limit = (today or date.today()).year + 1
-    year = 1980 + pos
+    year = _FIRST_CODE_YEAR + pos
     while year + 30 <= limit:
         year += 30
-    return year
+    older = year - 30
+    lowest = max(earliest, _FIRST_CODE_YEAR)
+    return (year, older) if older >= lowest else (year,)
 
 
-def decode_vin(vin: str) -> VinInfo:
-    """Rein offline: Gültigkeit, Prüfziffer, WMI-Hersteller/Land, Modelljahr."""
+def model_year(vin: str, *, today: date | None = None) -> int | None:
+    """Modelljahr (beste Schätzung) aus Stelle 10 einer gültigen FIN, ``None`` bei
+    unbekanntem Code."""
+    years = model_years(vin, today=today)
+    return years[0] if years else None
+
+
+def decode_vin(vin: str, *, protocol: str | None = None, today: date | None = None) -> VinInfo:
+    """Rein offline: Gültigkeit, Prüfziffer, WMI-Hersteller/Land, Modelljahr.
+
+    ``protocol``: OBD-Protokoll des Fahrzeugs, aus dem die FIN stammt (Bezeichnung
+    laut Adapter); schließt unplausible ältere Modelljahre aus (siehe Moduldoku).
+    """
     vin = vin.strip().upper()
     wmi = vin[:3]
     valid = bool(_VALID.match(vin))
+    years = (
+        model_years(vin, today=today, earliest=earliest_plausible_year(protocol)) if valid else ()
+    )
     return VinInfo(
         vin=vin,
         valid=valid,
@@ -195,7 +278,8 @@ def decode_vin(vin: str) -> VinInfo:
         wmi=wmi,
         manufacturer=manufacturer_for(wmi) if len(wmi) == 3 else None,
         country=country_for(wmi),
-        model_year=model_year(vin) if valid else None,
+        model_year=years[0] if years else None,
+        model_year_alternatives=years[1:],
     )
 
 
