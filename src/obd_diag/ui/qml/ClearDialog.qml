@@ -68,12 +68,13 @@ Dialog {
 
                 Repeater {
                     model: [
-                        "Zündung an, Motor aus. Bei laufendem Motor wird nicht gelöscht.",
+                        "Zündung an, Motor aus, Bordspannung mindestens 11,8 V. Sonst wird nicht gelöscht.",
                         "Codes und Freeze Frame werden vorher gesichert.",
                         "Die Bereitschaftstests (Readiness) werden zurückgesetzt: Die "
                         + "Abgasuntersuchung ist erst nach einigen Fahrzyklen wieder möglich.",
                         "Permanente Codes löscht das Steuergerät erst selbst, wenn der Fehler "
-                        + "behoben ist.",
+                        + "behoben ist" + (dialog.vm.permanentCount > 0
+                                           ? " (hier: " + dialog.vm.permanentCount + ")." : "."),
                         "Löschen behebt keinen Defekt. Kehrt ein Code zurück, besteht die "
                         + "Ursache weiter."
                     ]

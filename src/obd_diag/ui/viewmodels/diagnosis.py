@@ -6,8 +6,8 @@ from typing import Any
 from PySide6.QtCore import Property, QObject, Signal, Slot
 
 from obd_diag.protocol.elm327 import ElmError
-from obd_diag.services.clear import ClearRefused, ClearResult
-from obd_diag.services.diagnostics import DtcKind, ScanResult
+from obd_diag.services.clear import ClearRefused, ClearResult, clearable_codes
+from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
 from obd_diag.transport import TransportError
 from obd_diag.ui.backend import Backend
 from obd_diag.ui.jobs import JobRunner
@@ -136,7 +136,8 @@ class DiagnosisViewModel(QObject):
 
     @Property(bool, notify=stateChanged)
     def canClear(self) -> bool:
-        return not self._busy and self._codes.rowCount() > 0
+        # Nur gespeicherte und ausstehende Codes lassen sich löschen (Mode 04)
+        return not self._busy and bool(self._clearable())
 
     @Property(str, notify=stateChanged)
     def errorMessage(self) -> str:
@@ -152,8 +153,16 @@ class DiagnosisViewModel(QObject):
 
     @Property(list, notify=stateChanged)
     def uniqueCodes(self) -> list[str]:
-        """Die Codes für den Bestätigungsdialog, jeder nur einmal."""
-        return list(dict.fromkeys(c.code for c in self._codes.codes))
+        """Die zu löschenden Codes für den Bestätigungsdialog, jeder nur einmal."""
+        return list(dict.fromkeys(c.code for c in self._clearable()))
+
+    @Property(int, notify=stateChanged)
+    def permanentCount(self) -> int:
+        """Permanente Codes; sie bleiben nach dem Löschen stehen."""
+        return sum(c.kind is DtcKind.PERMANENT for c in self._codes.codes)
+
+    def _clearable(self) -> list[DiagnosticCode]:
+        return clearable_codes(self._result) if self._result is not None else []
 
     def _get_selected_index(self) -> int:
         return self._selected

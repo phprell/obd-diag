@@ -84,7 +84,9 @@ def test_codes_are_grouped_by_kind_and_first_is_selected(fake_backend: FakeBacke
     ]
     assert vm.property("selectedIndex") == 0
     assert vm.property("selected")["code"] == "P0420"
-    assert vm.property("uniqueCodes") == ["P0420", "P1234", "U0100"]
+    # Permanente Codes löscht Mode 04 nicht, sie stehen nicht im Dialog
+    assert vm.property("uniqueCodes") == ["P0420", "P1234"]
+    assert vm.property("permanentCount") == 1
 
 
 def test_selection_and_detail_without_catalog_entry(
@@ -253,3 +255,14 @@ def test_clear_transport_error_goes_to_banner(fake_backend: FakeBackend) -> None
     fake_backend.clear_error = TransportError("keine Antwort von /dev/ttyUSB0 nach 5.0 s")
     vm.clearCodes()
     assert vm.property("errorMessage").startswith("Verbindung fehlgeschlagen: keine Antwort")
+
+
+def test_only_permanent_codes_cannot_be_cleared() -> None:
+    result = ScanResult("ELM327", "CAN", 12.5, [DiagnosticCode("P0420", DtcKind.PERMANENT)])
+    backend = FakeBackend(result)
+    vm = _vm(backend)
+    vm.connectAndScan("/dev/ttyUSB0", 38400)
+    assert vm.property("hasCodes")
+    assert not vm.property("canClear")
+    vm.clearCodes()
+    assert [c[0] for c in backend.calls] == ["scan"]
