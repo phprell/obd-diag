@@ -2,11 +2,13 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Reiter über dem Hauptbereich: Fehlercodes, Readiness, Freeze Frame, Fahrzeug.
+// Reiter über dem Hauptbereich: Fehlercodes, Readiness, Freeze Frame, Fahrzeug,
+// Live-Daten.
 TabBar {
     id: bar
 
     required property var vm
+    required property var live  // LiveViewModel
 
     spacing: 0
     background: Item {}
@@ -85,5 +87,10 @@ TabBar {
     ViewTab {
         objectName: "tabVehicle"
         text: "Fahrzeug"
+    }
+    ViewTab {
+        objectName: "tabLive"
+        text: "Live-Daten"
+        dot: bar.live.running ? Theme.okDot : "transparent"  // Abfrage läuft
     }
 }

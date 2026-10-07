@@ -8,6 +8,9 @@ ToolBar {
 
     required property var vm
     readonly property alias portText: portBox.editText
+    readonly property int baud: baudBox.currentValue ?? 38400
+    // Live-Daten belegen den Adapter: dann nichts umstellen und nicht scannen
+    readonly property bool locked: vm.busy || vm.blocked
 
     // Fusion setzt die Abstände einzeln (SafeArea), daher alle vier angeben.
     topPadding: Theme.gap
@@ -37,7 +40,7 @@ ToolBar {
             objectName: "portBox"
             Layout.preferredWidth: 300
             editable: true
-            enabled: !bar.vm.busy
+            enabled: !bar.locked
             model: bar.vm.ports
             textRole: "device"
             Accessible.name: "Serieller Port"
@@ -74,7 +77,7 @@ ToolBar {
         }
         Button {
             text: "Suchen"
-            enabled: !bar.vm.busy
+            enabled: !bar.locked
             ToolTip.visible: hovered
             ToolTip.delay: 600
             ToolTip.text: "Angeschlossene Adapter neu suchen"
@@ -92,7 +95,7 @@ ToolBar {
             id: baudBox
             objectName: "baudBox"
             Layout.preferredWidth: 110
-            enabled: !bar.vm.busy
+            enabled: !bar.locked
             model: [38400, 9600, 115200, 230400, 500000]
             Accessible.name: "Baudrate"
         }
@@ -104,7 +107,7 @@ ToolBar {
         Button {
             objectName: "scanButton"
             text: bar.vm.hasResult && !bar.vm.viewOnly ? "Erneut scannen" : "Verbinden && Scannen"
-            enabled: !bar.vm.busy
+            enabled: !bar.locked
             palette.button: Theme.accentButton
             palette.buttonText: "white"
             font.bold: true
@@ -131,6 +134,8 @@ ToolBar {
     }
 
     function scan() {
+        if (locked)
+            return
         vm.connectAndScan(portBox.editText, baudBox.currentValue)
     }
 }

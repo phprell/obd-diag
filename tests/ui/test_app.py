@@ -79,7 +79,7 @@ def test_main_reports_broken_qml(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr(window, "load_main_window", lambda engine, vm: None)
+    monkeypatch.setattr(window, "load_main_window", lambda engine, vm, **kwargs: None)
     assert app.main([]) == 1
     assert capsys.readouterr().err == "Fehler: Die Oberfläche ließ sich nicht laden.\n"
 

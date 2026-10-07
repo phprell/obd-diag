@@ -18,6 +18,7 @@ from PySide6.QtQuickControls2 import QQuickStyle
 
 from obd_diag.ui.theme import DesignController
 from obd_diag.ui.viewmodels.diagnosis import SETTINGS_APP, SETTINGS_ORG, DiagnosisViewModel
+from obd_diag.ui.viewmodels.live import LiveViewModel
 
 QML_DIR = Path(__file__).with_name("qml")
 MAIN_QML = QML_DIR / "Main.qml"
@@ -77,13 +78,18 @@ def load_main_window(
     engine: QQmlApplicationEngine,
     vm: DiagnosisViewModel,
     design: DesignController | None = None,
+    live: LiveViewModel | None = None,
 ) -> None:
     # Als Kontext-Eigenschaft steht das View-Model schon bereit, bevor die ersten
     # Bindungen ausgewertet werden; Main.qml reicht es an die Teile weiter.
     helper = DialogHelper(engine)
     if design is None:
         design = create_design(engine)
+    if live is None:
+        # Teilt Backend und Runner der Diagnose: ein Thread, nie zwei Jobs am Adapter
+        live = LiveViewModel(vm.backend, vm.runner, vm, engine)
     engine.rootContext().setContextProperty("diagnosis", vm)
+    engine.rootContext().setContextProperty("live", live)
     engine.rootContext().setContextProperty("dialogHelper", helper)
     engine.rootContext().setContextProperty("designController", design)
     engine.load(QUrl.fromLocalFile(str(MAIN_QML)))

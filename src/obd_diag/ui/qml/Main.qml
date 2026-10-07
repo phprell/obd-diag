@@ -8,6 +8,8 @@ ApplicationWindow {
 
     // DiagnosisViewModel, von Python als Kontext-Eigenschaft gesetzt (ui/window.py)
     readonly property var vm: diagnosis
+    // LiveViewModel (Reiter „Live-Daten“), ebenfalls aus ui/window.py
+    readonly property var liveVm: live
     // DesignController (ui/theme.py): hell, dunkel oder wie das System
     readonly property var design: designController
 
@@ -73,7 +75,7 @@ ApplicationWindow {
         id: openAction
         text: "Sitzung öffnen …"
         shortcut: StandardKey.Open
-        enabled: !window.vm.busy
+        enabled: !window.vm.busy && !window.liveVm.running
         onTriggered: openDialog.open()
     }
     Action {
@@ -177,6 +179,7 @@ ApplicationWindow {
     }
 
     header: ConnectionBar {
+        id: connectionBar
         vm: window.vm
     }
 
@@ -201,6 +204,7 @@ ApplicationWindow {
                     id: tabs
                     objectName: "viewTabs"
                     vm: window.vm
+                    live: window.liveVm
                     Layout.alignment: Qt.AlignBottom
                 }
                 Item {
@@ -321,6 +325,11 @@ ApplicationWindow {
             VehicleView {
                 vm: window.vm
             }
+            LiveView {
+                live: window.liveVm
+                port: connectionBar.portText
+                baud: connectionBar.baud
+            }
         }
     }
 
@@ -349,6 +358,10 @@ ApplicationWindow {
                 textFormat: Text.StyledText
                 color: Theme.muted
                 text: {
+                    if (window.liveVm.running)
+                        return window.liveVm.stopping ? "Live-Daten: stoppe …"
+                             : "Live-Daten laufen" + (window.liveVm.connectionText
+                                                      ? "  ·  " + window.liveVm.connectionText : "")
                     if (window.vm.busy)
                         return window.vm.busyText
                     if (!window.vm.hasResult)
