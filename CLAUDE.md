@@ -71,6 +71,14 @@ und dunkles Design.
   `qml/`. `cli.py` – alle Befehle.
 
 ## Wichtige Entscheidungen und Fallstricke
+- **Freigabeliste** (`protocol/elm327.py`): `Elm327.command` ist der einzige Weg zum
+  Adapter und lässt nur `AT_COMMANDS` und lesende Anfragen (`01xx`, `02xx[00]`, `03`,
+  `07`, `0A`, `0902`) durch; `04` nur in `with elm.allow_clear()` (nur `clear_dtcs`).
+  Sonst `ForbiddenCommandError` (bewusst kein `ElmError`), gesendet wird nichts. Neue
+  Befehle dort bewusst freigeben. `tests/unit/test_command_guard.py` prüft Liste,
+  Byte-Format, exakte Befehlsfolge jeder Funktion (gegen J1979/Datenblatt geprüft)
+  und dass sonst niemand an den Transport schreibt; das Format prüfen zusätzlich
+  `FakeTransport` und eine Fixture für den seriellen Transport in allen Tests.
 - **Löschen** (`clear_codes`): Scan → Vorbedingungen (`0100` antwortet, Spannung
   ≥ 11,8 V falls lesbar, Drehzahl genau 0, unlesbare Drehzahl = Abbruch) → Freeze
   Frame → Sicherung (`~/.local/share/obd-diag/backups`, nie überschreiben) → erst dann

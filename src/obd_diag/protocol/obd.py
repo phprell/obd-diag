@@ -131,7 +131,8 @@ def clear_dtcs(elm: Elm327, *, pending_timeout: float = CLEAR_PENDING_TIMEOUT) -
     Log-Warnung). Mode 04 wird nie wiederholt.
     """
     deadline = time.monotonic() + pending_timeout
-    response = elm.command("04")
+    with elm.allow_clear():
+        response = elm.command("04")
     confirmed, pending = _clear_answers("04", response)
     while pending:
         remaining = deadline - time.monotonic()

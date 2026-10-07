@@ -21,3 +21,19 @@ def _emulator_dtc_count_byte(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         return
     patch_dtc_count_byte(monkeypatch, obd_message)
     yield
+
+
+@pytest.fixture(autouse=True)
+def _serial_wire_format(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Auch über den echten seriellen Transport (Emulator-Tests) geht nur, was dem
+    ELM327-Befehlsformat entspricht."""
+    from obd_diag.transport.serial import SerialTransport
+    from tests.fakes import WIRE_FORMAT
+
+    original = SerialTransport.write
+
+    def checked(self: SerialTransport, data: bytes) -> None:
+        assert WIRE_FORMAT.fullmatch(data), f"falsches Befehlsformat: {data!r}"
+        original(self, data)
+
+    monkeypatch.setattr(SerialTransport, "write", checked)

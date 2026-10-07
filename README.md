@@ -124,6 +124,11 @@ USB-Kennung) und gebundene Bluetooth-Geräte (`/dev/rfcomm*`, z. B. nach
 
 ### Fehlercodes löschen
 
+Das Tool kann technisch nur freigegebene Befehle senden: Adapter-Befehle (`AT…`) und
+lesende OBD-Anfragen (`01xx`, `02xx00`, `03`, `07`, `0A`, `0902`). `04` (Löschen) ist
+nur innerhalb des Lösch-Ablaufs freigeschaltet; alles andere wird vor dem Senden
+abgewiesen (`ForbiddenCommandError`).
+
 ```sh
 obd-diag clear --port /dev/ttyUSB0          # zeigt die Codes und fragt nach
 obd-diag clear --port /dev/ttyUSB0 --yes    # ohne Rückfrage

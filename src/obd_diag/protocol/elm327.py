@@ -1,6 +1,8 @@
 """Minimaler ELM327-Treiber: Befehl senden, Antwort bis zum Prompt lesen."""
 
 import re
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 from obd_diag.protocol.headers import HeaderFormat, header_format
@@ -38,6 +40,33 @@ _CAN_PROTOCOLS = frozenset("6789ABC")
 _KNOWN_PROTOCOLS = frozenset("123456789ABC")
 
 _WHITESPACE = re.compile(r"\s+")
+
+# --- Freigabeliste: was überhaupt an Adapter und Fahrzeug gesendet werden darf ---
+
+# Adapter-Befehle (ELM327-Datenblatt); sie stellen nur den Adapter ein und senden
+# nichts ans Fahrzeug. ATSP0 = Protokoll automatisch suchen.
+AT_COMMANDS = frozenset(
+    {"ATZ", "ATE0", "ATL0", "ATS0", "ATH0", "ATH1", "ATSP0", "ATRV", "ATDP", "ATDPN"}
+)
+# Lesende OBD-Anfragen nach SAE J1979: Mode 01 (aktuelle Daten), Mode 02 (Freeze
+# Frame, mit oder ohne Frame-Nummer 00), Mode 03/07/0A (Fehlercodes), Mode 09 PID 02
+# (FIN). Nur Großbuchstaben, keine Leerzeichen.
+_READ_REQUEST = re.compile(r"01[0-9A-F]{2}|02[0-9A-F]{2}(00)?|03|07|0A|0902")
+# Der einzige schreibende Befehl; nur innerhalb von ``Elm327.allow_clear()``.
+CLEAR_COMMAND = "04"
+
+
+class ForbiddenCommandError(Exception):
+    """Ein Befehl außerhalb der Freigabeliste sollte gesendet werden.
+
+    Das ist ein Programmierfehler, kein Adapterproblem: bewusst kein ``ElmError``,
+    damit ihn kein Aufrufer als „Angabe nicht verfügbar“ abfängt. Gesendet wurde nichts.
+    """
+
+
+def is_read_only(cmd: str) -> bool:
+    """True für Adapter-Befehle und lesende OBD-Anfragen der Freigabeliste."""
+    return cmd in AT_COMMANDS or _READ_REQUEST.fullmatch(cmd) is not None
 
 
 def _same_command(line: str, cmd: str) -> bool:
@@ -77,6 +106,25 @@ class Elm327:
     def __init__(self, transport: Transport, timeout: float = 5.0) -> None:
         self.transport = transport
         self.timeout = timeout
+        self._clear_allowed = False
+
+    @contextmanager
+    def allow_clear(self) -> Iterator[None]:
+        """Erlaubt Mode 04 für die Dauer des ``with``-Blocks (nur ``obd.clear_dtcs``)."""
+        self._clear_allowed = True
+        try:
+            yield
+        finally:
+            self._clear_allowed = False
+
+    def _check(self, cmd: str) -> None:
+        if is_read_only(cmd):
+            return
+        if cmd == CLEAR_COMMAND:
+            if self._clear_allowed:
+                return
+            raise ForbiddenCommandError("04 (Fehlercodes löschen) nur über clear_dtcs")
+        raise ForbiddenCommandError(f"nicht freigegebener Befehl {cmd!r}")
 
     def initialize(self) -> str:
         """Setzt den Adapter zurück und schaltet Echo, Zeilenvorschub und Leerzeichen ab.
@@ -97,6 +145,7 @@ class Elm327:
         (``SEARCHING...``, ``BUS INIT: OK``), Nullbytes und Zeilen aus reinem
         Zeichenmüll (manche Klone senden nach ``ATZ`` z. B. ein Byte ``FC``).
         """
+        self._check(cmd)
         self.transport.write(cmd.encode("ascii") + b"\r")
         return self._read(cmd, self.timeout)
 

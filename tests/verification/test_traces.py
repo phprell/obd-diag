@@ -20,6 +20,17 @@ from obd_diag.protocol.obd import read_dtcs, read_pid, read_rpm
 from obd_diag.services.vehicle import read_vin
 from tests.verification.helpers import RawTransport
 
+
+class _ForeignLogElm(Elm327):
+    """Die Mitschnitte stammen aus anderen Programmen und enthalten Befehle, die
+    obd-diag selbst nie sendet (``ATI``, ``0904``, ``018B1`` mit Antwortzahl). Für das
+    Nachspielen der Antwortbereinigung wird die Freigabeliste hier ausdrücklich
+    umgangen; sie selbst prüft ``tests/unit/test_command_guard.py``."""
+
+    def _check(self, cmd: str) -> None:
+        pass
+
+
 TRACES = Path(__file__).parent.parent / "fixtures" / "traces"
 _ERRORS: dict[str, type[ElmError]] = {
     "ElmError": ElmError,
@@ -54,7 +65,7 @@ def _compact(hex_text: str) -> bytes:
 def _check(trace: dict[str, Any], raw: bytes) -> None:
     cmd: str = trace["command"]
     transport = RawTransport({cmd: raw})
-    elm = Elm327(transport)
+    elm = _ForeignLogElm(transport)
     if "error" in trace:
         with pytest.raises(_ERRORS[trace["error"]]):
             elm.command(cmd)
@@ -129,7 +140,7 @@ def test_double_prompt_leaves_stale_prompt() -> None:
     nächsten Befehl gelesen. Die Transport-Schicht verwirft alte Eingaben nicht.
     """
     transport = RawTransport({"0100": b"41 00 BE 3F A8 13 \rSTOPPED\r\r>\r>", "ATDPN": b"A6\r\r>"})
-    elm = Elm327(transport)
+    elm = _ForeignLogElm(transport)
     with pytest.raises(ElmError, match="STOPPED"):
         elm.command("0100")
     assert elm.command("ATDPN") == ""  # gehört eigentlich noch zu 0100

@@ -1,3 +1,4 @@
+import re
 from collections.abc import Mapping, Sequence
 from types import TracebackType
 from typing import Self
@@ -43,6 +44,9 @@ CAN_CAR_FULL = {
 CLEARED = {"03": "4300", "07": "4700", "020200": "4202000000"}
 
 
+WIRE_FORMAT = re.compile(rb"[0-9A-Z]+\r")
+
+
 class FakeTransport:
     """Spielt vorbereitete Adapter-Antworten ab und merkt sich gesendete Befehle.
 
@@ -80,6 +84,8 @@ class FakeTransport:
         pass
 
     def write(self, data: bytes) -> None:
+        # Jeder Befehl auf der Leitung: ASCII-Großbuchstaben/Ziffern und genau ein CR.
+        assert WIRE_FORMAT.fullmatch(data), f"falsches Befehlsformat: {data!r}"
         cmd = data.decode("ascii").strip()
         self.sent.append(cmd)
         if cmd.upper() in ("ATH0", "ATH1"):

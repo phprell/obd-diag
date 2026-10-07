@@ -134,14 +134,15 @@ def test_echo_variants_are_stripped(cmd: str, echo: str) -> None:
 
 def test_echo_only_before_answer() -> None:
     # Eine Datenzeile, die zufällig dem Befehl gleicht, bleibt erhalten.
-    transport = RawTransport({"4300": b"4300\r4300\r\r>"})
-    assert Elm327(transport).command("4300") == "4300"
+    transport = RawTransport({"0100": b"0100\r0100\r\r>"})
+    assert Elm327(transport).command("0100") == "0100"
 
 
 def test_read_more_reads_without_writing() -> None:
     transport = RawTransport({"04": b"7F 04 78\r\r>44\r\r>"})
     elm = Elm327(transport)
-    assert elm.command("04") == "7F 04 78"
+    with elm.allow_clear():
+        assert elm.command("04") == "7F 04 78"
     assert elm.read_more("04", 1.0) == "44"
     assert transport.sent == ["04"]
     with pytest.raises(TransportTimeout):
