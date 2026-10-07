@@ -17,6 +17,9 @@ Roadmap-Schritt 4 (in Arbeit): Diagnosesitzungen speichern, `obd-diag export` al
 PDF-Bericht und CSV, `obd-diag diagnose` (Fehlercodes, Readiness, Freeze Frame, FIN in
 einem Durchgang) und `obd-diag vin`; die Oberfläche zeigt Readiness, Freeze Frame und
 Fahrzeug und kann Sitzungen speichern, öffnen und exportieren.
+Dazu robustere Adapter-Kommunikation: vermischte mehrteilige Antworten mehrerer
+Steuergeräte, Freeze Frame ohne Frame-Nummer, verzögerte Bestätigung beim Löschen,
+unklare Protokollnummer und abweichendes Echo (siehe „Protokoll-Details“).
 
 ## Entwicklung
 
@@ -327,6 +330,36 @@ Fehler. In der Oberfläche schaltet „Optionen → Adapter-Mitschnitt aufzeichn
 für jede Aktion ein (eine Datei je Aktion). Der Mitschnitt enthält ggf. die FIN und
 bleibt lokal. `ReplayTransport` in `transport/trace.py` spielt ihn ohne Adapter wieder
 ab, z. B. als Test-Fixture.
+
+### Protokoll-Details
+
+Der Adapter läuft ohne Header (`ATH0`), ohne Leerzeichen und ohne Echo. Abweichungen
+echter Adapter und Steuergeräte fängt das Tool so ab:
+
+- **Vermischte mehrteilige Antworten:** Senden zwei Steuergeräte gleichzeitig
+  mehrteilige CAN-Nachrichten, mischt der ELM327 ohne Header deren Frames (Datenblatt
+  ELM327DS S. 45). Erkennt das Zerlegen das (Lücken in der Frame-Nummerierung,
+  unvollständige Nachricht), wird die lesende Anfrage (Mode 03/07/0A, FIN `0902`) einmal
+  mit `ATH1` wiederholt, die Frames werden je CAN-ID nach ISO 15765-2 zusammengesetzt
+  (11 Bit `7E8 …`, 29 Bit `18 DA F1 10 …`), danach wieder `ATH0`
+  (`protocol/headers.py`). Die Codes stehen dann nach Steuergeräte-Adresse geordnet
+  (7E8 vor 7E9), sonst in Eingangsreihenfolge. Ältere Protokolle mit Header
+  (`48 6B 10 … <Prüfbyte>`) werden ebenfalls zerlegt; das Prüfbyte wird entfernt, aber
+  nicht geprüft. Dort tritt das Mischen nicht auf (eine Zeile je Nachricht).
+- **Freeze Frame:** angefragt nach SAE J1979 mit Frame-Nummer (`020C00`). Antwortet
+  das Fahrzeug auf `020200` mit `NO DATA` oder `7F 02 12`, wird `0202` ohne
+  Frame-Nummer versucht (wie python-OBD) und bei Erfolg der ganze Freeze Frame so
+  gelesen. Die Schlüssel in `raw` (Sicherung, Sitzung) zeigen das benutzte Format.
+- **Löschen mit `7F 04 78`** (Steuergerät meldet „Antwort folgt“): es wird ohne
+  erneutes Senden bis zu 10 s auf `44` oder eine Ablehnung gewartet. Kommt nichts,
+  gilt das Löschen als nicht bestätigt (Hinweis auf `obd-diag scan`, Sicherung bleibt).
+  Mode 04 wird nie wiederholt.
+- **Protokollnummer unklar** (`ATDPN` meldet `0`, `?` o. Ä.): `ATDPN` wird erneut
+  gefragt; bleibt sie unklar, wird `0100` einmal mit Headern gesendet und an deren
+  Form erkannt, ob CAN 11 Bit, CAN 29 Bit oder ein älteres Protokoll vorliegt. Die
+  Protokollangabe trägt dann den Zusatz „laut Headern …“.
+- **Echo:** eine erste Zeile, die dem Befehl ohne Rücksicht auf Groß-/Kleinschreibung
+  und Leerzeichen gleicht (`at dpn` für `ATDPN`), wird entfernt.
 
 ## Struktur
 

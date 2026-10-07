@@ -161,3 +161,86 @@ def adapter_output(
     if echo is not None:
         out.insert(0, echo)
     return ("".join(line + newline for line in out) + newline + ">").encode("ascii")
+
+
+# --- Antworten mit Headern (ATH1), ISO 15765-2 / ELM327DS S. 44-46 ---
+
+
+@dataclass(frozen=True)
+class Frame:
+    """Ein CAN-Frame eines Steuergeräts, wie der ELM327 ihn mit und ohne Header zeigt."""
+
+    can_id: str  # "7E8" oder "18DAF110"
+    data: tuple[int, ...]  # CAN-Datenfeld mit PCI-Byte(s), ggf. aufgefüllt
+    off_lines: tuple[str, ...]  # Darstellung ohne Header (ATH0, CAF1)
+
+
+def isotp_frames(
+    can_id: str, payload: Sequence[int], spaces: bool, pad: int, pad_single: bool = False
+) -> list[Frame]:
+    """Zerlegt ``payload`` in ISO-TP-Frames: SF ``0L``, FF ``1L LL`` + 6, CF ``2N`` + 7.
+
+    Mit ``pad_single`` hat auch ein Einzel-Frame 8 Bytes (DLC 8, aufgefüllt), sonst nur
+    so viele wie nötig; Folge-Frames sind immer aufgefüllt.
+    Ohne Header zeigt der ELM327 einen Einzel-Frame nur mit seinen Nutzdaten, einen
+    ersten Frame als Längenzeile ``LLL`` plus ``0:`` und Folge-Frames als ``N:``.
+    """
+    sep = ": " if spaces else ":"
+    if len(payload) <= 7:
+        data = (len(payload), *payload)
+        if pad_single:
+            data += (pad,) * (8 - len(data))
+        return [Frame(can_id, data, (_hex(payload, spaces),))]
+    frames = [
+        Frame(
+            can_id,
+            (0x10 | len(payload) >> 8, len(payload) & 0xFF, *payload[:6]),
+            (f"{len(payload):03X}", "0" + sep + _hex(payload[:6], spaces)),
+        )
+    ]
+    rest = list(payload[6:])
+    seq = 1
+    while rest:
+        chunk, rest = rest[:7], rest[7:]
+        chunk += [pad] * (7 - len(chunk))
+        frames.append(
+            Frame(can_id, (0x20 | seq % 16, *chunk), (f"{seq % 16:X}{sep}{_hex(chunk, spaces)}",))
+        )
+        seq += 1
+    return frames
+
+
+def header_line(frame: Frame, spaces: bool) -> str:
+    """Zeile mit Header: ``7E8 10 0A 43 …`` bzw. ``18 DA F1 10 10 0A …`` (ATH1)."""
+    eleven = len(frame.can_id) == 3
+    head = frame.can_id if eleven else _hex(bytes.fromhex(frame.can_id), spaces)
+    return head + (" " if spaces else "") + _hex(frame.data, spaces)
+
+
+def mix_frames(ecus: Sequence[Sequence[Frame]], rng: random.Random) -> list[Frame]:
+    """Mischt die Frames mehrerer Steuergeräte; je Steuergerät bleibt die Reihenfolge."""
+    queues = [list(frames) for frames in ecus]
+    out: list[Frame] = []
+    while any(queues):
+        queue = rng.choice([q for q in queues if q])
+        out.append(queue.pop(0))
+    return out
+
+
+class HeaderRawTransport(RawTransport):
+    """Wie ``RawTransport``; nach ``ATH1`` (bis ``ATH0``) gelten ``headers_on``."""
+
+    def __init__(self, responses: Mapping[str, bytes], headers_on: Mapping[str, bytes]) -> None:
+        super().__init__(responses)
+        self.headers_on = headers_on
+        self.headers = False
+
+    def write(self, data: bytes) -> None:
+        cmd = data.decode("ascii").strip()
+        if cmd in ("ATH0", "ATH1"):
+            self.headers = cmd == "ATH1"
+        if self.headers and cmd in self.headers_on:
+            self.sent.append(cmd)
+            self._buffer += self.headers_on[cmd]
+        else:
+            super().write(data)

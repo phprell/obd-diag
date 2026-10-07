@@ -33,7 +33,8 @@ from urllib.request import urlopen
 
 from obd_diag.data.wmi import country_for, manufacturer_for
 from obd_diag.protocol.elm327 import Elm327, ElmError
-from obd_diag.protocol.frames import split_messages
+from obd_diag.protocol.frames import FrameSequenceError, split_messages
+from obd_diag.protocol.obd import read_with_headers
 
 log = logging.getLogger(__name__)
 
@@ -106,10 +107,16 @@ def parse_vin_response(response: str) -> str | None:
     """FIN aus der Antwort auf ``0902`` (CAN mehrteilig oder ältere Protokolle).
 
     ``None``, wenn die Antwort keine 17-stellige FIN enthält (z. B. nur Füllbytes oder
-    abgelehnt); ``ValueError`` bei Zeilen, die keine Hex-Daten sind, und bei
-    vermischten Frames mehrerer Steuergeräte (siehe ``split_messages``).
+    abgelehnt); ``ValueError`` bei Zeilen, die keine Hex-Daten sind, und
+    ``FrameSequenceError`` (Unterklasse) bei vermischten Frames mehrerer Steuergeräte
+    (siehe ``split_messages``).
     """
-    messages = [m for m in split_messages(response) if m[:2] == b"\x49\x02" and len(m) > 2]
+    return vin_from_messages(split_messages(response))
+
+
+def vin_from_messages(messages: list[bytes]) -> str | None:
+    """Wie ``parse_vin_response``, aber für bereits zerlegte Nachrichten."""
+    messages = [m for m in messages if m[:2] == b"\x49\x02" and len(m) > 2]
     if not messages:
         return None
     if any(len(m) > 3 + _LEGACY_DATA for m in messages):
@@ -121,13 +128,17 @@ def read_vin(elm: Elm327) -> str | None:
     """``None``, wenn das Fahrzeug Mode 09 PID 02 nicht unterstützt (vor ca. 2005).
 
     Ebenso ``None`` (mit Log-Eintrag), wenn die Antwort keine gültig aussehende FIN
-    enthält; ``ElmError``, wenn sie sich gar nicht zerlegen lässt.
+    enthält; ``ElmError``, wenn sie sich gar nicht zerlegen lässt. Senden mehrere
+    Steuergeräte ihre FIN gleichzeitig mehrteilig (ohne Header nicht zuzuordnen), wird
+    die Anfrage einmal mit Headern (``ATH1``) wiederholt.
     """
     response = elm.query("0902")
     if response is None:
         return None
     try:
         vin = parse_vin_response(response)
+    except FrameSequenceError as e:
+        vin = vin_from_messages([m.data for m in read_with_headers(elm, "0902", e)])
     except ValueError as e:
         raise ElmError(f"0902: {e}") from e
     if vin is None:

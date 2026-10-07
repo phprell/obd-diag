@@ -19,10 +19,18 @@ def parse_dtc_response(response: str, mode: int = 0x03, *, can: bool = False) ->
     Zählbyte (SAE J1979); Bytes nach den gezählten Codes sind Füllbytes. Ältere
     Protokolle füllen stattdessen mit ``00 00`` auf. Negative Antworten (``7F``)
     einzelner Steuergeräte werden übersprungen.
+
+    ``ValueError`` bei unerwarteten Antworten; ``FrameSequenceError`` (Unterklasse),
+    wenn Frames mehrerer Steuergeräte vermischt sind (dann mit Headern neu lesen).
     """
+    return parse_dtc_messages(split_messages(response), mode, can=can)
+
+
+def parse_dtc_messages(messages: list[bytes], mode: int = 0x03, *, can: bool = False) -> list[str]:
+    """Wie ``parse_dtc_response``, aber für bereits zerlegte Nachrichten (je Steuergerät)."""
     sid = mode + 0x40
     codes: list[str] = []
-    for message in split_messages(response):
+    for message in messages:
         if len(message) >= 2 and message[0] == 0x7F and message[1] == mode:
             continue
         if not message or message[0] != sid:

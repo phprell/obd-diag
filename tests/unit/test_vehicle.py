@@ -120,6 +120,23 @@ def test_two_ecus_with_different_vins_takes_first() -> None:
     assert parse_vin_response(f"{first}\r{second}") == "WP0ZZZ99ZTS390000"
 
 
+def test_two_ecus_mixed_vin_reread_with_headers() -> None:
+    # Ohne Header: zweite Längenzeile, bevor die erste Nachricht vollständig ist
+    mixed = (
+        "014\r0:4902014D4154\r014\r0:490201575030\r1:34303330393642\r1:5A5A5A39395A54"
+        "\r2:4E4C3030303030\r2:53333930303030"
+    )
+    with_headers = (
+        "7E9 10 14 49 02 01 4D 41 54\r7E8 10 14 49 02 01 57 50 30\r"
+        "7E9 21 34 30 33 30 39 36 42\r7E8 21 5A 5A 5A 39 39 5A 54\r"
+        "7E9 22 4E 4C 30 30 30 30 30\r7E8 22 53 33 39 30 30 30 30"
+    )
+    transport = FakeTransport({"0902": mixed}, headers_on={"0902": with_headers})
+    # 7E8 (Motorsteuergerät) zuerst, obwohl 7E9 zuerst eintraf
+    assert read_vin(Elm327(transport)) == "WP0ZZZ99ZTS390000"
+    assert transport.sent == ["0902", "ATH1", "0902", "ATH0"]
+
+
 def test_lowercase_ascii_is_uppercased() -> None:
     payload = b"\x49\x02\x01" + b"wvwzzz1kz6w123456"
     hexed = payload.hex()

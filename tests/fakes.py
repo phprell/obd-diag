@@ -1,8 +1,9 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from types import TracebackType
 from typing import Self
 
 from obd_diag.data.dtc_catalog import DtcInfo
+from obd_diag.transport import TransportTimeout
 
 # Antworten eines CAN-Fahrzeugs (ATH0, ATS0) mit drei gespeicherten Codes, davon
 # einer zusätzlich ausstehend; Mode 0A ohne Codes.
@@ -46,17 +47,31 @@ class FakeTransport:
     """Spielt vorbereitete Adapter-Antworten ab und merkt sich gesendete Befehle.
 
     Unbekannte Befehle beantwortet der Fake mit ``OK``. Sobald ``04`` mit ``44``
-    bestätigt ist, gelten zusätzlich die Antworten aus ``after_clear``.
+    bestätigt ist, gelten zusätzlich die Antworten aus ``after_clear``. Nach ``ATH1``
+    (bis ``ATH0``) gelten zuerst die Antworten aus ``headers_on``. ``later`` liefert je
+    Befehl weitere Antworten, die ohne erneutes Senden gelesen werden
+    (``Elm327.read_more``); ist nichts mehr da, wirft ``read_until``
+    ``TransportTimeout``.
     """
 
     def __init__(
-        self, responses: Mapping[str, str], after_clear: Mapping[str, str] | None = None
+        self,
+        responses: Mapping[str, str],
+        after_clear: Mapping[str, str] | None = None,
+        *,
+        headers_on: Mapping[str, str] | None = None,
+        later: Mapping[str, Sequence[str]] | None = None,
     ) -> None:
         self.responses = responses
         self.after_clear = after_clear or {}
+        self.headers_on = headers_on or {}
+        self.later = later or {}
+        self.headers = False
         self.cleared = False
         self.sent: list[str] = []
+        self.reads = 0
         self._pending = b""
+        self._queue: list[bytes] = []
 
     def open(self) -> None:
         pass
@@ -67,15 +82,27 @@ class FakeTransport:
     def write(self, data: bytes) -> None:
         cmd = data.decode("ascii").strip()
         self.sent.append(cmd)
-        if self.cleared and cmd in self.after_clear:
+        if cmd.upper() in ("ATH0", "ATH1"):
+            self.headers = cmd.upper() == "ATH1"
+        if self.headers and cmd in self.headers_on:
+            response = self.headers_on[cmd]
+        elif self.cleared and cmd in self.after_clear:
             response = self.after_clear[cmd]
         else:
             response = self.responses.get(cmd, "OK")
-        if cmd == "04" and response.replace(" ", "").startswith("44"):
+        self._queue = [f"{r}\r\r>".encode("ascii") for r in self.later.get(cmd, ())]
+        if cmd == "04" and any(
+            r.replace(" ", "").startswith("44") for r in (response, *self.later.get(cmd, ()))
+        ):
             self.cleared = True
         self._pending = f"{response}\r\r>".encode("ascii")
 
     def read_until(self, terminator: bytes, timeout: float) -> bytes:
+        self.reads += 1
+        if not self._pending and self._queue:
+            self._pending = self._queue.pop(0)
+        if not self._pending:
+            raise TransportTimeout(f"keine Antwort nach {timeout} s")
         data, self._pending = self._pending, b""
         return data
 
