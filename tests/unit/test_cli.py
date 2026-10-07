@@ -1,3 +1,4 @@
+import io
 import json
 from pathlib import Path
 
@@ -6,9 +7,17 @@ import pytest
 from obd_diag import cli
 from obd_diag.cli import main
 from obd_diag.data.dtc_catalog import DtcCatalog
+from obd_diag.services import vehicle
 from obd_diag.services.session import save_session
 from obd_diag.transport.discovery import PortInfo
-from tests.fakes import CAN_CAR, CAN_CAR_ENGINE_OFF, CLEARED, FakeCatalog, FakeTransport
+from tests.fakes import (
+    CAN_CAR,
+    CAN_CAR_ENGINE_OFF,
+    CAN_CAR_FULL,
+    CLEARED,
+    FakeCatalog,
+    FakeTransport,
+)
 from tests.samples import full_session
 
 
@@ -257,3 +266,192 @@ def test_export_rejects_missing_or_foreign_file(
     assert err.startswith("Fehler: ")
     assert "Traceback" not in err
     assert not (tmp_path / "x.pdf").exists()
+
+
+# --- diagnose ---
+
+
+@pytest.fixture
+def full_car(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[FakeTransport]:
+    """Vollständig antwortendes Fahrzeug; Sitzungen und Cache landen unter ``tmp_path``."""
+    transports: list[FakeTransport] = []
+
+    def open_port(port: str, baud: int) -> FakeTransport:
+        transports.append(FakeTransport(dict(CAN_CAR_FULL)))
+        return transports[-1]
+
+    monkeypatch.setattr(cli, "SerialTransport", open_port)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    _use_catalog(monkeypatch, FakeCatalog({"P0133": "Lambdasonde reagiert zu langsam"}))
+
+    def no_network(*args: object, **kwargs: object) -> None:
+        raise AssertionError("Netzwerkzugriff ohne --online-vin")
+
+    monkeypatch.setattr(vehicle, "urlopen", no_network)
+    return transports
+
+
+def test_diagnose_table(
+    full_car: list[FakeTransport], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["diagnose"]) == 0
+    out, err = capsys.readouterr()
+    assert err == ""
+    assert out.startswith(
+        "Fahrzeug:\n"
+        "  FIN:        WVWZZZ1KZ6W123456\n"
+        "  Prüfziffer: nicht vorgeschrieben\n"
+        "  Hersteller: Volkswagen\n"
+        "  Land:       Deutschland\n"
+        "  Modelljahr: 2006 (aus Stelle 10, ohne Gewähr)\n"
+        "\nAdapter:      ELM327 v1.5\n"
+    )
+    assert "Gespeichert:\n  P0133  Lambdasonde reagiert zu langsam\n" in out
+    assert (
+        "Readiness (Otto-Motor):\n  Kontrollleuchte (MIL): an\n  Gemeldete Fehlercodes: 3\n" in out
+    )
+    assert "  Katalysator:               nicht abgeschlossen\n" in out
+    assert "  Katalysatorheizung:        nicht unterstützt\n" in out
+    assert "  Tankentlüftung:            abgeschlossen\n" in out
+    assert "  AU-bereit: nein\n" in out
+    assert out.endswith(
+        "Freeze Frame (ausgelöst durch P0133):\n"
+        "  Kühlmitteltemperatur:  75 °C\n"
+        "  Drehzahl:              1726 1/min\n"
+    )
+    assert "04" not in full_car[0].sent
+    assert not (tmp_path / "data").exists()  # ohne --save wird nichts gespeichert
+
+
+def test_diagnose_json_and_save(
+    full_car: list[FakeTransport], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["diagnose", "--json", "--save"]) == 0
+    out, err = capsys.readouterr()
+    data = json.loads(out)  # stdout bleibt reines JSON
+    assert data["format"] == "obd-diag-session"
+    assert data["vehicle"]["vin"] == "WVWZZZ1KZ6W123456"
+    assert data["readiness"]["ready"] is False
+    assert data["freeze_frame"]["dtc"] == "P0133"
+    (saved,) = (tmp_path / "data" / "obd-diag" / "sessions").iterdir()
+    assert err == f"Sitzung gespeichert: {saved}\n"
+    assert json.loads(saved.read_text(encoding="utf-8")) == data
+
+
+def test_diagnose_without_optional_parts(
+    full_car: list[FakeTransport],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    missing = dict(CAN_CAR_FULL)
+    missing.update(dict.fromkeys(["0101", "0902", "020200", "020500", "020C00"], "NO DATA"))
+    monkeypatch.setattr(cli, "SerialTransport", lambda port, baud: FakeTransport(missing))
+    assert main(["diagnose"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("Fahrzeug:\n  FIN nicht verfügbar")
+    assert "Readiness: nicht verfügbar (PID 01 nicht beantwortet).\n" in out
+    assert out.endswith("Freeze Frame: keiner gespeichert.\n")
+
+
+def test_diagnose_pdf_and_csv(
+    full_car: list[FakeTransport], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pdf, csv_path = tmp_path / "bericht.pdf", tmp_path / "codes.csv"
+    assert main(["diagnose", "--pdf", str(pdf), "--csv", str(csv_path)]) == 0
+    err = capsys.readouterr().err
+    assert err == f"PDF-Bericht: {pdf}\nCSV: {csv_path}\n"
+    assert pdf.read_bytes().startswith(b"%PDF")
+    assert "WVWZZZ1KZ6W123456" in csv_path.read_text(encoding="utf-8-sig")
+
+
+def test_diagnose_export_error(
+    full_car: list[FakeTransport], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    target = tmp_path / "fehlt" / "bericht.csv"
+    assert main(["diagnose", "--csv", str(target)]) == 1
+    assert capsys.readouterr().err.startswith("Fehler: ")
+
+
+def test_diagnose_online_vin(
+    full_car: list[FakeTransport],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    body = {"Results": [{"Model": "Golf", "EngineCylinders": "4", "BodyClass": ""}]}
+    urls: list[str] = []
+
+    def fake_urlopen(url: str, timeout: float) -> io.BytesIO:
+        urls.append(url)
+        return io.BytesIO(json.dumps(body).encode())
+
+    monkeypatch.setattr(vehicle, "urlopen", fake_urlopen)
+    assert main(["diagnose", "--online-vin"]) == 0
+    out = capsys.readouterr().out
+    assert urls == [vehicle.VPIC_URL.format(vin="WVWZZZ1KZ6W123456")]
+    assert "  Modell:     Golf\n  Zylinder:   4\n" in out
+    assert "Karosserie" not in out
+
+
+def test_diagnose_scan_error(
+    full_car: list[FakeTransport],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    broken = dict(CAN_CAR_FULL, **{"0100": "SEARCHING...\rUNABLE TO CONNECT"})
+    monkeypatch.setattr(cli, "SerialTransport", lambda port, baud: FakeTransport(broken))
+    assert main(["diagnose", "--save"]) == 1
+    assert capsys.readouterr().err.endswith("Fehler: 0100: UNABLE TO CONNECT\n")
+    assert not (tmp_path / "data").exists()
+
+
+# --- vin ---
+
+
+def test_vin_from_car(full_car: list[FakeTransport], capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["vin"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("Fahrzeug:\n  FIN:        WVWZZZ1KZ6W123456\n")
+    assert "  Hersteller: Volkswagen\n" in out
+    assert full_car[0].sent[0] == "ATZ"
+    assert "0902" in full_car[0].sent
+
+
+def test_vin_offline_argument(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["vin", "1M8GDM9AXKP042788", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data == {
+        "vin": "1M8GDM9AXKP042788",
+        "valid": True,
+        "checksum_ok": True,
+        "wmi": "1M8",
+        "manufacturer": "Motor Coach Industries",
+        "country": "USA",
+        "model_year": 1989,
+        "online": {},
+    }
+
+
+@pytest.mark.parametrize(
+    ("vin", "line"),
+    [
+        ("1M8GDM9A1KP042788", "  Prüfziffer: stimmt nicht\n"),
+        ("1M8GDM9AXKP042788", "  Prüfziffer: stimmt\n"),
+        ("WVWZZZ1KZ6W12345", "  Hinweis:    FIN ungültig (Länge oder Zeichen)\n"),
+    ],
+)
+def test_vin_checksum_lines(vin: str, line: str, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["vin", vin]) == 0
+    assert line in capsys.readouterr().out
+
+
+def test_vin_not_supported(
+    full_car: list[FakeTransport],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    old = dict(CAN_CAR_FULL, **{"0902": "NO DATA"})
+    monkeypatch.setattr(cli, "SerialTransport", lambda port, baud: FakeTransport(old))
+    assert main(["vin"]) == 1
+    assert "keine FIN" in capsys.readouterr().err

@@ -100,7 +100,7 @@ Rectangle {
                 Label {
                     Layout.fillWidth: true
                     text: "Hersteller und Land stammen aus den ersten drei Stellen (WMI), das "
-                          + "Modelljahr aus Stelle 10; es wiederholt sich alle 30 Jahre."
+                          + "Modelljahr aus Stelle 10; außerhalb Nordamerikas ist es nicht eindeutig."
                     color: Theme.muted
                     font.pixelSize: 12
                     wrapMode: Text.Wrap

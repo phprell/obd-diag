@@ -15,31 +15,7 @@ from obd_diag.export.report import FREEZE_LABELS, MONITOR_STATE_LABELS  # wie im
 from obd_diag.protocol.obd import FreezeFrame
 from obd_diag.services.diagnostics import DiagnosticCode
 from obd_diag.services.readiness import Monitor, MonitorState, ReadinessStatus
-from obd_diag.services.vehicle import VinInfo
-
-# Häufige Felder der NHTSA-vPIC-Antwort auf Deutsch; unbekannte bleiben, wie sie sind.
-VPIC_LABELS = {
-    "Make": "Marke",
-    "Manufacturer": "Hersteller (vPIC)",
-    "Model": "Modell",
-    "ModelYear": "Modelljahr (vPIC)",
-    "Series": "Baureihe",
-    "Trim": "Ausstattung",
-    "BodyClass": "Karosserie",
-    "VehicleType": "Fahrzeugart",
-    "Doors": "Türen",
-    "DisplacementL": "Hubraum (l)",
-    "DisplacementCC": "Hubraum (cm³)",
-    "EngineCylinders": "Zylinder",
-    "EngineHP": "Leistung (PS, US)",
-    "EngineKW": "Leistung (kW)",
-    "EngineModel": "Motor",
-    "FuelTypePrimary": "Kraftstoff",
-    "TransmissionStyle": "Getriebe",
-    "DriveType": "Antrieb",
-    "PlantCountry": "Werk (Land)",
-    "PlantCity": "Werk (Ort)",
-}
+from obd_diag.services.vehicle import VPIC_FIELDS, VinInfo
 
 
 def number_text(value: float, decimals: int = 0) -> str:
@@ -175,7 +151,11 @@ def vehicle_entry(vin: VinInfo | None) -> dict[str, Any]:
     facts = [
         ("Hersteller", vin.manufacturer or "unbekannt"),
         ("Land", vin.country or "unbekannt"),
-        ("Modelljahr", str(vin.model_year) if vin.model_year is not None else "unbekannt"),
+        # Stelle 10 wiederholt sich alle 30 Jahre; außerhalb Nordamerikas nicht eindeutig
+        (
+            "Modelljahr",
+            f"{vin.model_year} (ohne Gewähr)" if vin.model_year is not None else "unbekannt",
+        ),
         ("Herstellercode (WMI)", vin.wmi),
         ("Prüfziffer", checksum),
     ]
@@ -189,7 +169,7 @@ def vehicle_entry(vin: VinInfo | None) -> dict[str, Any]:
         "modelYear": vin.model_year if vin.model_year is not None else 0,
         "facts": [{"label": label, "value": value} for label, value in facts],
         "online": [
-            {"label": VPIC_LABELS.get(key, key), "value": value}
+            {"label": VPIC_FIELDS.get(key, key), "value": value}
             for key, value in vin.online.items()
             if value.strip()
         ],

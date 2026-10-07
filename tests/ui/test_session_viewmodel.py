@@ -48,7 +48,7 @@ def test_full_session_parts(full: DiagnosisViewModel) -> None:
     facts = {f["label"]: f["value"] for f in vehicle["facts"]}
     assert facts["Hersteller"] == "Volkswagen"
     assert facts["Land"] == "Deutschland"
-    assert facts["Modelljahr"] == "2006"
+    assert facts["Modelljahr"] == "2006 (ohne Gewähr)"
     assert facts["Prüfziffer"] == "nicht vorgeschrieben"
     assert vehicle["online"] == [
         {"label": "Modell", "value": "Golf"},

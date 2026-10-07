@@ -1,6 +1,7 @@
 """Kommandozeile: ``obd-diag``."""
 
 import argparse
+import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -8,8 +9,12 @@ from pathlib import Path
 from obd_diag import __version__
 from obd_diag.data.dtc_catalog import DtcCatalog
 from obd_diag.protocol.elm327 import Elm327, ElmError
+from obd_diag.protocol.obd import FreezeFrame
 from obd_diag.services.clear import ClearRefused, check_preconditions, clear_codes, clearable_codes
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult, scan, scan_to_dict
+from obd_diag.services.readiness import MonitorState, ReadinessStatus
+from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
+from obd_diag.services.vehicle import VPIC_FIELDS, VinInfo, decode_vin, lookup_vpic, read_vin
 from obd_diag.transport import TransportError
 from obd_diag.transport.discovery import list_ports
 from obd_diag.transport.serial import SerialTransport
@@ -138,6 +143,139 @@ def _run_clear(args: argparse.Namespace) -> int:
     return 0
 
 
+_MONITOR_STATES = {
+    MonitorState.COMPLETE: "abgeschlossen",
+    MonitorState.INCOMPLETE: "nicht abgeschlossen",
+    MonitorState.NOT_SUPPORTED: "nicht unterstützt",
+}
+
+# Freeze-Frame-Werte: Schlüssel in ``FreezeFrame.values``, Bezeichnung, Einheit
+_FREEZE_VALUES = (
+    ("engine_load_pct", "Motorlast", "%"),
+    ("coolant_temp_c", "Kühlmitteltemperatur", "°C"),
+    ("rpm", "Drehzahl", "1/min"),
+    ("speed_kmh", "Geschwindigkeit", "km/h"),
+)
+
+
+def _print_vehicle(vehicle: VinInfo | None) -> None:
+    print("Fahrzeug:")
+    if vehicle is None:
+        print("  FIN nicht verfügbar (Mode 09 nicht unterstützt oder nicht lesbar).")
+        return
+    rows = [("FIN", vehicle.vin)]
+    if not vehicle.valid:
+        rows.append(("Hinweis", "FIN ungültig (Länge oder Zeichen)"))
+    elif vehicle.checksum_ok is False:
+        rows.append(("Prüfziffer", "stimmt nicht"))
+    elif vehicle.checksum_ok:
+        rows.append(("Prüfziffer", "stimmt"))
+    else:
+        rows.append(("Prüfziffer", "nicht vorgeschrieben"))
+    rows.append(("Hersteller", vehicle.manufacturer or "unbekannt"))
+    rows.append(("Land", vehicle.country or "unbekannt"))
+    if vehicle.model_year is not None:
+        rows.append(("Modelljahr", f"{vehicle.model_year} (aus Stelle 10, ohne Gewähr)"))
+    rows += [
+        (label, vehicle.online[key]) for key, label in VPIC_FIELDS.items() if key in vehicle.online
+    ]
+    width = max(len(label) for label, _ in rows) + 1
+    for label, value in rows:
+        print(f"  {label + ':':<{width}} {value}")
+
+
+def _print_readiness(readiness: ReadinessStatus | None) -> None:
+    if readiness is None:
+        print("Readiness: nicht verfügbar (PID 01 nicht beantwortet).")
+        return
+    engine = "Diesel" if readiness.compression_ignition else "Otto"
+    print(f"Readiness ({engine}-Motor):")
+    print(f"  Kontrollleuchte (MIL): {'an' if readiness.mil_on else 'aus'}")
+    print(f"  Gemeldete Fehlercodes: {readiness.dtc_count}")
+    width = max(len(m.name) for m in readiness.monitors) + 1
+    for m in readiness.monitors:
+        print(f"  {m.name + ':':<{width}} {_MONITOR_STATES[m.state]}")
+    print(f"  AU-bereit: {'ja' if readiness.ready else 'nein'}")
+
+
+def _print_freeze_frame(freeze: FreezeFrame | None) -> None:
+    if freeze is None:
+        print("Freeze Frame: keiner gespeichert.")
+        return
+    print(f"Freeze Frame (ausgelöst durch {freeze.dtc or 'unbekannten Code'}):")
+    for key, label, unit in _FREEZE_VALUES:
+        if key in freeze.values:
+            print(f"  {label + ':':<22} {freeze.values[key]:g} {unit}")
+
+
+def _print_session(session: Session) -> None:
+    _print_vehicle(session.vehicle)
+    print()
+    _print_scan(session.scan)
+    print()
+    _print_readiness(session.readiness)
+    print()
+    _print_freeze_frame(session.freeze_frame)
+
+
+def _export(session: Session, pdf: Path | None, csv: Path | None) -> None:
+    # erst hier importieren: ReportLab wird nur für den Export gebraucht
+    from obd_diag.export.report import export_csv, export_pdf
+
+    if pdf is not None:
+        export_pdf(session, pdf)
+        print(f"PDF-Bericht: {pdf}", file=sys.stderr)
+    if csv is not None:
+        export_csv(session, csv)
+        print(f"CSV: {csv}", file=sys.stderr)
+
+
+def _run_diagnose(args: argparse.Namespace) -> int:
+    catalog = _open_catalog()
+    try:
+        with SerialTransport(args.port, args.baud) as transport:
+            session = run_diagnosis(
+                Elm327(transport), catalog, args.lang, online_vin_lookup=args.online_vin
+            )
+    finally:
+        if catalog is not None:
+            catalog.close()
+    if args.json:
+        print(json.dumps(session_to_dict(session), ensure_ascii=False, indent=2))
+    else:
+        _print_session(session)
+    # Pfade auf stderr, damit stdout bei --json reines JSON bleibt
+    try:
+        if args.save:
+            print(f"Sitzung gespeichert: {save_session(session)}", file=sys.stderr)
+        _export(session, args.pdf, args.csv)
+    except OSError as e:
+        print(f"Fehler: {e.filename or ''}: {e.strerror or e}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _run_vin(args: argparse.Namespace) -> int:
+    vin = args.vin
+    if vin is None:
+        with SerialTransport(args.port, args.baud) as transport:
+            elm = Elm327(transport)
+            elm.initialize()
+            elm.protocol()
+            vin = read_vin(elm)
+        if vin is None:
+            print("Fehler: Fahrzeug liefert keine FIN (Mode 09 PID 02).", file=sys.stderr)
+            return 1
+    info = decode_vin(vin)
+    if args.online_vin and info.valid:
+        info = dataclasses.replace(info, online=lookup_vpic(info.vin))
+    if args.json:
+        print(json.dumps(dataclasses.asdict(info), ensure_ascii=False, indent=2))
+    else:
+        _print_vehicle(info)
+    return 0
+
+
 def _run_export(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     if args.pdf is None and args.csv is None:
         parser.error("export: --pdf und/oder --csv angeben")
@@ -185,6 +323,33 @@ def main(argv: list[str] | None = None) -> int:
     )
     clear_parser.add_argument("--lang", choices=("de", "en"), default="de")
     clear_parser.add_argument("--yes", action="store_true", help="ohne Rückfrage löschen")
+    online_help = (
+        "FIN zusätzlich bei NHTSA vPIC (USA) nachschlagen; sendet die FIN ins Internet, "
+        "Ergebnis wird lokal gecacht"
+    )
+    diagnose_parser = sub.add_parser(
+        "diagnose",
+        parents=[connection],
+        help="vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN (nur lesend)",
+    )
+    diagnose_parser.add_argument("--lang", choices=("de", "en"), default="de")
+    diagnose_parser.add_argument("--json", action="store_true", help="Sitzung als JSON ausgeben")
+    diagnose_parser.add_argument("--online-vin", action="store_true", help=online_help)
+    diagnose_parser.add_argument(
+        "--save", action="store_true", help="Sitzung unter $XDG_DATA_HOME/obd-diag/sessions sichern"
+    )
+    diagnose_parser.add_argument("--pdf", type=Path, metavar="DATEI.pdf", help="PDF-Bericht")
+    diagnose_parser.add_argument(
+        "--csv", type=Path, metavar="DATEI.csv", help="CSV, eine Zeile pro Fehlercode"
+    )
+    vin_parser = sub.add_parser(
+        "vin", parents=[connection], help="FIN lesen (Mode 09) und dekodieren"
+    )
+    vin_parser.add_argument(
+        "vin", nargs="?", metavar="FIN", help="diese FIN dekodieren, ohne Adapter"
+    )
+    vin_parser.add_argument("--json", action="store_true", help="Ergebnis als JSON ausgeben")
+    vin_parser.add_argument("--online-vin", action="store_true", help=online_help)
     sub.add_parser("ports", help="angeschlossene Adapter auflisten")
     export_parser = sub.add_parser(
         "export", help="gespeicherte Diagnosesitzung (JSON) als PDF-Bericht oder CSV ausgeben"
@@ -206,6 +371,10 @@ def main(argv: list[str] | None = None) -> int:
             _run_scan(args)
         elif args.command == "clear":
             return _run_clear(args)
+        elif args.command == "diagnose":
+            return _run_diagnose(args)
+        elif args.command == "vin":
+            return _run_vin(args)
         elif args.command == "ports":
             _run_ports()
         elif args.command == "export":

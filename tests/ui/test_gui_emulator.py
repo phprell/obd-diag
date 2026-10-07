@@ -23,12 +23,6 @@ from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel  # noqa: E402
 
 pytestmark = pytest.mark.integration
 
-# Solange services.session.run_diagnosis ein Stub ist, schlägt jede Diagnose mit
-# NotImplementedError fehl; die Tests reichen den Fehler aus dem Worker durch.
-NEEDS_RUN_DIAGNOSIS = pytest.mark.xfail(
-    raises=NotImplementedError, strict=False, reason="run_diagnosis ist noch ein Stub"
-)
-
 
 RPM_ZERO = (
     obd_message.HD(obd_message.ECU_R_ADDR_E) + obd_message.SZ("04") + obd_message.DT("41 0C 00 00")
@@ -69,7 +63,7 @@ def car_port(emulator: Any) -> str:
 
 class RecordingBackend:
     """Echtes Backend, merkt sich aber Ausnahmen der Diagnose, damit der Test sie
-    wieder auslösen kann (im Worker werden sie zur Meldung)."""
+    mit Traceback wieder auslösen kann (im Worker werden sie zur Meldung)."""
 
     def __init__(self) -> None:
         self.errors: list[Exception] = []
@@ -109,7 +103,6 @@ def scanned(
     runner.wait()
 
 
-@NEEDS_RUN_DIAGNOSIS
 def test_connect_and_scan_against_emulator(
     qtbot: QtBot, car_port: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -150,7 +143,6 @@ def test_missing_port_against_real_backend(qtbot: QtBot) -> None:
     assert vm.property("errorMessage").startswith("Verbindung fehlgeschlagen: /dev/does-not-exist")
 
 
-@NEEDS_RUN_DIAGNOSIS
 def test_clear_refused_while_engine_runs(qtbot: QtBot, scanned: DiagnosisViewModel) -> None:
     with qtbot.waitSignal(scanned.clearRefused, timeout=20000) as blocker:
         scanned.clearCodes()
@@ -158,7 +150,6 @@ def test_clear_refused_while_engine_runs(qtbot: QtBot, scanned: DiagnosisViewMod
     assert scanned.property("codeCount") == 3
 
 
-@NEEDS_RUN_DIAGNOSIS
 def test_clear_against_emulator(
     qtbot: QtBot, emulator: Any, scanned: DiagnosisViewModel, tmp_path: Path
 ) -> None:
