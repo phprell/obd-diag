@@ -6,9 +6,6 @@ vor dem Löschen fehl, wird Mode 04 nicht gesendet.
 """
 
 import dataclasses
-import json
-import os
-import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -32,6 +29,7 @@ from obd_diag.services.diagnostics import (
     scan,
     scan_to_dict,
 )
+from obd_diag.services.storage import data_dir, write_new_json
 
 
 class ClearRefused(Exception):
@@ -57,10 +55,7 @@ def clearable_codes(result: ScanResult) -> list[DiagnosticCode]:
 
 def default_backup_dir() -> Path:
     """``$XDG_DATA_HOME/obd-diag/backups`` (Standard: ~/.local/share/obd-diag/backups)."""
-    data_home = os.environ.get("XDG_DATA_HOME", "")
-    # Laut XDG-Spezifikation gelten nur absolute Pfade.
-    base = Path(data_home) if os.path.isabs(data_home) else Path.home() / ".local" / "share"
-    return base / "obd-diag" / "backups"
+    return data_dir() / "backups"
 
 
 def check_preconditions(elm: Elm327) -> None:
@@ -108,28 +103,7 @@ def _now() -> datetime:
 
 def _write_backup(backup_dir: Path, data: dict[str, Any], now: datetime) -> Path:
     """Schreibt ``data`` atomar als neue Datei; vorhandene Sicherungen bleiben unberührt."""
-    backup_dir.mkdir(parents=True, exist_ok=True)
-    content = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
-    fd, tmp_name = tempfile.mkstemp(dir=backup_dir, prefix=".backup-", suffix=".tmp")
-    tmp = Path(tmp_name)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(content)
-            f.flush()
-            os.fsync(f.fileno())
-        stem = f"dtc-backup-{now:%Y%m%d-%H%M%S}"
-        for n in range(1, 1000):
-            path = backup_dir / (f"{stem}.json" if n == 1 else f"{stem}-{n}.json")
-            try:
-                # link() legt den Namen nur an, wenn er frei ist; die Datei ist dann
-                # schon vollständig geschrieben.
-                os.link(tmp, path)
-            except FileExistsError:
-                continue
-            return path
-        raise FileExistsError(f"kein freier Dateiname für {stem} in {backup_dir}")
-    finally:
-        tmp.unlink(missing_ok=True)
+    return write_new_json(backup_dir, f"dtc-backup-{now:%Y%m%d-%H%M%S}", data)
 
 
 def _backup_data(before: ScanResult, freeze: FreezeFrame, now: datetime) -> dict[str, Any]:

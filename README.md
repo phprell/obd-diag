@@ -13,6 +13,8 @@ Roadmap-Schritt 2: `obd-diag scan` liest Fehlercodes und erklärt sie.
 Roadmap-Schritt 3: `obd-diag clear` löscht Codes nach Sicherung, `obd-diag ports`
 findet Adapter; dazu die Desktop-Oberfläche (PySide6/QML) mit Verbinden, Fehlerliste,
 Detailansicht und Löschen.
+Roadmap-Schritt 4 (in Arbeit): Diagnosesitzungen speichern, `obd-diag export` als
+PDF-Bericht und CSV.
 
 ## Entwicklung
 
@@ -23,7 +25,7 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
 
-Ohne uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytest-qt ruff mypy types-pyserial ELM327-emulator`.
+Ohne uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytest-qt pypdf ruff mypy types-pyserial types-reportlab ELM327-emulator`.
 
 Die GUI-Tests (`tests/ui`) laufen ohne Bildschirm (`QT_QPA_PLATFORM=offscreen`, setzt
 `tests/ui/conftest.py`) und werden übersprungen, wenn PySide6 fehlt.
@@ -127,7 +129,38 @@ Im Emulator läuft der Motor standardmäßig (`010C` liefert wechselnde Drehzahl
 1303 1/min), `clear` lehnt also ab. Die Tests setzen die Drehzahl über
 `emulator.answer["RPM"]` auf 0 (siehe `tests/integration/test_clear_emulator.py`).
 
-### Oberfläche
+### Diagnosesitzungen und Export
+
+Eine Diagnosesitzung (Scan mit Klartexten, Readiness, Freeze Frame, FIN, Zeitpunkt)
+wird als JSON unter `$XDG_DATA_HOME/obd-diag/sessions/` gespeichert (Standard
+`~/.local/share/obd-diag/sessions/`), Dateiname `session-JJJJMMTT-HHMMSS.json` nach
+dem Zeitpunkt der Diagnose; vorhandene Dateien werden nie überschrieben (dann
+`…-2.json` usw.). Die Datei trägt `"format": "obd-diag-session"` und `"version": 1`,
+der Teil `scan` hat dieselbe Form wie `obd-diag scan --json`. Fremde oder neuere
+Formate lehnt das Laden mit Meldung ab.
+
+Eine gespeicherte Sitzung lässt sich umwandeln:
+
+```sh
+obd-diag export ~/.local/share/obd-diag/sessions/session-20261007-143205.json \
+    --pdf bericht.pdf --csv fehlercodes.csv
+```
+
+- **PDF** (DIN A4, Deutsch): Fahrzeug (FIN, Hersteller, Land, Modelljahr),
+  Adapter, Protokoll und Bordspannung (mit Warnung bei niedriger Spannung),
+  Kurzübersicht, Readiness mit „AU-bereit: ja/nein“, Fehlercodes nach Art mit
+  Erklärung, Ursachen samt Wahrscheinlichkeit, Symptomen und Kostenrahmen, Freeze
+  Frame. Fehlende Teile erscheinen als „nicht verfügbar“. Erzeugt mit
+  [ReportLab](https://www.reportlab.com/) (BSD-Lizenz). Schrift: DejaVu Sans,
+  Liberation Sans oder Noto Sans, falls installiert (wird eingebettet), sonst
+  Helvetica aus dem PDF-Standardumfang.
+- **CSV**: eine Zeile pro Fehlercode mit den Spalten Code; Art (Gespeichert,
+  Ausstehend, Permanent); Titel; Beschreibung; Ursachen; Symptome; MIL;
+  Abgasrelevant; Reparaturaufwand; Kosten; Kosten von (EUR); Kosten bis (EUR);
+  Datum; FIN. Mehrere Ursachen/Symptome stehen durch ` | ` getrennt in einer Zelle.
+  Kodierung UTF-8 mit BOM und `;` als Trennzeichen, damit ein deutsches Excel die
+  Datei per Doppelklick mit Umlauten und Spalten richtig öffnet.
+
 
 ```sh
 uv run obd-diag-gui
@@ -162,8 +195,9 @@ wieder; die Oberfläche bleibt dabei bedienbar.
 src/obd_diag/
 ├── transport/   # Byte-Kanal zum Adapter (Protocol, USB-Seriell, Adaptersuche)
 ├── protocol/    # ELM327-Befehle, OBD-II-Dekodierung
-├── services/    # Diagnose-Abläufe (Scan, Löschen)
+├── services/    # Diagnose-Abläufe (Scan, Löschen, Sitzung speichern/laden)
 ├── data/        # DTC-Katalog (SQLite), FIN (folgt)
+├── export/      # PDF-Bericht und CSV einer Sitzung
 ├── ui/          # Desktop-Oberfläche: View-Models (Python) und QML
 └── cli.py
 ```

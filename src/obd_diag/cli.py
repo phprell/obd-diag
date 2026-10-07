@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from obd_diag import __version__
 from obd_diag.data.dtc_catalog import DtcCatalog
@@ -137,6 +138,30 @@ def _run_clear(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_export(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
+    if args.pdf is None and args.csv is None:
+        parser.error("export: --pdf und/oder --csv angeben")
+    # erst hier importieren: ReportLab wird nur für den Export gebraucht
+    from obd_diag.export.report import export_csv, export_pdf
+    from obd_diag.services.session import load_session
+
+    try:
+        session = load_session(args.session)
+        if args.pdf is not None:
+            export_pdf(session, args.pdf)
+            print(f"PDF-Bericht: {args.pdf}")
+        if args.csv is not None:
+            export_csv(session, args.csv)
+            print(f"CSV: {args.csv}")
+    except OSError as e:
+        print(f"Fehler: {e.filename or args.session}: {e.strerror or e}", file=sys.stderr)
+        return 1
+    except ValueError as e:
+        print(f"Fehler: {e}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="obd-diag")
     parser.add_argument("--version", action="version", version=__version__)
@@ -161,6 +186,14 @@ def main(argv: list[str] | None = None) -> int:
     clear_parser.add_argument("--lang", choices=("de", "en"), default="de")
     clear_parser.add_argument("--yes", action="store_true", help="ohne Rückfrage löschen")
     sub.add_parser("ports", help="angeschlossene Adapter auflisten")
+    export_parser = sub.add_parser(
+        "export", help="gespeicherte Diagnosesitzung (JSON) als PDF-Bericht oder CSV ausgeben"
+    )
+    export_parser.add_argument("session", type=Path, metavar="SESSION.json")
+    export_parser.add_argument("--pdf", type=Path, metavar="DATEI.pdf", help="PDF-Bericht")
+    export_parser.add_argument(
+        "--csv", type=Path, metavar="DATEI.csv", help="CSV, eine Zeile pro Fehlercode"
+    )
 
     args = parser.parse_args(argv)
     try:
@@ -175,6 +208,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_clear(args)
         elif args.command == "ports":
             _run_ports()
+        elif args.command == "export":
+            return _run_export(args, export_parser)
     except (TransportError, ElmError) as e:
         print(f"Fehler: {e}", file=sys.stderr)
         return 1

@@ -6,8 +6,10 @@ import pytest
 from obd_diag import cli
 from obd_diag.cli import main
 from obd_diag.data.dtc_catalog import DtcCatalog
+from obd_diag.services.session import save_session
 from obd_diag.transport.discovery import PortInfo
 from tests.fakes import CAN_CAR, CAN_CAR_ENGINE_OFF, CLEARED, FakeCatalog, FakeTransport
+from tests.samples import full_session
 
 
 def test_missing_port_gives_clean_error(capsys: pytest.CaptureFixture[str]) -> None:
@@ -213,3 +215,45 @@ def test_no_ports(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
     monkeypatch.setattr(cli, "list_ports", lambda: [])
     assert main(["ports"]) == 0
     assert capsys.readouterr().out.startswith("Keine Adapter gefunden")
+
+
+# --- export ---
+
+
+def test_export_pdf_and_csv(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    session_file = save_session(full_session(), tmp_path)
+    pdf, csv_path = tmp_path / "bericht.pdf", tmp_path / "codes.csv"
+    assert main(["export", str(session_file), "--pdf", str(pdf), "--csv", str(csv_path)]) == 0
+    out, err = capsys.readouterr()
+    assert err == ""
+    assert out == f"PDF-Bericht: {pdf}\nCSV: {csv_path}\n"
+    assert pdf.read_bytes().startswith(b"%PDF")
+    assert csv_path.read_bytes().startswith(b"\xef\xbb\xbfCode;Art;")
+
+
+def test_export_only_csv(tmp_path: Path) -> None:
+    session_file = save_session(full_session(), tmp_path)
+    assert main(["export", str(session_file), "--csv", str(tmp_path / "c.csv")]) == 0
+    assert not list(tmp_path.glob("*.pdf"))
+
+
+def test_export_needs_target(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    session_file = save_session(full_session(), tmp_path)
+    with pytest.raises(SystemExit) as info:
+        main(["export", str(session_file)])
+    assert info.value.code == 2
+    assert "--pdf und/oder --csv" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("content", [None, '{"adapter": "x"}'])
+def test_export_rejects_missing_or_foreign_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], content: str | None
+) -> None:
+    path = tmp_path / "fremd.json"
+    if content is not None:
+        path.write_text(content, encoding="utf-8")
+    assert main(["export", str(path), "--pdf", str(tmp_path / "x.pdf")]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("Fehler: ")
+    assert "Traceback" not in err
+    assert not (tmp_path / "x.pdf").exists()
