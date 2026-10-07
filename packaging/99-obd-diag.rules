@@ -1,0 +1,8 @@
+# Zugriff auf gängige USB-Seriell-Chips von OBD-Adaptern ohne root.
+# Installation: sudo cp 99-obd-diag.rules /etc/udev/rules.d/ && sudo udevadm control --reload
+# FTDI (z. B. OBDLink, hochwertige ELM327)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", MODE="0660", GROUP="uucp", TAG+="uaccess"
+# CH340/CH341 (viele günstige ELM327-Klone)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE="0660", GROUP="uucp", TAG+="uaccess"
+# Silicon Labs CP210x
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0660", GROUP="uucp", TAG+="uaccess"
