@@ -26,7 +26,7 @@ from hypothesis import strategies as st
 
 from obd_diag import cli
 from obd_diag.data.dtc_catalog import DtcCatalog
-from obd_diag.protocol import obd
+from obd_diag.protocol import obd, pids
 from obd_diag.protocol.elm327 import (
     AT_COMMANDS,
     CLEAR_COMMAND,
@@ -182,6 +182,11 @@ def test_any_text_is_either_allowed_or_never_sent(cmd: str) -> None:
         ("read_rpm", obd.read_rpm, ["010C"]),
         ("read_rpms", obd.read_rpms, ["010C"]),
         ("read_pid", lambda e: obd.read_pid(e, 0x0C), ["010C"]),
+        # 0100 setzt in CAN_CAR_FULL das Bit für 0x20 (A8 13): Kette mit 0120 (unterstützte
+        # PIDs 21-40); dessen Antwort ist unbrauchbar, also endet die Kette dort.
+        ("read_supported_pids", pids.read_supported_pids, ["0100", "0120"]),
+        ("read_value rpm", lambda e: pids.read_value(e, pids.pid_by_key("rpm")), ["010C"]),
+        ("read_value odometer", lambda e: pids.read_value(e, pids.PIDS[0xA6]), ["01A6"]),
         ("read_freeze_frame", obd.read_freeze_frame, FREEZE),
         ("read_readiness", readiness.read_readiness, ["0101"]),
         ("read_vin", vehicle.read_vin, ["0902"]),
