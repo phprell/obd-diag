@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 
 from obd_diag.protocol.headers import HeaderFormat, header_format
-from obd_diag.transport import Transport
+from obd_diag.transport import Transport, TransportError
 
 PROMPT = b">"
 
@@ -157,7 +157,14 @@ class Elm327:
         try:
             return self.query(cmd)
         finally:
-            self.command("ATH0")
+            try:
+                self.command("ATH0")
+            except ElmError as e:
+                # Mit Headern würden alle weiteren Antworten falsch gelesen. Kein
+                # ElmError, damit kein Aufrufer das als "Angabe fehlt" abfängt.
+                raise TransportError(
+                    f"Adapter lässt sich nicht auf ATH0 zurückstellen ({e}); Sitzung abgebrochen"
+                ) from e
 
     def _protocol_number(self) -> str:
         """Nummer laut ``ATDPN`` ohne das "A" der automatischen Erkennung; "" bei ``?``."""

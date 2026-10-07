@@ -7,7 +7,7 @@ from obd_diag.protocol.elm327 import (
     ObdProtocol,
     UnknownCommandError,
 )
-from obd_diag.transport import TransportTimeout
+from obd_diag.transport import TransportError, TransportTimeout
 from tests.fakes import FakeTransport
 from tests.verification.helpers import RawTransport
 
@@ -219,3 +219,20 @@ def test_protocol_unreadable_headers_stay_unknown() -> None:
     protocol = Elm327(transport).protocol()
     assert protocol == ObdProtocol("", "")
     assert not protocol.is_can
+
+
+def test_failed_header_restore_aborts_instead_of_misreading() -> None:
+    """Bleibt der Adapter nach dem Header-Fallback auf ATH1, würde alles Weitere falsch
+    gelesen; das darf kein Aufrufer als bloß fehlende Angabe abfangen."""
+
+    class StuckInHeaders(FakeTransport):
+        def write(self, data: bytes) -> None:
+            super().write(data)
+            if self.sent[-1] == "ATH0" and self.sent.count("ATH0") > 1:
+                self._pending = b"?\r\r>"
+
+    transport = StuckInHeaders({"ATZ": "ELM327 v1.5", "ATDPN": "0", "0100": "4100BE3FA813"})
+    elm = Elm327(transport)
+    elm.initialize()
+    with pytest.raises(TransportError, match="ATH0"):
+        elm.protocol()
