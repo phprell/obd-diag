@@ -11,8 +11,8 @@
 # Test selbst.
 #
 # Felder: id, page (Seite im PDF), command, raw, can (für Fehlercodes) und genau eine
-# Erwartung: text | version | voltage | codes | messages | vin | pid | rpm | error |
-# split_error.
+# Erwartung: text | version | voltage | codes | messages | vin | read_vin | pid | rpm |
+# error | split_error.
 
 - id: atz-version
   page: "7 (Communicating with the ELM327), 30"
@@ -73,6 +73,18 @@
   command: "0902"
   raw: "014\r0: 49 02 01 31 44 34\r1: 47 50 30 30 52 35 35\r2: 42 31 32 33 34 35 36\r\r>"
   vin: 1D4GP00R55B123456
+
+- id: vin-j1850-read
+  page: "44: 09 02 bei J1850, über read_vin (Zeilen nach Zähler, 00-Füllung entfernt)"
+  command: "0902"
+  raw: "49 02 01 00 00 00 31\r49 02 02 44 34 47 50\r49 02 03 30 30 52 35\r49 02 04 35 42 31 32\r49 02 05 33 34 35 36\r\r>"
+  read_vin: 1D4GP00R55B123456
+
+- id: vin-can-read
+  page: "44, 46: 09 02 bei CAN, über read_vin"
+  command: "0902"
+  raw: "014\r0: 49 02 01 31 44 34\r1: 47 50 30 30 52 35 35\r2: 42 31 32 33 34 35 36\r\r>"
+  read_vin: 1D4GP00R55B123456
 
 - id: calid-two-ecus-mixed
   page: >-

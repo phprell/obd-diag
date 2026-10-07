@@ -2,6 +2,8 @@
 
 import dataclasses
 import json
+import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -9,18 +11,21 @@ from typing import Any
 
 from obd_diag import __version__
 from obd_diag.data.dtc_catalog import Cause, DtcInfo
-from obd_diag.protocol.elm327 import Elm327
-from obd_diag.protocol.obd import FreezeFrame
+from obd_diag.protocol.elm327 import Elm327, ElmError
+from obd_diag.protocol.obd import FreezeFrame, read_freeze_frame
 from obd_diag.services.diagnostics import (
     DiagnosticCode,
     DtcKind,
     DtcLookup,
     ScanResult,
+    scan,
     scan_to_dict,
 )
-from obd_diag.services.readiness import Monitor, MonitorState, ReadinessStatus
+from obd_diag.services.readiness import Monitor, MonitorState, ReadinessStatus, read_readiness
 from obd_diag.services.storage import data_dir, write_new_json
-from obd_diag.services.vehicle import VinInfo
+from obd_diag.services.vehicle import VinInfo, decode_vin, lookup_vpic, read_vin
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -43,8 +48,37 @@ def run_diagnosis(
 
     Fehlt eine einzelne Angabe (Steuergerät antwortet nicht), bleibt sie ``None``;
     nur ein fehlgeschlagener Scan bricht ab.
+
+    Der Scan setzt den Adapter zurück (``ATZ``) und handelt das Protokoll aus; danach
+    folgen Readiness (``0101``), Freeze Frame (``02xx00``) und FIN (``0902``). Ein
+    ``ElmError`` in einem dieser Teile lässt nur diesen Teil leer; Verbindungsfehler
+    (``TransportError``) brechen ab. Der Freeze Frame wird immer gelesen, bleibt aber
+    ``None``, wenn er weder einen auslösenden Code noch Werte enthält (ohne
+    gespeicherten Code ist er leer). Die FIN geht nur mit ``online_vin_lookup`` an
+    NHTSA vPIC.
     """
-    raise NotImplementedError
+    created = datetime.now().astimezone()
+    result = scan(elm, catalog, lang)
+    readiness = _optional("Readiness", read_readiness, elm)
+    freeze = _optional("Freeze Frame", read_freeze_frame, elm)
+    if freeze is not None and freeze.dtc is None and not freeze.values:
+        freeze = None
+    vin = _optional("FIN", read_vin, elm)
+    vehicle = None if vin is None else decode_vin(vin)
+    if vehicle is not None and online_vin_lookup and vehicle.valid:
+        vehicle = dataclasses.replace(vehicle, online=lookup_vpic(vehicle.vin))
+    return Session(
+        created=created, scan=result, readiness=readiness, freeze_frame=freeze, vehicle=vehicle
+    )
+
+
+def _optional[T](what: str, read: Callable[[Elm327], T], elm: Elm327) -> T | None:
+    """``read(elm)`` oder ``None``, wenn der Adapter einen Fehler meldet."""
+    try:
+        return read(elm)
+    except ElmError as e:
+        log.warning("%s nicht lesbar: %s", what, e)
+        return None
 
 
 SESSION_FORMAT = "obd-diag-session"

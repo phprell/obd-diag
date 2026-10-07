@@ -17,6 +17,7 @@ import yaml
 from obd_diag.protocol.elm327 import Elm327, ElmError, NoDataError, UnknownCommandError
 from obd_diag.protocol.frames import split_messages
 from obd_diag.protocol.obd import read_dtcs, read_pid, read_rpm
+from obd_diag.services.vehicle import read_vin
 from tests.verification.helpers import RawTransport
 
 TRACES = Path(__file__).parent.parent / "fixtures" / "traces"
@@ -74,6 +75,8 @@ def _check(trace: dict[str, Any], raw: bytes) -> None:
         (message,) = split_messages(elm.command(cmd))
         assert message[:3] == bytes((0x49, 0x02, 0x01))
         assert message[3:].decode("ascii") == trace["vin"]
+    elif "read_vin" in trace:
+        assert read_vin(elm) == trace["read_vin"]
     elif "pid" in trace:
         expected = trace["pid"]["data"]
         data = read_pid(elm, trace["pid"]["pid"])

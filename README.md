@@ -14,7 +14,8 @@ Roadmap-Schritt 3: `obd-diag clear` löscht Codes nach Sicherung, `obd-diag port
 findet Adapter; dazu die Desktop-Oberfläche (PySide6/QML) mit Verbinden, Fehlerliste,
 Detailansicht und Löschen.
 Roadmap-Schritt 4 (in Arbeit): Diagnosesitzungen speichern, `obd-diag export` als
-PDF-Bericht und CSV.
+PDF-Bericht und CSV, `obd-diag diagnose` (Fehlercodes, Readiness, Freeze Frame, FIN in
+einem Durchgang) und `obd-diag vin`.
 
 ## Entwicklung
 
@@ -134,6 +135,69 @@ Im Emulator läuft der Motor standardmäßig (`010C` liefert wechselnde Drehzahl
 1303 1/min), `clear` lehnt also ab. Die Tests setzen die Drehzahl über
 `emulator.answer["RPM"]` auf 0 (siehe `tests/integration/test_clear_emulator.py`).
 
+### Vollständige Diagnose
+
+```sh
+obd-diag diagnose --port /dev/ttyUSB0                   # Tabelle
+obd-diag diagnose --port /dev/ttyUSB0 --json            # Sitzung als JSON
+obd-diag diagnose --port /dev/ttyUSB0 --save            # Sitzung speichern, Pfad auf stderr
+obd-diag diagnose --port /dev/ttyUSB0 --pdf bericht.pdf --csv codes.csv
+obd-diag diagnose --port /dev/ttyUSB0 --online-vin      # FIN zusätzlich bei NHTSA vPIC
+```
+
+`diagnose` liest in einem Durchgang, nur lesend (nie Mode 04):
+
+1. Scan wie bei `scan` (Adapter-Reset, Protokoll, Bordspannung, Codes aus Mode 03/07/0A).
+   Schlägt er fehl, bricht `diagnose` ab.
+2. Readiness (Mode 01 PID 01): MIL, gemeldete Codezahl, Motorart (Otto/Diesel) und je
+   Monitor „abgeschlossen“, „nicht abgeschlossen“ oder „nicht unterstützt“, dazu
+   „AU-bereit: ja/nein“ (ja, wenn kein unterstützter Monitor offen ist). Antworten
+   mehrere Steuergeräte, zählt je Monitor der schlechteste Stand, die MIL ist an, wenn
+   ein Steuergerät sie meldet, und die Codezahlen werden addiert.
+3. Freeze Frame (Mode 02, Frame 00): auslösender Code, Last, Kühlmitteltemperatur,
+   Drehzahl, Geschwindigkeit. Ohne gespeicherten Code ist er leer und erscheint als
+   „keiner gespeichert“.
+4. FIN (Mode 09 PID 02, CAN mehrteilig oder ältere Protokolle mit fünf Zeilen) und
+   ihre Offline-Dekodierung.
+
+Antwortet das Fahrzeug auf Readiness, Freeze Frame oder FIN nicht (oder unbrauchbar),
+fehlt nur dieser Teil. `--save` legt die Sitzung wie unten beschrieben ab, `--pdf` und
+`--csv` exportieren direkt (wie `obd-diag export`). Bei `--json` bleibt stdout reines
+JSON; Pfade gespeicherter Dateien stehen auf stderr.
+
+### FIN
+
+```sh
+obd-diag vin --port /dev/ttyUSB0          # aus dem Fahrzeug lesen und dekodieren
+obd-diag vin WVWZZZ1KZ6W123456            # nur dekodieren, ohne Adapter
+obd-diag vin WVWZZZ1KZ6W123456 --json
+```
+
+Die Dekodierung ist offline:
+
+- gültig: 17 Zeichen, nur 0-9 und A-Z ohne I, O, Q;
+- Prüfziffer (Stelle 9, ISO 3779 / 49 CFR 565): Pflicht nur in Nordamerika (FIN
+  beginnt mit 1-5) und China (`L`), dort „stimmt“/„stimmt nicht“; sonst „stimmt“, wenn
+  sie zufällig oder freiwillig passt, und „nicht vorgeschrieben“ andernfalls;
+- Hersteller aus einer Tabelle häufiger Herstellerkennungen (WMI, Stellen 1-3,
+  `src/obd_diag/data/wmi.py`), Land aus den ISO-3780-Regionsbereichen der Stellen 1-2;
+- Modelljahr aus Stelle 10. Der Code wiederholt sich alle 30 Jahre; in Nordamerika
+  entscheidet Stelle 7 (Ziffer: 1980-2009, Buchstabe: 2010-2039), sonst gilt das
+  jüngste Jahr bis höchstens ein Jahr in der Zukunft. Europäische Hersteller nutzen
+  Stelle 10 nicht alle als Modelljahr, die Angabe ist dort ohne Gewähr.
+
+**Datenschutz:** Die FIN bleibt auf dem Rechner. Nur mit `--online-vin` wird sie an die
+NHTSA-Datenbank [vPIC](https://vpic.nhtsa.dot.gov/api/) (USA) geschickt; übernommen
+werden Modell, Modelljahr, Karosserie, Zylinder, Hubraum, Kraftstoff, Werk u. Ä. Die
+Antwort wird je FIN unter `$XDG_CACHE_HOME/obd-diag/vpic/` (Standard
+`~/.cache/obd-diag/vpic/`) abgelegt, eine FIN wird also nur einmal abgefragt.
+Netzwerkfehler werden ignoriert. vPIC kennt vor allem Fahrzeuge für den US-Markt; für
+europäische Modelle sind die Angaben oft lückenhaft.
+
+Im Emulator antworten `0101` und `0902` standardgemäß (die FIN wechselt reihum zwischen
+drei Beispielen); Mode 02 erwartet er ohne Frame-Nummer, der Freeze Frame bleibt dort
+leer. `tests/integration/test_diagnosis_emulator.py` stellt das für die Tests um.
+
 ### Diagnosesitzungen und Export
 
 Eine Diagnosesitzung (Scan mit Klartexten, Readiness, Freeze Frame, FIN, Zeitpunkt)
@@ -201,7 +265,7 @@ src/obd_diag/
 ├── transport/   # Byte-Kanal zum Adapter (Protocol, USB-Seriell, Adaptersuche)
 ├── protocol/    # ELM327-Befehle, OBD-II-Dekodierung
 ├── services/    # Diagnose-Abläufe (Scan, Löschen, Sitzung speichern/laden)
-├── data/        # DTC-Katalog (SQLite), FIN (folgt)
+├── data/        # DTC-Katalog (SQLite), WMI-Tabelle für die FIN
 ├── export/      # PDF-Bericht und CSV einer Sitzung
 ├── ui/          # Desktop-Oberfläche: View-Models (Python) und QML
 └── cli.py
