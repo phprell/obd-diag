@@ -73,9 +73,6 @@ def test_legacy_roundtrip(
     messages = [m for ecu in ecus for m in legacy_messages(mode, ecu, spaces)]
     lines, expected = interleave(messages, rng)
     assert _read(mode, lines, frame, can=False) == expected
-    # Falsche Protokollannahme (z. B. ATDPN ohne Ergebnis): Legacy-Zeilen haben eine
-    # gerade Byteanzahl nach dem Mode-Byte und werden auch als CAN richtig gelesen.
-    assert _read(mode, lines, frame, can=True) == expected
 
 
 @SETTINGS

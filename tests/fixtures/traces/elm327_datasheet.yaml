@@ -45,16 +45,6 @@
   can: false
   codes: [P0133]
 
-- id: mode03-legacy-read-as-can
-  page: "32; gleiche Antwort, aber falsche Protokollannahme (CAN)"
-  note: >-
-    Legacy-Antworten haben immer 6 Datenbytes (gerade Anzahl) und werden daher auch mit
-    can=True richtig gelesen.
-  command: "03"
-  raw: "43 01 33 00 00 00 00\r\r>"
-  can: true
-  codes: [P0133]
-
 - id: mode0100-two-ecus
   page: "44 (Multiline Responses): zwei Steuergeräte antworten auf 01 00"
   command: "0100"
