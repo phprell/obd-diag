@@ -23,6 +23,14 @@ _ERRORS = frozenset(
     }
 )
 
+# Interne Fehler (``ERR94``: schwerer CAN-Fehler), Unterspannungs-Reset und als fehlerhaft
+# markierte Zeilen (``... <DATA ERROR``, ``... <RX ERROR``), siehe Datenblatt ELM327DS,
+# „Error Messages and Alerts“.
+_ERROR_LINE = re.compile(r"^ERR[0-9A-F]{2}$|^LV RESET$|<(DATA|RX) ERROR$")
+
+# Zeilen ohne ein einziges druckbares ASCII-Zeichen (leer oder reiner Zeichenmüll)
+_JUNK = re.compile(r"^[^\x21-\x7e]*$")
+
 # ISO 15765-4 (CAN); A bis C sind CAN-Protokolle der STN-Chips bzw. benutzerdefiniert.
 _CAN_PROTOCOLS = frozenset("6789ABC")
 
@@ -57,29 +65,41 @@ class Elm327:
         self.timeout = timeout
 
     def initialize(self) -> str:
-        """Setzt den Adapter zurück und schaltet Echo, Zeilenvorschub und Leerzeichen ab."""
-        version = self.command("ATZ")
+        """Setzt den Adapter zurück und schaltet Echo, Zeilenvorschub und Leerzeichen ab.
+
+        Liefert die Kennung aus der letzten Zeile der ``ATZ``-Antwort (z. B.
+        ``ELM327 v1.5``); davor stehen bei manchen Adaptern Leerzeilen oder Müll.
+        """
+        lines = self.command("ATZ").splitlines()
         for cmd in ("ATE0", "ATL0", "ATS0", "ATH0", "ATSP0"):
             self.command(cmd)
-        return version
+        return lines[-1] if lines else ""
 
     def command(self, cmd: str) -> str:
-        """Sendet ``cmd`` und liefert die bereinigte Antwort; wirft ``ElmError`` bei Fehlern."""
+        """Sendet ``cmd`` und liefert die bereinigte Antwort; wirft ``ElmError`` bei Fehlern.
+
+        Entfernt werden Echo, Leerzeilen, Statuszeilen (``SEARCHING...``,
+        ``BUS INIT: OK``), Nullbytes und Zeilen aus reinem Zeichenmüll (manche Klone
+        senden nach ``ATZ`` z. B. ein Byte ``FC``).
+        """
         self.transport.write(cmd.encode("ascii") + b"\r")
         raw = self.transport.read_until(PROMPT, self.timeout)
         lines: list[str] = []
-        for line in raw[: -len(PROMPT)].decode("ascii", errors="replace").splitlines():
+        decoded = raw[: -len(PROMPT)].replace(b"\x00", b"").decode("ascii", errors="replace")
+        for line in decoded.splitlines():
             line = _STATUS_PREFIX.sub("", line.strip())
             # Echo und Leerzeilen entfernen; Echo ist bis zum ersten ATE0 aktiv.
-            if line and line != cmd:
+            if line != cmd and not _JUNK.match(line):
                 lines.append(line)
         text = "\n".join(lines)
         if text == "NO DATA":
             raise NoDataError(f"{cmd}: {text}")
         if text == "?":
             raise UnknownCommandError(f"{cmd}: {text}")
-        if text in _ERRORS or text.startswith("BUS INIT:"):
-            raise ElmError(f"{cmd}: {text}")
+        for line in lines:
+            # Fehler auch nach Teildaten (z. B. ``STOPPED``): die Antwort ist unvollständig.
+            if line in _ERRORS or line.startswith("BUS INIT:") or _ERROR_LINE.search(line):
+                raise ElmError(f"{cmd}: {text}")
         return text
 
     def query(self, cmd: str) -> str | None:

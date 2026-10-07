@@ -1,0 +1,167 @@
+# Adapter-Antworten aus dem ELM327-Datenblatt (ELM327DSI, Firmware v2.0, © Elm Electronics
+# 2005–2013), abgerufen 2026-10 über den Spiegel
+#   https://cdn.sparkfun.com/assets/learn_tutorials/8/3/ELM327DS.pdf
+# (Original: https://www.elmelectronics.com/, Datenblatt ELM327DS).
+# Übernommen sind nur kurze, faktische Protokoll-Zeichenketten als Zitat mit Seitenangabe.
+#
+# Das Datenblatt zeigt die Antworten im Terminal: ``>`` ist der Prompt, Leerzeichen sind
+# an (Standard ATS1), Header aus (Standard ATH0). Für ``raw`` ist jede Antwortzeile mit
+# ``\r`` abgeschlossen; danach folgen wie beim echten Adapter ``\r>`` (Leerzeile + Prompt,
+# vgl. die Mitschnitte in field_logs.yaml). Varianten mit Echo und ``\r\n`` erzeugt der
+# Test selbst.
+#
+# Felder: id, page (Seite im PDF), command, raw, can (für Fehlercodes) und genau eine
+# Erwartung: text | version | voltage | codes | messages | vin | pid | rpm | error |
+# split_error.
+
+- id: atz-version
+  page: "7 (Communicating with the ELM327), 30"
+  command: ATZ
+  raw: "ELM327 v2.0\r\r>"
+  version: ELM327 v2.0
+
+- id: atrv-12.6
+  page: "29 (Reading the Battery Voltage)"
+  command: ATRV
+  raw: "12.6V\r\r>"
+  voltage: 12.6
+
+- id: atrv-12.5
+  page: "29 (Reading the Battery Voltage), nach AT CV 1247"
+  command: ATRV
+  raw: "12.5V\r\r>"
+  voltage: 12.5
+
+- id: mode01-rpm
+  page: "30 (Talking to the Vehicle): 01 0C -> 41 0C 1A F8 = 1726 1/min"
+  command: 010C
+  raw: "41 0C 1A F8\r\r>"
+  rpm: 1726.0
+
+- id: mode03-legacy-one-code
+  page: "32 (Interpreting Trouble Codes): 43 01 33 00 00 00 00 = P0133, Rest ist Füllung"
+  command: "03"
+  raw: "43 01 33 00 00 00 00\r\r>"
+  can: false
+  codes: [P0133]
+
+- id: mode03-legacy-read-as-can
+  page: "32; gleiche Antwort, aber falsche Protokollannahme (CAN)"
+  note: >-
+    Legacy-Antworten haben immer 6 Datenbytes (gerade Anzahl) und werden daher auch mit
+    can=True richtig gelesen.
+  command: "03"
+  raw: "43 01 33 00 00 00 00\r\r>"
+  can: true
+  codes: [P0133]
+
+- id: mode0100-two-ecus
+  page: "44 (Multiline Responses): zwei Steuergeräte antworten auf 01 00"
+  command: "0100"
+  raw: "41 00 BE 3E B8 11\r41 00 80 10 80 00\r\r>"
+  messages: ["4100BE3EB811", "410080108000"]
+
+- id: mode0100-two-ecus-pid
+  page: "44; read_pid nimmt die erste Antwort"
+  command: "0100"
+  raw: "41 00 BE 3E B8 11\r41 00 80 10 80 00\r\r>"
+  pid: {pid: 0x00, data: BE3EB811}
+
+- id: vin-j1850-lines
+  page: "44: 09 02 bei J1850, fünf Zeilen mit Zeilennummer im dritten Byte"
+  command: "0902"
+  raw: "49 02 01 00 00 00 31\r49 02 02 44 34 47 50\r49 02 03 30 30 52 35\r49 02 04 35 42 31 32\r49 02 05 33 34 35 36\r\r>"
+  messages:
+    - "49020100000031"
+    - "49020244344750"
+    - "49020330305235"
+    - "49020435423132"
+    - "49020533343536"
+
+- id: vin-can-multiframe
+  page: "44, 46 (CAN Message Formats): 014 = 20 Bytes, Frames 0: 1: 2:"
+  command: "0902"
+  raw: "014\r0: 49 02 01 31 44 34\r1: 47 50 30 30 52 35 35\r2: 42 31 32 33 34 35 36\r\r>"
+  vin: 1D4GP00R55B123456
+
+- id: calid-two-ecus-mixed
+  page: >-
+    45: zwei Steuergeräte senden 09 04 gleichzeitig mehrteilig; ohne Header sind die
+    Frames vermischt („two segment twos“), Zuordnung nur mit ATH1 möglich
+  command: "0904"
+  raw: "013\r0: 49 04 01 35 36 30\r1: 32 38 39 34 39 41 43\r013\r0: 49 04 01 35 36 30\r2: 00 00 00 00 00 00 31\r1: 32 38 39 35 34 41 43\r2: 00 00 00 00 00 00 00\r\r>"
+  split_error: true
+
+- id: no-data
+  page: "79 (Error Messages and Alerts): NO DATA"
+  command: "07"
+  raw: "NO DATA\r\r>"
+  codes: []
+  can: true
+
+- id: question-mark
+  page: "7, 78: ? für nicht verstandene Befehle"
+  command: "0A"
+  raw: "?\r\r>"
+  error: UnknownCommandError
+
+- id: unable-to-connect
+  page: "80: UNABLE TO CONNECT, davor SEARCHING... (S. 33)"
+  command: "0100"
+  raw: "SEARCHING...\rUNABLE TO CONNECT\r\r>"
+  error: ElmError
+
+- id: bus-init-dots-ok
+  page: "34 (Bus Initiation): BUS INIT: ... gefolgt von OK"
+  command: "03"
+  raw: "BUS INIT: ...OK\r43 01 33 00 00 00 00\r\r>"
+  can: false
+  codes: [P0133]
+
+- id: bus-init-dots-error
+  page: "34: BUS INIT: ... gefolgt von einer Fehlermeldung"
+  command: "0100"
+  raw: "BUS INIT: ...ERROR\r\r>"
+  error: ElmError
+
+- id: can-error
+  page: "78: CAN ERROR"
+  command: "03"
+  raw: "CAN ERROR\r\r>"
+  error: ElmError
+
+- id: err94
+  page: "79: ERRxx, z. B. ERR94 (schwerer CAN-Fehler)"
+  command: "03"
+  raw: "ERR94\r\r>"
+  error: ElmError
+
+- id: lv-reset
+  page: "79: LV RESET nach Unterspannung"
+  command: "03"
+  raw: "LV RESET\r\r>"
+  error: ElmError
+
+- id: buffer-full-after-data
+  page: "78: BUFFER FULL, Daten gingen verloren"
+  command: "03"
+  raw: "43 01 33 00 00 00 00\rBUFFER FULL\r\r>"
+  error: ElmError
+
+- id: data-error-marker
+  page: "78: <DATA ERROR markiert eine fehlerhafte Zeile"
+  command: "03"
+  raw: "43 01 33 00 00 00 00 <DATA ERROR\r\r>"
+  error: ElmError
+
+- id: rx-error-marker
+  page: "79: <RX ERROR"
+  command: "03"
+  raw: "43 01 33 00 <RX ERROR\r\r>"
+  error: ElmError
+
+- id: stopped
+  page: "79: STOPPED, Befehl durch neues Zeichen unterbrochen"
+  command: "03"
+  raw: "STOPPED\r\r>"
+  error: ElmError
