@@ -8,8 +8,16 @@ so aus (``ATH0``, mit oder ohne Leerzeichen)::
     1: 01 71 00 00 00 00 00
 
 Die erste Zeile ist die Nutzdatenlänge in Bytes (hex), dann folgen die Frames mit
-fortlaufender Nummer 0 bis F. Der letzte Frame ist aufgefüllt und wird auf die Länge
-gekürzt. Alle anderen Zeilen sind je eine vollständige Nachricht.
+fortlaufender Nummer 0 bis F (danach wieder 0). Der letzte Frame ist aufgefüllt und
+wird auf die Länge gekürzt. Alle anderen Zeilen sind je eine vollständige Nachricht;
+sie dürfen auch zwischen den Frames einer mehrteiligen Nachricht stehen (Einzel-Frame
+eines anderen Steuergeräts).
+
+Senden zwei Steuergeräte gleichzeitig mehrteilige Nachrichten, mischt der ELM327 ohne
+Header deren Frames (Datenblatt ELM327DS, „Multiline Responses“, Beispiel ``09 04``);
+eine Zuordnung ist dann unmöglich. Das wird an Lücken in der Frame-Nummerierung und an
+unvollständigen Nachrichten erkannt und als ``ValueError`` gemeldet, statt falsche
+Daten zu liefern.
 """
 
 import re
@@ -25,35 +33,81 @@ def _hex(text: str) -> bytes:
         raise ValueError(f"keine Hex-Daten: {text!r}") from None
 
 
+class _Collector:
+    """Sammelt Nachrichten; höchstens eine mehrteilige ist gleichzeitig offen."""
+
+    def __init__(self) -> None:
+        self.messages: list[bytearray] = []
+        self.lengths: list[int | None] = []
+        self.open: int | None = None  # Index der offenen mehrteiligen Nachricht
+        self.next_seq = 0
+
+    def add(self, data: bytes, length: int | None) -> int:
+        self.messages.append(bytearray(data))
+        self.lengths.append(length)
+        return len(self.messages) - 1
+
+    def complete(self, index: int) -> bool:
+        length = self.lengths[index]
+        return length is not None and len(self.messages[index]) >= length
+
+    def close(self) -> None:
+        """Schließt die offene Nachricht; fehlen Frames, ist die Antwort unbrauchbar."""
+        index = self.open
+        if index is not None and self.lengths[index] is not None and not self.complete(index):
+            raise ValueError(
+                f"mehrteilige Nachricht unvollständig ({len(self.messages[index])} von "
+                f"{self.lengths[index]} Bytes): Frames fehlen oder stammen von mehreren "
+                "Steuergeräten"
+            )
+        self.open = None
+
+    def frame(self, seq: int, data: bytes) -> None:
+        index = self.open
+        if (
+            index is not None
+            and seq == 0
+            and self.messages[index]
+            and (self.lengths[index] is None or self.complete(index))
+        ):
+            index = None  # nächste Nachricht ohne Längenzeile (ELM327-emulator)
+        if index is not None and self.complete(index):
+            raise ValueError(f"Frame {seq:X} nach vollständiger Nachricht")
+        if index is None:
+            index = self.open = self.add(b"", None)
+            self.next_seq = 0
+        if seq != self.next_seq:
+            raise ValueError(
+                f"Frame {seq:X} statt {self.next_seq:X}; Antworten mehrerer Steuergeräte "
+                "vermischt? Nur mit Headern (ATH1) zuzuordnen"
+            )
+        self.messages[index] += data
+        self.next_seq = (seq + 1) % 16
+
+
 def split_messages(response: str) -> list[bytes]:
-    """Liefert die Nutzdaten jeder Nachricht in ``response``."""
-    messages: list[bytearray] = []
-    lengths: list[int | None] = []
-    multi = False  # gehört die nächste ``N:``-Zeile zur aktuellen Nachricht?
+    """Liefert die Nutzdaten jeder Nachricht in ``response``.
+
+    Wirft ``ValueError`` bei Zeilen, die keine Hex-Daten sind, und bei mehrteiligen
+    Nachrichten mit fehlenden oder vertauschten Frames.
+    """
+    collector = _Collector()
     for raw in response.upper().splitlines():
         line = raw.strip()
         if not line:
             continue
         if _BYTE_COUNT.match(line):
-            messages.append(bytearray())
-            lengths.append(int(line, 16))
-            multi = True
+            collector.close()
+            collector.open = collector.add(b"", int(line, 16))
+            collector.next_seq = 0
             continue
         frame = _FRAME.match(line)
         if frame is None:
-            messages.append(bytearray(_hex(line)))
-            lengths.append(None)
-            multi = False
-            continue
-        length = lengths[-1] if multi else None
-        complete = length is None or len(messages[-1]) >= length
-        if not multi or (frame.group(1) == "0" and messages[-1] and complete):
-            # Mehrteilige Nachricht ohne Längenzeile
-            messages.append(bytearray())
-            lengths.append(None)
-            multi = True
-        messages[-1] += _hex(frame.group(2))
+            collector.add(_hex(line), None)
+        else:
+            collector.frame(int(frame.group(1), 16), _hex(frame.group(2)))
+    collector.close()
     return [
         bytes(data if length is None else data[:length])
-        for data, length in zip(messages, lengths, strict=True)
+        for data, length in zip(collector.messages, collector.lengths, strict=True)
     ]

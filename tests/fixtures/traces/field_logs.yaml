@@ -1,0 +1,245 @@
+# Byte-genaue Mitschnitte echter Adapter an echten Fahrzeugen, wie Nutzer sie in
+# Issue-Trackern quelloffener Projekte gepostet haben (abgerufen 2026-10). Übernommen sind
+# nur kurze, faktische Protokoll-Zeichenketten als Zitat mit Quellenangabe; es wird kein
+# Code der Projekte verwendet.
+#
+# python-OBD (https://github.com/brendan-w/python-OBD) loggt jeden Lesevorgang als
+# Python-Bytes-Literal (``read: b'...'``) und betreibt den Adapter mit Headern (ATH1),
+# Leerzeichen (ATS1) und ab ATE0 ohne Echo. Header-AN-Zeilen sind hier nach ATH0
+# umgerechnet, aber nur wo das eindeutig ist (Feld ``headers_on`` zeigt das Original):
+#   * J1850/ISO 9141/KWP (Protokolle 1–5): 3 Header-Bytes vorn und 1 Prüfsummen-Byte hinten
+#     entfallen (Datenblatt ELM327DS S. 44: ``48 6B 10 41 00 BE 3E B8 11 FA`` mit ATH1
+#     entspricht ``41 00 BE 3E B8 11`` mit ATH0).
+#   * CAN 11 bit, Einzel-Frame: CAN-ID und PCI-Byte (Länge) entfallen, angezeigt werden
+#     genau so viele Bytes wie das PCI-Byte angibt (ELM327DS S. 46, „Single Frame“).
+# Die Umrechnung prüft tests/verification/test_traces.py gegen ``headers_on``.
+#
+# Ein python-OBD-Lesevorgang endet an ``>``; fehlt der Prompt im Log, hat python-OBD
+# früher abgebrochen (es bricht auch bei ``OK`` ab). Solche Teilstücke sind hier nicht
+# übernommen, nur vollständige Antworten.
+#
+# Felder wie in elm327_datasheet.yaml, zusätzlich source (URL) und adapter/vehicle.
+
+# --- ATZ: Kennung mit Müll, Leerzeilen und Echo davor --------------------------------
+
+- id: atz-fc-junk
+  source: https://github.com/brendan-w/python-OBD/issues/187
+  adapter: ELM327 v1.5 (Klon), ebenso in #153 und #164
+  command: ATZ
+  raw: "\xFC\r\rELM327 v1.5\r\r>"
+  version: ELM327 v1.5
+
+- id: atz-echo-fc-junk
+  source: https://github.com/brendan-w/python-OBD/issues/153
+  adapter: ELM327 v1.5 (Klon), Audi TT 1998 / Volvo V40 2003
+  command: ATZ
+  raw: "ATZ\r\xFC\r\rELM327 v1.5\r\r>"
+  version: ELM327 v1.5
+
+- id: atz-blank-lines
+  source: https://github.com/brendan-w/python-OBD/issues/173
+  command: ATZ
+  raw: "\r\rELM327 v1.5\r\r>"
+  version: ELM327 v1.5
+
+- id: atz-echo-blank-lines
+  source: https://github.com/brendan-w/python-OBD/issues/180
+  command: ATZ
+  raw: "ATZ\r\r\rELM327 v1.3a\r\r>"
+  version: ELM327 v1.3a
+
+- id: atz-single-cr
+  source: https://github.com/brendan-w/python-OBD/issues/164
+  command: ATZ
+  raw: "ELM327 v2.1\r>"
+  version: ELM327 v2.1
+
+- id: ate0-echo
+  source: https://github.com/brendan-w/python-OBD/issues/153
+  note: Nach ATZ ist das Echo wieder an; die Antwort auf ATE0 selbst enthält noch das Echo.
+  command: ATE0
+  raw: "ATE0\rOK\r\r>"
+  text: OK
+
+- id: baud-probe-garbage
+  source: https://github.com/brendan-w/python-OBD/issues/180
+  note: Antwort beim Durchprobieren der Baudrate (python-OBD sendet dort ``\x7F\x7F``).
+  command: ATI
+  raw: "\x7F\x7F\r?\r\r>"
+  error: UnknownCommandError
+
+# --- ATRV ----------------------------------------------------------------------------
+
+- id: atrv-14.1
+  source: https://github.com/brendan-w/python-OBD/issues/153
+  command: ATRV
+  raw: "14.1V\r\r>"
+  voltage: 14.1
+
+- id: atrv-11.2
+  source: https://github.com/brendan-w/python-OBD/issues/153
+  command: ATRV
+  raw: "11.2V\r\r>"
+  voltage: 11.2
+
+- id: atrv-13.6
+  source: https://github.com/brendan-w/python-OBD/issues/164
+  command: ATRV
+  raw: "13.6V\r\r>"
+  voltage: 13.6
+
+- id: atrv-single-cr
+  source: https://github.com/brendan-w/python-OBD/issues/164
+  command: ATRV
+  raw: "14.1V\r>"
+  voltage: 14.1
+
+# --- ATDPN ---------------------------------------------------------------------------
+
+- id: atdpn-a5
+  source: https://github.com/brendan-w/python-OBD/issues/180
+  note: nach SEARCHING... mit KWP-Antwort (83 F1 10 ...), also ISO 14230-4 fast init
+  command: ATDPN
+  raw: "A5\r\r>"
+  text: A5
+
+- id: atdpn-a8
+  source: https://github.com/brendan-w/python-OBD/blob/master/docs/Troubleshooting.md
+  note: Log gegen einen Simulator (/dev/pts), nicht gegen ein Fahrzeug
+  command: ATDPN
+  raw: "A8\r>"
+  text: A8
+
+# --- BUS INIT und SEARCHING (Statuszeile auf eigener Zeile) --------------------------
+
+- id: bus-init-ok-iso9141
+  source: https://github.com/brendan-w/python-OBD/issues/153
+  vehicle: Audi TT 1998, ATTP3 (ISO 9141-2)
+  note: >-
+    Echte Klone schreiben „BUS INIT: OK“ ohne Punkte und mit Zeilenende vor den Daten
+    (nicht auf derselben Zeile).
+  command: "0100"
+  headers_on: "BUS INIT: OK\r48 6B 11 41 00 BE 1F B8 10 AA \r\r>"
+  raw: "BUS INIT: OK\r41 00 BE 1F B8 10 \r\r>"
+  pid: {pid: 0x00, data: BE1FB810}
+
+- id: bus-init-ok-kwp
+  source: https://github.com/brendan-w/python-OBD/issues/164
+  vehicle: ATTP5 (ISO 14230-4 KWP fast init)
+  command: "0100"
+  headers_on: "BUS INIT: OK\r86 F1 10 41 00 BE 3E B8 11 8D \r\r>"
+  raw: "BUS INIT: OK\r41 00 BE 3E B8 11 \r\r>"
+  pid: {pid: 0x00, data: BE3EB811}
+
+- id: searching-j1850
+  source: https://github.com/brendan-w/python-OBD/issues/153
+  vehicle: Volvo V40 2003
+  command: "0100"
+  headers_on: "SEARCHING...\r48 6B 13 41 00 BE 1F B8 11 AD \r\r>"
+  raw: "SEARCHING...\r41 00 BE 1F B8 11 \r\r>"
+  text: 41 00 BE 1F B8 11
+
+- id: searching-can-two-ecus
+  source: https://github.com/brendan-w/python-OBD/issues/173
+  command: "0100"
+  headers_on: "SEARCHING...\r7E9 06 41 00 88 18 00 13 \r7E8 06 41 00 BE 3F A8 13 \r\r>"
+  raw: "SEARCHING...\r41 00 88 18 00 13 \r41 00 BE 3F A8 13 \r\r>"
+  messages: ["410088180013", "4100BE3FA813"]
+
+- id: kwp-negative-response
+  source: https://github.com/brendan-w/python-OBD/issues/180
+  note: Das Steuergerät lehnt Mode 01 PID 00 mit 7F 01 11 ab; read_pid liefert None.
+  command: "0100"
+  headers_on: "SEARCHING...\r83 F1 10 7F 01 11 15 \r\r>"
+  raw: "SEARCHING...\r7F 01 11 \r\r>"
+  pid: {pid: 0x00, data: null}
+
+- id: duplicate-responses
+  source: https://github.com/brendan-w/python-OBD/issues/100
+  command: "0115"
+  headers_on: "7E8 04 41 15 00 FF \r7E8 04 41 15 00 FF \r\r>"
+  raw: "41 15 00 FF \r41 15 00 FF \r\r>"
+  messages: ["411500FF", "411500FF"]
+
+# --- Fehlermeldungen -----------------------------------------------------------------
+
+- id: bus-init-error
+  source: https://github.com/brendan-w/python-OBD/issues/187
+  command: "0100"
+  raw: "BUS INIT: ERROR\r\r>"
+  error: ElmError
+
+- id: bus-init-unable
+  source: https://github.com/brendan-w/python-OBD/issues/164
+  command: "0100"
+  raw: "BUS INIT: UNABLE TO CONNECT\r>"
+  error: ElmError
+
+- id: bus-init-stopped
+  source: https://github.com/brendan-w/python-OBD/issues/173
+  command: "0100"
+  raw: "BUS INIT: STOPPED\r\r>"
+  error: ElmError
+
+- id: data-then-stopped
+  source: https://github.com/brendan-w/python-OBD/issues/173
+  note: >-
+    Im Original folgt ein zweiter Prompt (``...STOPPED\r\r>\r>``); der Rest ``\r>`` bliebe
+    im Puffer und würde als Antwort auf den nächsten Befehl gelesen (siehe Bericht).
+  command: "0100"
+  headers_on: "7E8 06 41 00 BE 3F A8 13 \rSTOPPED\r\r>\r>"
+  raw: "41 00 BE 3F A8 13 \rSTOPPED\r\r>"
+  error: ElmError
+
+- id: no-data
+  source: https://github.com/brendan-w/python-OBD/issues/187
+  command: "03"
+  raw: "NO DATA\r\r>"
+  can: true
+  codes: []
+
+- id: searching-unable-to-connect
+  source: https://github.com/brendan-w/python-OBD/blob/master/docs/Troubleshooting.md
+  command: "0100"
+  raw: "SEARCHING...\rUNABLE TO CONNECT\r\r>"
+  error: ElmError
+
+# --- CAN mehrteilig ohne Header, ohne Leerzeichen (ATH0, ATS0) ------------------------
+# ELMduino (https://github.com/PowerBroker2/ELMduino) protokolliert jedes empfangene
+# Zeichen einzeln; der Adapter lief mit ATH0/ATS0, das Echo war an.
+
+- id: elmduino-multiframe-ats0
+  source: https://github.com/PowerBroker2/ELMduino/issues/285
+  adapter: Vgate iCar Pro BT4 (BLE), Fahrzeug mit DPF (PID 01 8B, 29-bit-CAN)
+  note: >-
+    Belegt das Format ohne Leerzeichen: Längenzeile ``009``, Frames ``0:...``/``1:...``
+    ohne Leerzeichen nach dem Doppelpunkt, letzter Frame mit FF aufgefüllt. Das
+    angehängte ``2`` ist die erwartete Antwortzahl (Datenblatt: „Responses“).
+  command: 018B2
+  raw: "018B2\r009\r0:418B7302FF0A\r1:640191FFFFFFFF\r\r>"
+  messages: ["418B7302FF0A640191"]
+
+- id: elmduino-multiframe-truncated
+  source: https://github.com/PowerBroker2/ELMduino/issues/285
+  adapter: Vgate iCar Pro BT4 (BLE)
+  note: >-
+    Mit ``018B1`` hört der Adapter nach dem ersten Frame auf: 009 Bytes angekündigt, nur
+    6 geliefert. Früher lieferte split_messages die 6 Bytes stillschweigend, jetzt
+    ValueError (ELMduino gibt in diesem Fall ebenfalls auf).
+  command: 018B1
+  raw: "018B1\r009\r0:418B7302C902\r\r>"
+  split_error: true
+
+# --- Füllbyte hinter Einzel-Frame ----------------------------------------------------
+
+- id: clio-trailing-aa
+  source: >-
+    https://github.com/fr3ts0n/AndrOBD/issues/283, als Testfall übernommen in
+    https://github.com/fr3ts0n/AndrOBD/blob/master/library/src/test/java/com/fr3ts0n/ecu/prot/obd/ElmProtTest.java
+  vehicle: Renault Clio V 2023, ELM327-Bluetooth-Klon, AndrOBD mit ATH0/ATS0
+  note: >-
+    Das Fahrzeug hängt an 01 00 ein Byte AA an (Verstoß gegen SAE J1979). read_pid liefert
+    es mit; Mode-03-Antworten dieses Fahrzeugs sind nicht bekannt (siehe Bericht).
+  command: "0100"
+  raw: "4100BE3EA817AA\r\r>"
+  pid: {pid: 0x00, data: BE3EA817AA}

@@ -8,6 +8,7 @@ from obd_diag.protocol.elm327 import (
     UnknownCommandError,
 )
 from tests.fakes import FakeTransport
+from tests.verification.helpers import RawTransport
 
 
 def test_initialize_returns_version_and_configures(fake_transport: FakeTransport) -> None:
@@ -85,3 +86,31 @@ def test_protocol_number(dpn: str, number: str, is_can: bool) -> None:
     protocol = Elm327(FakeTransport({"0100": "4100BE3FA813", "ATDPN": dpn})).protocol()
     assert protocol.number == number
     assert protocol.is_can is is_can
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [b"\xfc\r\rELM327 v1.5", b"ATZ\r\xfc\r\rELM327 v1.5", b"\r\rELM327 v1.5", b"\x00ELM327 v1.5"],
+)
+def test_initialize_ignores_junk_before_version(raw: bytes) -> None:
+    # Mitschnitte aus python-OBD #153/#164/#187: Klone senden nach ATZ ein Byte FC.
+    # Früher lieferte initialize() "�\nELM327 v1.5".
+    transport = RawTransport({"ATZ": raw + b"\r\r>"})
+    assert Elm327(transport).initialize() == "ELM327 v1.5"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "41 00 BE 3F A8 13\rSTOPPED",
+        "43 01 33 00 00 00 00\rBUFFER FULL",
+        "ERR94",
+        "LV RESET",
+        "43 01 33 00 00 00 00 <DATA ERROR",
+        "43 01 33 <RX ERROR",
+    ],
+)
+def test_error_lines_raise(raw: str) -> None:
+    # Auch nach Teildaten: die Antwort ist unvollständig oder fehlerhaft.
+    with pytest.raises(ElmError):
+        Elm327(FakeTransport({"03": raw})).command("03")

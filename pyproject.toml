@@ -33,6 +33,7 @@ dev = [
     "pytest-qt>=4.5.0",
     "pypdf>=6.19.0",
     "types-reportlab>=5.0.0.20261006",
+    "hypothesis>=6.168.5",
 ]
 
 [build-system]

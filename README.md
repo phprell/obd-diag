@@ -25,7 +25,12 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
 
-Ohne uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytest-qt pypdf ruff mypy types-pyserial types-reportlab ELM327-emulator`.
+Ohne uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytest-qt pypdf ruff mypy types-pyserial types-reportlab ELM327-emulator hypothesis pyyaml`.
+
+`tests/verification` prüft die Antwortverarbeitung ohne Adapter gegen echte Mitschnitte
+(ELM327-Datenblatt, Nutzer-Logs aus python-OBD/ELMduino/AndrOBD, Quellen in
+`tests/fixtures/traces/`), gegen den DTC-Decoder von python-OBD und mit
+Hypothesis-Round-Trip- und Fuzz-Tests.
 
 Die GUI-Tests (`tests/ui`) laufen ohne Bildschirm (`QT_QPA_PLATFORM=offscreen`, setzt
 `tests/ui/conftest.py`) und werden übersprungen, wenn PySide6 fehlt.
