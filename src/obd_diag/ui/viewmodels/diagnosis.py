@@ -82,6 +82,10 @@ class DiagnosisViewModel(QObject):
 
     Eine aus einer Datei geöffnete Sitzung ist nur zum Ansehen (``viewOnly``): Löschen
     braucht ein verbundenes Fahrzeug.
+
+    Solange die Live-Daten laufen, ist ``blocked`` gesetzt (``LiveViewModel``): Scan,
+    Löschen und Export brauchen den einzigen Worker-Thread bzw. den Adapter und
+    werden dann ignoriert.
     """
 
     portsChanged = Signal()
@@ -105,6 +109,7 @@ class DiagnosisViewModel(QObject):
         self._settings = QSettings(SETTINGS_ORG, SETTINGS_APP)
         self._ports: list[dict[str, str]] = []
         self._busy = False
+        self._blocked = False
         self._busy_text = ""
         self._session: Session | None = None
         self._view_only = False
@@ -130,6 +135,20 @@ class DiagnosisViewModel(QObject):
         return self._session
 
     @property
+    def backend(self) -> Backend:
+        return self._backend
+
+    @property
+    def runner(self) -> JobRunner:
+        return self._runner
+
+    def set_blocked(self, blocked: bool) -> None:
+        """Von den Live-Daten: Adapter und Worker-Thread sind belegt."""
+        if blocked != self._blocked:
+            self._blocked = blocked
+            self.stateChanged.emit()
+
+    @property
     def _result(self) -> ScanResult | None:
         return self._session.scan if self._session is not None else None
 
@@ -148,6 +167,11 @@ class DiagnosisViewModel(QObject):
     @Property(bool, notify=stateChanged)
     def busy(self) -> bool:
         return self._busy
+
+    @Property(bool, notify=stateChanged)
+    def blocked(self) -> bool:
+        """Live-Daten laufen: keine Diagnose, kein Löschen, kein Export."""
+        return self._blocked
 
     @Property(str, notify=stateChanged)
     def busyText(self) -> str:
@@ -201,7 +225,9 @@ class DiagnosisViewModel(QObject):
     def canClear(self) -> bool:
         # Nur gespeicherte und ausstehende Codes lassen sich löschen (Mode 04), und nur
         # am verbundenen Fahrzeug, nicht in einer geöffneten Sitzung
-        return not self._busy and not self._view_only and bool(self._clearable())
+        return (
+            not self._busy and not self._blocked and not self._view_only and bool(self._clearable())
+        )
 
     @Property(str, notify=stateChanged)
     def errorMessage(self) -> str:
@@ -294,7 +320,7 @@ class DiagnosisViewModel(QObject):
 
     @Property(bool, notify=stateChanged)
     def canExport(self) -> bool:
-        return not self._busy and self._session is not None
+        return not self._busy and not self._blocked and self._session is not None
 
     @Property(str, notify=stateChanged)
     def reportBaseName(self) -> str:
@@ -363,7 +389,7 @@ class DiagnosisViewModel(QObject):
     def connectAndScan(self, port: str, baud: int) -> None:
         """Vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN."""
         port = port.strip()
-        if self._busy:
+        if self._busy or self._blocked:
             return
         if not port:
             self._fail("Bitte einen Port angeben, z. B. /dev/ttyUSB0.")
@@ -436,7 +462,7 @@ class DiagnosisViewModel(QObject):
 
     def _export(self, kind: str, target: str) -> None:
         session = self._session
-        if self._busy or session is None or not target.strip():
+        if self._busy or self._blocked or session is None or not target.strip():
             return
         path = local_path(target.strip())
         if path.suffix.lower() != f".{kind}":
