@@ -10,7 +10,8 @@ Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/ar
 Roadmap-Schritt 1 (Grundgerüst): Transport-Schicht für USB-Seriell, minimaler
 ELM327-Treiber, DTC-Dekodierung, Tests gegen Fake und Emulator, CI.
 Roadmap-Schritt 2: `obd-diag scan` liest Fehlercodes und erklärt sie.
-Roadmap-Schritt 3: Desktop-Oberfläche (PySide6/QML) mit Verbinden, Fehlerliste,
+Roadmap-Schritt 3: `obd-diag clear` löscht Codes nach Sicherung, `obd-diag ports`
+findet Adapter; dazu die Desktop-Oberfläche (PySide6/QML) mit Verbinden, Fehlerliste,
 Detailansicht und Löschen.
 
 ## Entwicklung
@@ -81,6 +82,51 @@ Im Emulator sind standardmäßig keine Codes gesetzt; die Tests geben sie über 
 Listen `DTC_STORED`, `DTC_PENDING` und `DTC_PERMANENT` in `elm.obd_message` vor
 (siehe `tests/integration/test_scan_emulator.py`).
 
+### Adapter finden
+
+```sh
+obd-diag ports
+```
+
+listet USB-Seriell-Adapter (`/dev/ttyUSB*`, `/dev/ttyACM*` und andere Geräte mit
+USB-Kennung) und gebundene Bluetooth-Geräte (`/dev/rfcomm*`, z. B. nach
+`sudo rfcomm bind 0 <MAC>`). Eingebaute Schnittstellen (`/dev/ttyS*`) erscheinen nicht.
+
+### Fehlercodes löschen
+
+```sh
+obd-diag clear --port /dev/ttyUSB0          # zeigt die Codes und fragt nach
+obd-diag clear --port /dev/ttyUSB0 --yes    # ohne Rückfrage
+```
+
+`clear` ist die einzige schreibende Aktion (Mode 04) und hält sich an feste Regeln:
+
+1. Erst lesen: Scan wie bei `scan`. Gibt es keine gespeicherten oder ausstehenden
+   Codes, wird nichts gesendet. Permanente Codes (Mode 0A) löscht Mode 04 nicht, sie
+   verschwinden erst, wenn das Steuergerät den Fehler in Fahrzyklen als behoben sieht.
+2. Vorbedingungen: das Steuergerät antwortet (Zündung an), die Bordspannung liegt
+   nicht unter 11,8 V und die Drehzahl ist 0 (Motor aus). Ist die Drehzahl nicht
+   lesbar, wird ebenfalls abgelehnt.
+3. Rückfrage: die Codes werden aufgelistet, gelöscht wird nur nach Eingabe von `ja`
+   (oder mit `--yes`).
+4. Sicherung: Scan-Ergebnis, Freeze Frame (Mode 02: auslösender Code, Last,
+   Kühlmitteltemperatur, Drehzahl, Geschwindigkeit, roh und dekodiert), Zeitpunkt,
+   Adapter und Protokoll als JSON nach `$XDG_DATA_HOME/obd-diag/backups/`
+   (Standard `~/.local/share/obd-diag/backups/`). Die Datei wird vollständig
+   geschrieben, bevor Mode 04 gesendet wird; vorhandene Sicherungen werden nie
+   überschrieben.
+5. Erst dann Mode 04, danach ein Kontroll-Scan. Lehnt das Steuergerät ab
+   (`7F 04 22`: Bedingungen nicht erfüllt), bricht `clear` mit Fehlermeldung ab;
+   die Sicherung bleibt.
+
+Schlägt ein Schritt vor dem Löschen fehl, wird Mode 04 nicht gesendet. Mit dem Löschen
+gehen auch Freeze Frame und Readiness-Status verloren; ist der Fehler nicht behoben,
+kommen die Codes wieder.
+
+Im Emulator läuft der Motor standardmäßig (`010C` liefert wechselnde Drehzahlen ab
+1303 1/min), `clear` lehnt also ab. Die Tests setzen die Drehzahl über
+`emulator.answer["RPM"]` auf 0 (siehe `tests/integration/test_clear_emulator.py`).
+
 ### Oberfläche
 
 ```sh
@@ -114,9 +160,9 @@ wieder; die Oberfläche bleibt dabei bedienbar.
 
 ```
 src/obd_diag/
-├── transport/   # Byte-Kanal zum Adapter (Protocol + USB-Seriell)
+├── transport/   # Byte-Kanal zum Adapter (Protocol, USB-Seriell, Adaptersuche)
 ├── protocol/    # ELM327-Befehle, OBD-II-Dekodierung
-├── services/    # Diagnose-Abläufe (Scan)
+├── services/    # Diagnose-Abläufe (Scan, Löschen)
 ├── data/        # DTC-Katalog (SQLite), FIN (folgt)
 ├── ui/          # Desktop-Oberfläche: View-Models (Python) und QML
 └── cli.py
