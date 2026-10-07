@@ -21,6 +21,23 @@ uv run mypy
 
 Ohne uv: `python -m venv .venv && .venv/bin/pip install -e . pytest ruff mypy types-pyserial ELM327-emulator`.
 
+### Fehlercode-Katalog
+
+Die Klartexte zu den Fehlercodes (Deutsch/Englisch, Ursachen, Symptome, Kostenrahmen)
+liegen offline in `src/obd_diag/data/dtc_catalog.sqlite`. Die Datei wird nicht
+eingecheckt, sondern gebaut – vor dem ersten Start und vor `uv build`:
+
+```sh
+uv run python tools/build_dtc_db.py                     # lädt die Daten von GitHub
+uv run python tools/build_dtc_db.py --source ../OBDex   # oder aus lokalem Checkout
+```
+
+Datenquelle ist [OBDex](https://github.com/foerbsnavi/OBDex) (Daten unter
+[CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/), Code MIT), fest auf einen
+Commit gepinnt (`OBDEX_COMMIT` im Skript). Quelle, Commit, Lizenz und Bauzeit stehen in
+der Tabelle `meta` des Katalogs. Ein Test gegen den echten Katalog läuft nur, wenn er
+gebaut ist.
+
 ### Ohne Auto testen
 
 Der [ELM327-emulator](https://github.com/Ircama/ELM327-emulator) stellt ein virtuelles
@@ -47,7 +64,7 @@ src/obd_diag/
 ├── transport/   # Byte-Kanal zum Adapter (Protocol + USB-Seriell)
 ├── protocol/    # ELM327-Befehle, OBD-II-Dekodierung
 ├── services/    # Diagnose-Abläufe (folgt)
-├── data/        # DTC-Katalog, FIN (folgt)
+├── data/        # DTC-Katalog (SQLite), FIN (folgt)
 ├── ui/          # QML (folgt)
 └── cli.py
 ```

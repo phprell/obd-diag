@@ -1,0 +1,66 @@
+# Kleiner Ausschnitt im OBDex-Format für die Katalog-Tests.
+
+- code: P0420
+  category: powertrain
+  title:
+    en: Catalyst System Efficiency Below Threshold (Bank 1)
+    de: Katalysatorwirkungsgrad unter Schwellwert (Bank 1)
+  description:
+    en: The oxygen storage capacity of the main catalytic converter on bank 1 has degraded.
+    de: Die Sauerstoffspeicherfähigkeit des Hauptkatalysators auf Bank 1 ist zu gering.
+  common_causes:
+    - id: exhaust_leak_pre_cat
+      likelihood: low
+      label:
+        en: Exhaust leak before catalyst
+        de: Abgasleck vor Katalysator
+    - id: catalyst_aged
+      likelihood: high
+      label:
+        en: Catalyst aged or contaminated
+        de: Katalysator gealtert oder vergiftet
+    - id: o2_sensor_downstream_drift
+      likelihood: medium
+      label:
+        en: Downstream oxygen sensor drift
+  symptoms:
+    - en: Check engine light on
+      de: Motorkontrollleuchte an
+    - en: Failed emissions inspection
+  repair:
+    difficulty: hard
+    diy_possible: false
+    estimated_cost_eur: [600, 2500.4]
+    estimated_hours: [1.5, 5.0]
+  flags:
+    mil: true
+    emissions_relevant: true
+  related_codes: [P0430]
+  sources:
+    - https://en.wikipedia.org/wiki/Catalytic_converter
+
+- code: U0100
+  category: network
+  title:
+    en: Lost Communication With ECM/PCM "A"
+  description:
+    en: The module has not received messages from the engine control module.
+  common_causes:
+    - id: can_wiring
+      likelihood: high
+      label:
+        en: CAN bus wiring fault
+  symptoms:
+    - en: Engine may not start
+  flags:
+    mil: false
+  sources:
+    - https://example.org
+
+- code: B0001
+  category: body
+  title:
+    en: Driver Frontal Stage 1 Deployment Control
+    de: Fahrerairbag Stufe 1 Auslösesteuerung
+  sources:
+    - https://example.org

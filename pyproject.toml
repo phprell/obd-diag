@@ -20,11 +20,17 @@ dev = [
     "mypy>=1.11",
     "types-pyserial",
     "ELM327-emulator>=3.0",
+    "pyyaml>=6.0.3",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build]
+# Der Katalog ist gitignored (wird gebaut, nicht eingecheckt), muss aber ins Paket.
+artifacts = ["src/obd_diag/data/dtc_catalog.sqlite"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/obd_diag"]
@@ -38,7 +44,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 
 [tool.mypy]
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "tools"]
 
 [[tool.mypy.overrides]]
 module = ["elm"]
