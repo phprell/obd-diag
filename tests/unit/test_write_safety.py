@@ -141,7 +141,11 @@ def test_clear_with_arbitrary_answers_sends_04_only_when_safe(
     # Die Prüfung der Drehzahl kam vor dem Löschen, danach nur noch Lesendes.
     index = sent.index(CLEAR_COMMAND)
     assert "010C" in sent[:index]
-    assert sent[index - len(FREEZE) - len(PRECONDITIONS) : index - len(FREEZE)] == PRECONDITIONS
+    # Zwischen den Vorbedingungen und 04 nur Freeze-Frame-Abfragen (Mode 02, je nach
+    # Antwort mit oder ohne Frame-Nummer).
+    start = max(i for i in range(index) if sent[i : i + len(PRECONDITIONS)] == PRECONDITIONS)
+    between = sent[start + len(PRECONDITIONS) : index]
+    assert between and all(c.startswith("02") for c in between), between
     assert all(is_read_only(c) for c in sent[index + 1 :])
     # Beim Senden lag genau eine vollständige Sicherung mit den Codes vor.
     ((backup,),) = transport.backups_at_clear
