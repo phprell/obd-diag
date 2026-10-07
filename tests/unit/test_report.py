@@ -115,8 +115,10 @@ def test_pdf_full_session(tmp_path: Path, font: str) -> None:
         "Tankentlüftung",
         "nicht abgeschlossen",
         "nicht unterstützt",
-        "AU-bereit",
-        "nein, nicht alle unterstützten Tests sind abgeschlossen",
+        "Alle Tests abgeschlossen",
+        "nein, 2 offen",
+        "Das ist keine AU-Bewertung",
+        "Prüfziffer",
         f"Erstellt mit obd-diag {__version__}; Fehlercode-Texte: OBDex (CC0)",
         "Seite 1 von",
     ):
@@ -142,7 +144,39 @@ def test_pdf_low_voltage_and_ready(tmp_path: Path, font: str) -> None:
     text = _pdf_text(path)
     assert "11,2 V (niedrig)" in text
     assert "Warnung: Bordspannung unter 11,8 V" in text
-    assert "AU-bereit\nja" in text or "AU-bereit ja" in text
+    assert "Alle Tests abgeschlossen\nja" in text
+    assert "AU-bereit" not in text
+
+
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        (
+            {"model_year": 2026, "model_year_alternatives": (1996,)},
+            ["Modelljahr", "2026 oder 1996 (aus Stelle 10, ohne Gewähr)"],
+        ),
+        (
+            {},
+            [
+                "2006 (aus Stelle 10, ohne Gewähr)",
+                "nicht vorgeschrieben (passt nicht, kein Fehler)",
+            ],
+        ),
+        ({"checksum_ok": True}, ["Prüfziffer stimmt Hersteller"]),
+        ({"checksum_ok": False}, ["Prüfziffer stimmt nicht"]),
+    ],
+)
+def test_pdf_vehicle_wording(
+    tmp_path: Path, changes: dict[str, object], expected: list[str]
+) -> None:
+    session = full_session()
+    assert session.vehicle is not None
+    vehicle = dataclasses.replace(session.vehicle, **changes)  # type: ignore[arg-type]
+    path = tmp_path / "bericht.pdf"
+    export_pdf(dataclasses.replace(session, vehicle=vehicle), path)
+    text = " ".join(_pdf_text(path).split())  # Zeilenumbrüche in Tabellenzellen egal
+    for snippet in expected:
+        assert snippet in text, snippet
 
 
 def test_pdf_minimal_session(tmp_path: Path, font: str) -> None:
@@ -156,7 +190,7 @@ def test_pdf_minimal_session(tmp_path: Path, font: str) -> None:
     assert "Freeze Frame nicht verfügbar." in text
     assert "Keine Fehlercodes gespeichert." in text
     assert "unbekannt" in text  # Bordspannung
-    assert "AU-bereit" not in text
+    assert "Alle Tests abgeschlossen" not in text
     assert "Seite 1 von 1" in text
 
 

@@ -27,6 +27,17 @@ PID 01 wie in Wikipedia „OBD-II PIDs“ (Abschnitt „Service 01 PID 01“, ab
 Bit C4/D4 (Otto: Kältemittel der Klimaanlage) ist in neueren J1979-Ausgaben
 reserviert, wird aber weiter dekodiert, weil ältere Fahrzeuge es setzen. Reservierte
 Bits werden ignoriert. Nicht unterstützte Monitore erscheinen mit ``NOT_SUPPORTED``.
+
+Bezug zur Abgasuntersuchung (AU): Das Ergebnis heißt bewusst „alle Tests
+abgeschlossen“ und nicht „AU-bereit“. Nach der AU-Richtlinie (Verkehrsblatt 19/2017,
+Leitfaden 5.01, gültig ab 01.01.2018) besteht die AU bei allen OBD-Fahrzeugen aus
+einer Funktionsprüfung OBD und einer Endrohrmessung; die Bewertung der
+Prüfbereitschaftstests entfällt, wenn alle unterstützten Tests durchgeführt sind
+(Hella Gutmann, „Informationen zum Leitfaden 5.01“, BD0059, 12/2017). Schon vorher
+galt: Ist der Readiness-Code nicht gesetzt, wird stattdessen gemessen; das allein ist
+kein erheblicher Mangel. Eine zitierfähige, allgemeine Liste tolerierter offener
+Monitore gibt es nicht (Stand 2026-10-07), die Behandlung hängt von Fahrzeug und
+Prüfablauf ab. Deshalb gibt es hier keine AU-Bewertung.
 """
 
 from dataclasses import dataclass
@@ -34,6 +45,15 @@ from enum import StrEnum
 
 from obd_diag.protocol.elm327 import Elm327, ElmError
 from obd_diag.protocol.frames import split_messages
+
+# Bezeichnung des Gesamtergebnisses und Hinweis dazu, gleich in Kommandozeile, Bericht
+# und Oberfläche
+ALL_COMPLETE_LABEL = "Alle Tests abgeschlossen"
+AU_NOTE = (
+    "Das ist keine AU-Bewertung: Zur Abgasuntersuchung gehört immer auch eine "
+    "Abgasmessung am Endrohr, und ob einzelne offene Tests toleriert werden, hängt vom "
+    "Fahrzeug und vom Prüfablauf ab."
+)
 
 
 class MonitorState(StrEnum):
@@ -57,9 +77,20 @@ class ReadinessStatus:
     monitors: tuple[Monitor, ...]
 
     @property
-    def ready(self) -> bool:
-        """Alle unterstützten Monitore abgeschlossen (Voraussetzung für die AU)."""
+    def all_complete(self) -> bool:
+        """Alle unterstützten Monitore abgeschlossen.
+
+        Das ist kein AU-Ergebnis: Seit der AU-Richtlinie 2018 (Leitfaden 5.01) gehört zur
+        AU immer auch die Endrohrmessung; offene Monitore führen nicht pauschal zum
+        Nichtbestehen, und ob einzelne toleriert werden, hängt von Fahrzeug und
+        Prüfablauf ab (siehe README, Abschnitt Readiness).
+        """
         return all(m.state is not MonitorState.INCOMPLETE for m in self.monitors)
+
+    @property
+    def ready(self) -> bool:
+        """Alter Name für ``all_complete`` (bleibt zur Kompatibilität)."""
+        return self.all_complete
 
 
 # Kontinuierliche Monitore in Byte B: (Bit, Schlüssel, Name); "nicht abgeschlossen" = Bit + 4
@@ -122,7 +153,7 @@ _RANK = {MonitorState.NOT_SUPPORTED: 0, MonitorState.COMPLETE: 1, MonitorState.I
 
 
 def combine_readiness(statuses: list[ReadinessStatus]) -> ReadinessStatus:
-    """Fasst die Antworten mehrerer Steuergeräte zusammen, wie es die AU prüft.
+    """Fasst die Antworten mehrerer Steuergeräte zu einem Gesamtstand zusammen.
 
     Maßgeblich für die Motorart ist das erste Steuergerät (in der Regel das
     Motorsteuergerät); Steuergeräte mit anderer Motorart-Kennung werden für die

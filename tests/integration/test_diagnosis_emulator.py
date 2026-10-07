@@ -173,7 +173,7 @@ def test_cli_diagnose_save_and_pdf(
     pdf = cli_env / "bericht.pdf"
     assert main(["diagnose", "--port", emulator.port_name, "--save", "--pdf", str(pdf)]) == 0
     out, err = capsys.readouterr()
-    assert "  AU-bereit: ja\n" in out
+    assert "  Alle Tests abgeschlossen: ja\n" in out
     assert "Freeze Frame (ausgelöst durch P0133):" in out
     (saved,) = (cli_env / "data" / "obd-diag" / "sessions").iterdir()
     assert f"Sitzung gespeichert: {saved}\n" in err

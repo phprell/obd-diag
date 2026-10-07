@@ -14,8 +14,14 @@ from PySide6.QtCore import (
 from obd_diag.export.report import FREEZE_LABELS, MONITOR_STATE_LABELS  # wie im PDF
 from obd_diag.protocol.obd import FreezeFrame
 from obd_diag.services.diagnostics import DiagnosticCode
-from obd_diag.services.readiness import Monitor, MonitorState, ReadinessStatus
-from obd_diag.services.vehicle import VPIC_FIELDS, VinInfo
+from obd_diag.services.readiness import (
+    ALL_COMPLETE_LABEL,
+    AU_NOTE,
+    Monitor,
+    MonitorState,
+    ReadinessStatus,
+)
+from obd_diag.services.vehicle import VPIC_FIELDS, VinInfo, checksum_text, model_year_text
 
 
 def number_text(value: float, decimals: int = 0) -> str:
@@ -82,7 +88,8 @@ def readiness_entry(status: ReadinessStatus | None) -> dict[str, Any]:
     incomplete = [m.name for m in status.monitors if m.state is MonitorState.INCOMPLETE]
     supported = [m for m in status.monitors if m.state is not MonitorState.NOT_SUPPORTED]
     complete = sum(m.state is MonitorState.COMPLETE for m in status.monitors)
-    if status.ready:
+    done = status.all_complete
+    if done:
         summary = f"Alle {len(supported)} unterstützten Tests abgeschlossen."
     elif len(incomplete) == 1:
         summary = f"1 Test nicht abgeschlossen: {incomplete[0]}."
@@ -90,8 +97,9 @@ def readiness_entry(status: ReadinessStatus | None) -> dict[str, Any]:
         summary = f"{len(incomplete)} Tests nicht abgeschlossen: {', '.join(incomplete)}."
     return {
         "available": True,
-        "ready": status.ready,
-        "readyLabel": "AU-bereit" if status.ready else "Nicht AU-bereit",
+        "ready": done,  # alle unterstützten Tests abgeschlossen (kein AU-Urteil)
+        "readyLabel": ALL_COMPLETE_LABEL if done else "Nicht alle Tests abgeschlossen",
+        "auNote": AU_NOTE,
         "summary": summary,
         "milOn": status.mil_on,
         "milLabel": "an" if status.mil_on else "aus",
@@ -144,20 +152,13 @@ def vehicle_entry(vin: VinInfo | None) -> dict[str, Any]:
     """FIN und was sich daraus ablesen lässt; ``{"available": False}`` ohne FIN."""
     if vin is None:
         return {"available": False}
-    if vin.checksum_ok is None:
-        checksum = "nicht vorgeschrieben"
-    else:
-        checksum = "stimmt" if vin.checksum_ok else "stimmt nicht"
     facts = [
         ("Hersteller", vin.manufacturer or "unbekannt"),
         ("Land", vin.country or "unbekannt"),
         # Stelle 10 wiederholt sich alle 30 Jahre; außerhalb Nordamerikas nicht eindeutig
-        (
-            "Modelljahr",
-            f"{vin.model_year} (ohne Gewähr)" if vin.model_year is not None else "unbekannt",
-        ),
+        ("Modelljahr", model_year_text(vin) or "unbekannt"),
         ("Herstellercode (WMI)", vin.wmi),
-        ("Prüfziffer", checksum),
+        ("Prüfziffer", checksum_text(vin)),
     ]
     return {
         "available": True,
@@ -167,6 +168,7 @@ def vehicle_entry(vin: VinInfo | None) -> dict[str, Any]:
         "manufacturer": vin.manufacturer or "",
         "country": vin.country or "",
         "modelYear": vin.model_year if vin.model_year is not None else 0,
+        "modelYearAlternatives": list(vin.model_year_alternatives),
         "facts": [{"label": label, "value": value} for label, value in facts],
         "online": [
             {"label": VPIC_FIELDS.get(key, key), "value": value}

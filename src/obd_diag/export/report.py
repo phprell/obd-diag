@@ -42,8 +42,9 @@ from reportlab.platypus import (
 from obd_diag import __version__
 from obd_diag.data.dtc_catalog import DtcInfo
 from obd_diag.services.diagnostics import LOW_VOLTAGE, DiagnosticCode, DtcKind
-from obd_diag.services.readiness import MonitorState, ReadinessStatus
+from obd_diag.services.readiness import ALL_COMPLETE_LABEL, AU_NOTE, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session
+from obd_diag.services.vehicle import checksum_text, model_year_text
 
 KIND_LABELS = {
     DtcKind.STORED: "Gespeichert",
@@ -406,11 +407,14 @@ class _Builder:
             if not v.valid:
                 rows.append(("", self._colored("FIN ungültig (Länge oder Zeichen)", _BAD)))
             elif v.checksum_ok is False:
-                rows.append(("", self._colored("Prüfziffer stimmt nicht", _WARN)))
+                rows.append(("Prüfziffer", self._colored(checksum_text(v), _WARN)))
+            else:
+                rows.append(("Prüfziffer", checksum_text(v)))
             rows.append(("Hersteller", v.manufacturer or "unbekannt"))
             rows.append(("Land", v.country or "unbekannt"))
-            if v.model_year is not None:
-                rows.append(("Modelljahr", str(v.model_year)))
+            year = model_year_text(v)
+            if year is not None:
+                rows.append(("Modelljahr", year))
             for key in ("Model", "EngineCylinders", "DisplacementL", "FuelTypePrimary"):
                 if key in v.online:
                     label = {
@@ -494,8 +498,10 @@ class _Builder:
             )
             cells.append(
                 (
-                    "AU-bereit",
-                    self._colored(*(("ja", _GOOD) if r.ready else ("nein", _BAD)), bold=True),
+                    ALL_COMPLETE_LABEL,
+                    self._colored(
+                        *(("ja", _GOOD) if r.all_complete else ("nein", _WARN)), bold=True
+                    ),
                 )
             )
         width = _WIDTH / len(cells)
@@ -517,22 +523,21 @@ class _Builder:
         return [Spacer(1, 12), table]
 
     def readiness(self, readiness: ReadinessStatus | None) -> list[Flowable]:
-        out: list[Flowable] = [self._p("Readiness (Abgasuntersuchung)", "h1")]
+        out: list[Flowable] = [self._p("Readiness (Eigendiagnosen Abgassystem)", "h1")]
         if readiness is None:
             out.append(self._p(f"Readiness-Status {NOT_AVAILABLE}.", "note"))
             return out
         engine = "Diesel" if readiness.compression_ignition else "Otto"
+        open_count = sum(m.state is MonitorState.INCOMPLETE for m in readiness.monitors)
         ready = (
             self._colored("ja", _GOOD, bold=True)
-            if readiness.ready
-            else self._colored(
-                "nein, nicht alle unterstützten Tests sind abgeschlossen", _BAD, bold=True
-            )
+            if readiness.all_complete
+            else self._colored(f"nein, {open_count} offen", _WARN, bold=True)
         )
         out.append(
             self._kv_table(
                 [
-                    ("AU-bereit", ready),
+                    (ALL_COMPLETE_LABEL, ready),
                     ("Kontrollleuchte (MIL)", "an" if readiness.mil_on else "aus"),
                     ("Gemeldete Fehlercodes", str(readiness.dtc_count)),
                     ("Motorart", f"{engine} (Monitore für {engine}-Motoren)"),
@@ -554,7 +559,7 @@ class _Builder:
         out.append(
             self._p(
                 "Nach dem Löschen von Fehlercodes stehen die Monitore wieder auf „nicht "
-                "abgeschlossen“; sie schließen erst nach mehreren Fahrten ab.",
+                "abgeschlossen“; sie schließen erst nach mehreren Fahrten ab. " + AU_NOTE,
                 "note",
             )
         )

@@ -143,7 +143,8 @@ def test_tabs_show_session_parts(qtbot: QtBot, ui: Ui, fake_backend: FakeBackend
     assert ui.prop("vehicleHeader", "visible") is True
     _tab(ui, 1)
     qtbot.waitUntil(lambda: ui.prop("readinessHeadline", "visible") is True)
-    assert ui.prop("readinessHeadline", "text") == "Nicht AU-bereit"
+    assert ui.prop("readinessHeadline", "text") == "Nicht alle Tests abgeschlossen"
+    assert "keine AU-Bewertung" in ui.prop("readinessNote", "text")
     assert ui.prop("monitorRepeater", "count") == 10
     assert ui.prop("readinessEmpty", "visible") is False
     _tab(ui, 2)

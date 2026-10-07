@@ -1,13 +1,32 @@
 """Offline-Tabelle der Herstellerkennungen (WMI, FIN-Stellen 1-3) und Länderbereiche.
 
 ``MANUFACTURERS`` ist eine kuratierte Auswahl häufiger WMIs (deutsche, europäische,
-asiatische und amerikanische Hersteller) nach der WMI-Liste in Wikipedia „Vehicle
-identification number“ (Abschnitt „World manufacturer identifier“, abgerufen
-2026-10). Sie ist nicht vollständig: unbekannte WMIs ergeben keinen Hersteller.
+asiatische und amerikanische Hersteller). Sie ist nicht vollständig: unbekannte WMIs
+ergeben keinen Hersteller. Jeder Eintrag wurde am 2026-10-07 gegen mindestens eine
+dieser Quellen geprüft:
+
+- Wikipedia „Vehicle identification number“, Abschnitt „List of common WMI“
+  (https://en.wikipedia.org/wiki/Vehicle_identification_number), dort zum Teil mit
+  der WMI-Liste des Kraftfahrt-Bundesamts belegt;
+- Wikipedia „Fahrzeug-Identifizierungsnummer“, Abschnitt Herstellercodes
+  (https://de.wikipedia.org/wiki/Fahrzeug-Identifizierungsnummer);
+- NHTSA vPIC ``DecodeWMI`` (Stichproben, z. B.
+  https://vpic.nhtsa.dot.gov/api/vehicles/DecodeWMI/WVW?format=json); vPIC kennt
+  nur WMIs von Fahrzeugen, die in die USA geliefert werden.
+
+Einträge, die keine dieser Quellen bestätigt, wurden entfernt. WMIs mit ``9`` an
+Stelle 3 (Kleinserienhersteller, der Hersteller steht erst in den Stellen 12-14)
+fehlen absichtlich. Die Bezeichnungen sind eigene Kurzformen; übernommen sind nur die
+Zuordnungen (Fakten). Manche WMIs nutzt ein Konzern für mehrere Marken, angegeben ist
+dann die übliche Hauptmarke oder der Konzern.
 
 Das Land ergibt sich unabhängig davon aus den ersten zwei Zeichen nach den
 Regionsbereichen der ISO 3780 (``country_for``); das ist das Land, für das die WMI
-vergeben wurde, in der Regel das Land des Werks oder des Herstellersitzes.
+vergeben wurde, in der Regel das Land des Werks oder des Herstellersitzes. Die
+Bereiche folgen der ISO-Übersicht „WMI Country Code Distribution“, Stand 13.04.2021
+(https://standards.iso.org/iso/3780/ed-4/en/Current%20WMI%20World%20Codes%20chart%204.13.21.pdf),
+in der Aufschlüsselung der englischen Wikipedia (Abschnitt „World manufacturer
+identifier“), geprüft am 2026-10-07.
 """
 
 MANUFACTURERS: dict[str, str] = {
@@ -16,7 +35,7 @@ MANUFACTURERS: dict[str, str] = {
     "WVG": "Volkswagen (SUV)",
     "WV1": "Volkswagen Nutzfahrzeuge",
     "WV2": "Volkswagen Nutzfahrzeuge (Bus)",
-    "WV3": "Volkswagen Nutzfahrzeuge (Lkw)",
+    "WV3": "Volkswagen Nutzfahrzeuge (Fahrgestell)",
     "WAU": "Audi",
     "WA1": "Audi (SUV)",
     "WUA": "Audi Sport (quattro GmbH)",
@@ -35,12 +54,12 @@ MANUFACTURERS: dict[str, str] = {
     "W1V": "Mercedes-Benz (Transporter)",
     "WME": "smart",
     "WEB": "EvoBus (Mercedes-Benz Omnibusse)",
-    "WKK": "Setra (EvoBus)",
+    "WKK": "Setra (Kässbohrer)",
     "WP0": "Porsche",
     "WP1": "Porsche (SUV)",
     "W0L": "Opel",
     "W0V": "Opel",
-    "WF0": "Ford Deutschland",
+    "WF0": "Ford (Europa)",
     "WMA": "MAN",
     "WAG": "Neoplan",
     "WJM": "Iveco Magirus",
@@ -49,10 +68,10 @@ MANUFACTURERS: dict[str, str] = {
     "VF3": "Peugeot",
     "VF6": "Renault Trucks",
     "VF7": "Citroën",
-    "VF9": "Bugatti",
     "VR1": "DS Automobiles",
     "VR3": "Peugeot",
     "VR7": "Citroën",
+    "VXK": "Opel (seit Übernahme durch PSA)",
     "VNK": "Toyota Frankreich",
     # Spanien
     "VSS": "SEAT",
@@ -60,10 +79,9 @@ MANUFACTURERS: dict[str, str] = {
     "VS6": "Ford Spanien",
     "VS7": "Citroën Spanien",
     "VSX": "Opel Spanien",
-    "VWV": "Volkswagen Spanien",
     # Italien
     "ZFA": "Fiat",
-    "ZFC": "Fiat (Nutzfahrzeuge)",
+    "ZFC": "Ram 1200 (Fiat)",
     "ZFF": "Ferrari",
     "ZAR": "Alfa Romeo",
     "ZLA": "Lancia",
@@ -76,7 +94,7 @@ MANUFACTURERS: dict[str, str] = {
     "ZGU": "Moto Guzzi",
     # Vereinigtes Königreich
     "SAJ": "Jaguar",
-    "SAD": "Jaguar (SUV)",
+    "SAD": "Jaguar (SUV; bis 1987 Daimler)",
     "SAL": "Land Rover",
     "SAR": "Rover",
     "SCA": "Rolls-Royce",
@@ -90,7 +108,7 @@ MANUFACTURERS: dict[str, str] = {
     "SJN": "Nissan Großbritannien",
     "SB1": "Toyota Großbritannien",
     "SMT": "Triumph Motorrad",
-    "SFD": "Alexander Dennis",
+    "SFD": "Dennis",
     # Schweden, Finnland
     "YV1": "Volvo",
     "YV4": "Volvo (SUV)",
@@ -154,7 +172,7 @@ MANUFACTURERS: dict[str, str] = {
     "KND": "Kia (SUV)",
     "KNE": "Kia",
     "KNM": "Renault Samsung",
-    "KPT": "SsangYong",
+    "KPT": "SsangYong / KG Mobility",
     "KL1": "GM Daewoo / Chevrolet",
     "KLA": "Daewoo",
     # China
@@ -178,7 +196,7 @@ MANUFACTURERS: dict[str, str] = {
     # Indien, Südostasien
     "MA1": "Mahindra",
     "MA3": "Maruti Suzuki",
-    "MBH": "Maruti Suzuki",
+    "MBH": "Maruti Suzuki (für Nissan)",
     "MAL": "Hyundai Indien",
     "MAT": "Tata Motors",
     "MAJ": "Ford Indien",
@@ -202,8 +220,8 @@ MANUFACTURERS: dict[str, str] = {
     "1GT": "GMC (Lkw)",
     "1GK": "GMC (SUV)",
     "1C3": "Chrysler",
-    "1C4": "Chrysler / Dodge / Jeep (MPV)",
-    "1C6": "Ram",
+    "1C4": "Chrysler-Konzern (MPV)",
+    "1C6": "Chrysler-Konzern / Ram (Lkw)",
     "1B3": "Dodge",
     "1D7": "Dodge (Lkw)",
     "1J4": "Jeep",
@@ -242,9 +260,9 @@ MANUFACTURERS: dict[str, str] = {
     "3N1": "Nissan Mexiko",
     "3G1": "Chevrolet Mexiko",
     "3HG": "Honda Mexiko",
-    "3KP": "Kia Mexiko",
+    "3KP": "Kia / Hyundai Mexiko",
     # Australien, Südamerika
-    "6G1": "Holden",
+    "6G1": "Holden / Chevrolet",
     "6FP": "Ford Australien",
     "6T1": "Toyota Australien",
     "9BW": "Volkswagen Brasilien",
@@ -255,97 +273,149 @@ MANUFACTURERS: dict[str, str] = {
 # Zeichenfolge der ISO-3780-Bereiche (I, O, Q kommen in der FIN nicht vor)
 _ORDER = "ABCDEFGHJKLMNPRSTUVWXYZ1234567890"
 
-# (erstes Zeichen, zweites Zeichen von, bis, Land); Bereiche nach ISO 3780 bzw. der
-# SAE-Zuteilung, wie in Wikipedia „Vehicle identification number“ (Tabelle „Country
-# or region codes“). Nicht vergebene Bereiche fehlen.
+# (erstes Zeichen, zweites Zeichen von, bis, Land) nach der ISO-Übersicht von 2021
+# (siehe Moduldoku). Es gilt der erste passende Eintrag: Teilbereiche stehen deshalb
+# vor dem Bereich, der die ganze Zeile abdeckt (z. B. Neuseeland vor Australien).
+# Nicht vergebene Bereiche fehlen.
 _REGIONS: tuple[tuple[str, str, str, str], ...] = (
+    # Afrika
     ("A", "A", "H", "Südafrika"),
     ("A", "J", "K", "Elfenbeinküste"),
-    ("B", "A", "E", "Angola"),
-    ("B", "F", "K", "Kenia"),
-    ("B", "L", "R", "Tansania"),
-    ("C", "A", "E", "Benin"),
-    ("C", "L", "R", "Tunesien"),
-    ("D", "A", "E", "Ägypten"),
-    ("D", "F", "K", "Marokko"),
-    ("E", "A", "E", "Äthiopien"),
-    ("F", "A", "E", "Sambia"),
+    ("A", "L", "M", "Lesotho"),
+    ("A", "N", "P", "Botswana"),
+    ("A", "R", "S", "Namibia"),
+    ("A", "T", "U", "Madagaskar"),
+    ("A", "V", "W", "Mauritius"),
+    ("A", "X", "Y", "Tunesien"),
+    ("A", "Z", "1", "Zypern"),
+    ("A", "2", "3", "Simbabwe"),
+    ("A", "4", "5", "Mosambik"),
+    ("B", "A", "B", "Angola"),
+    ("B", "C", "C", "Äthiopien"),
+    ("B", "F", "G", "Kenia"),
+    ("B", "H", "H", "Ruanda"),
+    ("B", "L", "L", "Nigeria"),
+    ("B", "R", "R", "Algerien"),
+    ("B", "T", "T", "Eswatini"),
+    ("B", "U", "U", "Uganda"),
+    ("B", "3", "4", "Libyen"),
+    ("C", "A", "B", "Ägypten"),
+    ("C", "F", "G", "Marokko"),
+    ("C", "L", "M", "Sambia"),
+    # Asien
     ("H", "A", "0", "China"),
     ("J", "A", "0", "Japan"),
-    ("K", "A", "E", "Sri Lanka"),
-    ("K", "F", "K", "Israel"),
+    ("K", "F", "H", "Israel"),
     ("K", "L", "R", "Südkorea"),
-    ("K", "S", "0", "Kasachstan"),
+    ("K", "S", "T", "Jordanien"),
+    ("K", "1", "3", "Südkorea"),
+    ("K", "5", "5", "Kirgisistan"),
     ("L", "A", "0", "China"),
     ("M", "A", "E", "Indien"),
     ("M", "F", "K", "Indonesien"),
     ("M", "L", "R", "Thailand"),
-    ("M", "S", "W", "Myanmar"),
+    ("M", "S", "S", "Myanmar"),
+    ("M", "U", "U", "Mongolei"),
+    ("M", "X", "X", "Kasachstan"),
+    ("M", "Y", "0", "Indien"),
     ("N", "A", "E", "Iran"),
-    ("N", "F", "K", "Pakistan"),
+    ("N", "F", "G", "Pakistan"),
+    ("N", "J", "J", "Irak"),
     ("N", "L", "R", "Türkei"),
-    ("P", "A", "E", "Philippinen"),
-    ("P", "F", "K", "Singapur"),
+    ("N", "S", "T", "Usbekistan"),
+    ("N", "V", "V", "Aserbaidschan"),
+    ("N", "X", "X", "Tadschikistan"),
+    ("N", "Y", "Y", "Armenien"),
+    ("N", "1", "5", "Iran"),
+    ("N", "7", "8", "Türkei"),
+    ("P", "A", "C", "Philippinen"),
+    ("P", "F", "G", "Singapur"),
     ("P", "L", "R", "Malaysia"),
-    ("R", "A", "E", "Vereinigte Arabische Emirate"),
+    ("P", "S", "T", "Bangladesch"),
+    ("P", "V", "V", "Kambodscha"),
+    ("P", "5", "0", "Indien"),
+    ("R", "A", "B", "Vereinigte Arabische Emirate"),
     ("R", "F", "K", "Taiwan"),
-    ("R", "L", "R", "Vietnam"),
-    ("R", "S", "0", "Saudi-Arabien"),
+    ("R", "L", "N", "Vietnam"),
+    ("R", "P", "P", "Laos"),
+    ("R", "S", "T", "Saudi-Arabien"),
+    ("R", "1", "7", "Hongkong"),
+    # Europa
+    ("E", "A", "0", "Russland"),
     ("S", "A", "M", "Vereinigtes Königreich"),
     ("S", "N", "T", "Deutschland"),  # ehemalige DDR
     ("S", "U", "Z", "Polen"),
-    ("S", "1", "4", "Lettland"),
+    ("S", "1", "2", "Lettland"),
+    ("S", "3", "3", "Georgien"),
+    ("S", "4", "4", "Island"),
     ("T", "A", "H", "Schweiz"),
     ("T", "J", "P", "Tschechien"),
     ("T", "R", "V", "Ungarn"),
-    ("T", "W", "1", "Portugal"),
+    ("T", "W", "2", "Portugal"),
+    ("T", "3", "5", "Serbien"),
+    ("T", "6", "6", "Andorra"),
+    ("T", "7", "8", "Niederlande"),
+    ("U", "A", "C", "Spanien"),
     ("U", "H", "M", "Dänemark"),
-    ("U", "N", "T", "Irland"),
-    ("U", "U", "Z", "Rumänien"),
+    ("U", "N", "R", "Irland"),
+    ("U", "U", "X", "Rumänien"),
+    ("U", "1", "2", "Nordmazedonien"),
     ("U", "5", "7", "Slowakei"),
+    ("U", "8", "0", "Bosnien und Herzegowina"),
     ("V", "A", "E", "Österreich"),
     ("V", "F", "R", "Frankreich"),
     ("V", "S", "W", "Spanien"),
-    ("V", "X", "2", "Serbien"),
+    ("V", "X", "2", "Frankreich"),
     ("V", "3", "5", "Kroatien"),
-    ("V", "6", "0", "Estland"),
+    ("V", "6", "8", "Estland"),
     ("W", "A", "0", "Deutschland"),
-    ("X", "A", "E", "Bulgarien"),
-    ("X", "F", "K", "Griechenland"),
+    ("X", "A", "C", "Bulgarien"),
+    ("X", "D", "E", "Russland"),
+    ("X", "F", "H", "Griechenland"),
+    ("X", "J", "K", "Russland"),
     ("X", "L", "R", "Niederlande"),
-    ("X", "S", "W", "Russland"),
-    ("X", "X", "2", "Luxemburg"),
-    ("X", "3", "0", "Russland"),
+    ("X", "S", "W", "Russland"),  # ehemalige Sowjetunion
+    ("X", "X", "Y", "Luxemburg"),
+    ("X", "Z", "1", "Russland"),
     ("Y", "A", "E", "Belgien"),
     ("Y", "F", "K", "Finnland"),
-    ("Y", "L", "R", "Malta"),
+    ("Y", "N", "N", "Malta"),
     ("Y", "S", "W", "Schweden"),
     ("Y", "X", "2", "Norwegen"),
     ("Y", "3", "5", "Belarus"),
-    ("Y", "6", "0", "Ukraine"),
-    ("Z", "A", "R", "Italien"),
-    ("Z", "X", "2", "Slowenien"),
+    ("Y", "6", "9", "Ukraine"),
+    ("Z", "A", "U", "Italien"),
+    ("Z", "X", "Z", "Slowenien"),
+    ("Z", "1", "1", "San Marino"),
     ("Z", "3", "5", "Litauen"),
+    ("Z", "6", "0", "Russland"),
+    # Nordamerika
     ("1", "A", "0", "USA"),
     ("2", "A", "0", "Kanada"),
-    ("3", "A", "W", "Mexiko"),
-    ("3", "X", "7", "Costa Rica"),
+    ("3", "A", "X", "Mexiko"),
+    ("3", "4", "4", "Nicaragua"),
+    ("3", "5", "5", "Dominikanische Republik"),
+    ("3", "6", "6", "Honduras"),
+    ("3", "7", "7", "Panama"),
+    ("3", "8", "9", "Puerto Rico"),
     ("4", "A", "0", "USA"),
     ("5", "A", "0", "USA"),
-    ("6", "A", "W", "Australien"),
-    ("7", "A", "E", "Neuseeland"),
-    ("7", "F", "0", "USA"),
+    ("7", "A", "0", "USA"),
+    # Ozeanien
+    ("6", "Y", "1", "Neuseeland"),
+    ("6", "A", "0", "Australien"),
+    # Südamerika
     ("8", "A", "E", "Argentinien"),
-    ("8", "F", "K", "Chile"),
-    ("8", "L", "R", "Ecuador"),
+    ("8", "F", "G", "Chile"),
+    ("8", "L", "N", "Ecuador"),
     ("8", "S", "W", "Peru"),
-    ("8", "X", "2", "Venezuela"),
+    ("8", "X", "Z", "Venezuela"),
+    ("8", "2", "2", "Bolivien"),
+    ("8", "4", "4", "Costa Rica"),
     ("9", "A", "E", "Brasilien"),
-    ("9", "F", "K", "Kolumbien"),
-    ("9", "L", "R", "Paraguay"),
-    ("9", "S", "W", "Uruguay"),
-    ("9", "X", "2", "Trinidad und Tobago"),
-    ("9", "3", "9", "Brasilien"),
+    ("9", "F", "G", "Kolumbien"),
+    ("9", "S", "V", "Uruguay"),
+    ("9", "1", "0", "Brasilien"),
 )
 
 
