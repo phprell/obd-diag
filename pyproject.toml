@@ -1,6 +1,6 @@
 [project]
 name = "obd-diag"
-version = "0.0.1"
+version = "0.2.0"
 description = "OBD-II-Diagnose für Linux über ELM327-kompatible Adapter"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -64,7 +64,10 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["integration: braucht den ELM327-Emulator"]
+markers = [
+    "integration: braucht den ELM327-Emulator",
+    "clear_disabled: Löschen bleibt wie ausgeliefert gesperrt (tests/conftest.py)",
+]
 # GUI-Tests (tests/ui) setzen QT_QPA_PLATFORM=offscreen selbst, siehe tests/ui/conftest.py
 qt_api = "pyside6"
 

@@ -220,6 +220,8 @@ def test_datasheet_two_ecus_mixed_calid() -> None:
         "7E8 08 01 02 03 04 05 06 07 08",  # SF-Länge > 7
         "7E8 03 43 01",  # SF zu kurz
         "7E8 10 05 43 01 01 33 00 00",  # FF mit Länge < 8
+        "7E8 10",  # FF ohne zweites Längenbyte
+        "7E8 10 0A 43 04 01 33 03 00\r7E8 10 0A 43 04 01 33 03 00",  # neuer FF vor Ende
         "7E8 45 00",  # unbekanntes PCI
         "7E8",  # ohne Daten
         "OK",

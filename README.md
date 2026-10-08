@@ -5,6 +5,11 @@ Freeze Frame, Readiness, FIN, Live-Daten mit Aufzeichnung, als Kommandozeile und
 Desktop-Oberfläche (PySide6/QML). Standardmäßig nur lesend: der einzige schreibende
 Befehl ist das Löschen der Fehlercodes, und das nur nach Prüfung und Sicherung.
 
+> **Löschen ist vorerst deaktiviert.** Erst wenn das Lesen an einem echten Fahrzeug
+> geprüft ist, wird es freigegeben (`CLEAR_ENABLED` in `services/clear.py`). Bis dahin
+> bricht `obd-diag clear` ab, ohne den Port zu öffnen, und die Schaltfläche in der
+> Oberfläche bleibt grau. Der Ablauf unten beschreibt, wie es nach der Freigabe läuft.
+
 Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/artifact/de949a8a-4f58-41b4-a629-6b9d238bdac7)
 
 ## Stand
@@ -13,8 +18,9 @@ Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/ar
   Klartext, Readiness, Freeze Frame, FIN mit Offline-Dekodierung, sicheres Löschen,
   Diagnosesitzungen als JSON, PDF-Bericht und CSV, Adapter-Mitschnitt, Oberfläche
   mit hellem und dunklem Design.
-- **v0.2** (Branch `live-daten`): Live-Daten nach SAE J1979 (51 Werte), Aufzeichnung
-  als CSV, Reiter „Live-Daten“ und `obd-diag live`.
+- **v0.2** (in `main`, Version 0.2.0, noch ohne Release-Tag): Live-Daten nach SAE
+  J1979 (116 Werte aus 82 PIDs, darunter alle Lambdasonden), Aufzeichnung als CSV,
+  Reiter „Live-Daten“ und `obd-diag live`.
 - **Noch nicht am echten Auto getestet.** Die Antwortverarbeitung ist ohne Hardware
   gegen Datenblatt, echte Mitschnitte und python-OBD geprüft (siehe „Entwicklung“).
   Ablauf für den ersten Test: „Erster Test am Auto“ unten.
@@ -109,8 +115,16 @@ Rechte: unter Arch heißt die Gruppe `uucp` (Debian/Ubuntu: `dialout`):
 3. `obd-diag diagnose --port … --save --trace`: liest alles, nur lesend, und schneidet
    die Kommunikation mit.
 4. Optional mit laufendem Motor: `obd-diag live --port … --duration 30 --record --trace`.
-5. Noch **kein** `clear`, bis Ausgabe und Mitschnitt geprüft sind. Aus dem Mitschnitt
-   wird mit `ReplayTransport` ein Regressionstest.
+5. `clear` ist bis dahin gesperrt. Erst wenn Ausgabe und Mitschnitt geprüft sind, wird
+   Löschen freigegeben. Aus dem Mitschnitt wird mit `ReplayTransport` ein
+   Regressionstest.
+
+Wird die Verbindung mitten in der Abfrage unterbrochen (Adapter abgezogen, Stecker vom
+Auto ab, Bluetooth weg), bricht das Tool mit einer Meldung ab („Verbindung zu …
+unterbrochen“ bzw. „keine Antwort von …“). Danach wird nichts mehr gesendet, eine
+halbe Diagnose wird nicht gespeichert, und eine Live-Aufzeichnung behält alle
+vollständigen Runden. Meldet der Adapter dagegen Busfehler (Zündung aus), endet
+Live nach drei Runden ohne Antwort.
 
 Die genormte Diagnose sieht nur abgasrelevante Steuergeräte (Motor, Getriebe).
 Airbag, ABS, Komfortelektronik usw. brauchen herstellerspezifische Diagnose; die ist
@@ -178,6 +192,9 @@ USB-Kennung) und gebundene Bluetooth-Geräte (`/dev/rfcomm*`, z. B. nach
 `sudo rfcomm bind 0 <MAC>`). Eingebaute Schnittstellen (`/dev/ttyS*`) erscheinen nicht.
 
 ### Fehlercodes löschen
+
+**Derzeit deaktiviert** (siehe oben). Die Tests prüfen den Ablauf trotzdem vollständig,
+damit er bei der Freigabe stimmt.
 
 Das Tool kann technisch nur freigegebene Befehle senden: Adapter-Befehle (`AT…`) und
 lesende OBD-Anfragen (`01xx`, `02xx00`, `03`, `07`, `0A`, `0902`). `04` (Löschen) ist
@@ -313,16 +330,20 @@ Zeit (s)  Motordrehzahl (1/min)  Geschwindigkeit (km/h)  Kühlmitteltemperatur (
      1.0                   1731                      51                         86  …          14.1
 ```
 
-- **Werte:** 51 Mode-01-PIDs nach SAE J1979 (`protocol/pids.py`), u. a. Drehzahl,
-  Geschwindigkeit, Kühlmittel-, Ansaugluft- und Öltemperatur, Last, Luftmasse,
-  Saugrohr- und Raildruck, AGR, Lambda-Sollwert, Kraftstofftrimm, Tankfüllstand,
-  Kraftstoffverbrauch und Kilometerstand. Angefragt werden nur Werte, die das
+- **Werte:** 116 Werte aus 82 Mode-01-PIDs nach SAE J1979 (`protocol/pids.py`), u. a.
+  Drehzahl, Geschwindigkeit, Kühlmittel-, Ansaugluft- und Öltemperatur, Last,
+  Luftmasse, Saugrohr- und Raildruck, AGR, Lambda-Sollwert, Kraftstofftrimm (auch
+  Nachkat), Lambdasonden 1–8 (Schmal- und Breitband), Drehmomentstufen,
+  Tankfüllstand, Kraftstoffverbrauch und Kilometerstand. Liefert eine PID mehrere
+  Werte (z. B. Sondenspannung und Trimm), wird sie je Runde nur einmal abgefragt.
+  Die Sonden heißen 1–8 in PID-Reihenfolge; welche Bank und Position das ist, legt
+  das Fahrzeug fest (PID `13` oder `1D`). Angefragt werden nur Werte, die das
   Fahrzeug als unterstützt meldet (`0100`, `0120` … über alle Steuergeräte).
   Ohne `--pids`: Drehzahl, Geschwindigkeit, Kühlmitteltemperatur, Last,
   Ansauglufttemperatur und Steuergerätespannung, soweit unterstützt.
-- **Nicht enthalten:** PIDs mit mehreren Werten oder Statusbyte, darunter
-  Lambdasonden, Ladedruck (`70`) und Partikelfilter (`7A`–`7C`); Liste im Docstring
-  von `protocol/pids.py`.
+- **Nicht enthalten:** PIDs mit Statusbyte, deren Aufbau sich zwischen Ausgaben der
+  Norm geändert hat oder in freien Quellen nicht eindeutig ist, darunter Ladedruck
+  (`70`) und Partikelfilter (`7A`–`7C`); Liste im Docstring von `protocol/pids.py`.
 - **Ablauf:** Runde für Runde wird jeder Wert einmal gelesen; ist einer nicht lesbar,
   steht „-“ (in der CSV eine leere Zelle), die Abfrage läuft weiter. Meldet der Adapter
   drei Runden lang bei jedem Wert einen Busfehler (z. B. Zündung aus), endet sie mit
@@ -424,7 +445,8 @@ Menü *Datei* und Schaltflächen unten:
 Die Dateidialoge kommen vom Desktop (xdg-desktop-portal oder GTK); fehlt beides,
 nimmt Qt einen eigenen Dialog.
 
-„Fehlercodes löschen …“ fragt vorher nach (Zündung an, Motor aus; Codes und Freeze
+„Fehlercodes löschen …“ ist derzeit gesperrt (grau, der Tooltip nennt den Grund).
+Nach der Freigabe fragt es vorher nach (Zündung an, Motor aus; Codes und Freeze
 Frame werden gesichert; die Readiness für die Abgasuntersuchung wird zurückgesetzt),
 zeigt danach den Pfad der Sicherung und liest die Diagnose neu ein – Readiness und
 Freeze Frame zeigen also den Stand nach dem Löschen.

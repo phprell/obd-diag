@@ -67,7 +67,7 @@ def prepare_live(elm: Elm327) -> LiveSetup:
     adapter = elm.initialize()
     protocol = elm.protocol().name
     supported = pid_table.read_supported_pids(elm)
-    available = [pid_table.PIDS[pid] for pid in sorted(supported) if pid in pid_table.PIDS]
+    available = [spec for spec in pid_table.PIDS.values() if spec.pid in supported]
     return LiveSetup(adapter, protocol, available)
 
 
@@ -194,18 +194,21 @@ def _read_voltage(elm: Elm327) -> float | None:
         return None
 
 
-def _read_value(elm: Elm327, spec: PidSpec) -> tuple[float | None, ElmError | None]:
-    """Ein Wert und ggf. der Adapterfehler, an dem er scheiterte.
+def _read_values(
+    elm: Elm327, specs: list[PidSpec]
+) -> tuple[dict[str, float | None], ElmError | None]:
+    """Die Werte einer PID (eine Anfrage) und ggf. der Adapterfehler, an dem sie scheiterten.
 
-    Abgelehnt, ``?`` oder unlesbar ergibt ``(None, None)``; Adapterfehler wie
-    ``CAN ERROR`` ``(None, Fehler)``. ``TransportError`` geht durch.
+    Abgelehnt, ``?`` oder unlesbar ergibt ``None`` je Wert ohne Fehler; Adapterfehler
+    wie ``CAN ERROR`` ``None`` je Wert und den Fehler. ``TransportError`` geht durch.
     """
+    nothing: dict[str, float | None] = {spec.key: None for spec in specs}
     try:
-        return pid_table.read_value(elm, spec), None
+        return pid_table.read_values(elm, specs), None
     except (UnknownCommandError, ValueError):
-        return None, None
+        return nothing, None
     except ElmError as e:
-        return None, e
+        return nothing, e
 
 
 def run_live(
@@ -222,10 +225,11 @@ def run_live(
 ) -> int:
     """Fragt ``pids`` reihum ab und meldet jede Runde über ``on_sample``.
 
-    Erwartet einen mit ``prepare_live`` vorbereiteten Adapter. Ein einzelner nicht
+    Erwartet einen mit ``prepare_live`` vorbereiteten Adapter. Jede PID wird je Runde
+    einmal abgefragt, auch wenn mehrere Werte aus ihr stammen. Ein einzelner nicht
     lesbarer Wert (``ElmError`` oder ``ValueError``) ergibt ``None`` in der Runde
     (kein Abbruch); ``TransportError`` bricht ab. Scheitert in ``MAX_FAILED_ROUNDS``
-    Runden nacheinander jeder Wert an einem Adapterfehler (Bus weg, Zündung aus), endet
+    Runden nacheinander jede Abfrage an einem Adapterfehler (Bus weg, Zündung aus), endet
     die Abfrage mit ``ElmError``. ``should_stop`` wird vor jeder Runde
     und während des Wartens geprüft (in Schritten von höchstens 0,1 s).
 
@@ -236,6 +240,9 @@ def run_live(
     ``interval`` ab Rundenbeginn; dauert eine Runde länger, folgt die nächste sofort.
     Liefert die Anzahl der Runden.
     """
+    groups: dict[int, list[PidSpec]] = {}
+    for spec in pids:
+        groups.setdefault(spec.pid, []).append(spec)
     start = clock()
     count = 0
     voltage: float | None = None
@@ -247,13 +254,15 @@ def run_live(
             voltage = _read_voltage(elm)
             if voltage is not None:
                 throttled = voltage < LOW_VOLTAGE
-        values: dict[str, float | None] = {}
+        read: dict[str, float | None] = {}
         errors: list[ElmError] = []
-        for spec in pids:
-            values[spec.key], error = _read_value(elm, spec)
+        for group in groups.values():
+            group_values, error = _read_values(elm, group)
+            read.update(group_values)
             if error is not None:
                 errors.append(error)
-        failed_rounds = failed_rounds + 1 if pids and len(errors) == len(pids) else 0
+        values = {spec.key: read[spec.key] for spec in pids}
+        failed_rounds = failed_rounds + 1 if groups and len(errors) == len(groups) else 0
         if failed_rounds >= MAX_FAILED_ROUNDS:
             raise ElmError(
                 f"keine Antwort vom Fahrzeug in {failed_rounds} Runden nacheinander "

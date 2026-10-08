@@ -17,7 +17,9 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   (transport importiert nichts aus services). Höhere Schichten kennen nur das
   `Transport`-Protocol, nie pyserial direkt.
 - Standardmäßig nur lesend. Einziger schreibender OBD-Befehl ist Mode 04 (Löschen),
-  nur über `services/clear.py`. Keine Codierung, kein Flashen, keine
+  nur über `services/clear.py`. **Löschen ist gesperrt** (`CLEAR_ENABLED = False`),
+  bis das Lesen am echten Auto geprüft ist; nur nach ausdrücklicher Freigabe durch den
+  Nutzer einschalten. Keine Codierung, kein Flashen, keine
   Herstellerbefehle.
 - Fehlercode-Texte offline (SQLite). Online nur NHTSA vPIC, nur nach Opt-in.
 - Parser halten sich strikt an SAE J1979 / ISO 15765 / ELM327-Datenblatt; Abweichungen
@@ -29,7 +31,7 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
 - `uv sync` – Umgebung; danach Katalog bauen: `uv run python tools/build_dtc_db.py`
   (lädt OBDex-YAML von GitHub, ~9 s; `--source DIR` für einen lokalen Klon)
 - `uv run ruff format . && uv run ruff check . && uv run mypy` (strict)
-- `uv run pytest` – ca. 1240 Tests, ~3 min (Emulator-Tests und der PID-Vergleich mit
+- `uv run pytest` – ca. 1600 Tests, ~3,5 min (Emulator-Tests und der PID-Vergleich mit
   python-OBD sind langsam).
   **Exit-Code von pytest selbst prüfen**, nicht durch `| tail` (hat schon einmal
   einen roten Stand auf main gebracht).
@@ -41,10 +43,10 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
 - Mutationstests: `uv run --with mutmut mutmut run` (Ziele in `[tool.mutmut]`),
   danach `mutants/` löschen. Die Testsuite legt `elm.log` an (gitignored), löschen.
 
-## Stand (2026-10-07)
-Roadmap-Schritte 1–4 sind fertig = Funktionsumfang v0.1. v0.2 (Live-Daten) liegt
-auf dem Branch `live-daten`, noch nicht in main. Version steht noch auf
-0.0.1, kein Release-Tag. **Nichts ist an einem echten Adapter/Auto getestet.**
+## Stand (2026-10-08)
+Roadmap-Schritte 1–4 sind fertig = Funktionsumfang v0.1. v0.2 (Live-Daten) ist in
+main (PR #1). Version 0.2.0, noch kein Release-Tag (Tag erst nach Absprache, am
+besten nach dem Test am Auto). **Nichts ist an einem echten Adapter/Auto getestet.**
 Die Antwortverarbeitung ist ohne Hardware verifiziert (`tests/verification`:
 Datenblatt-Beispiele, echte Nutzer-Logs aus python-OBD/ELMduino/AndrOBD, Vergleich
 mit dem DTC-Decoder von python-OBD über alle 65536 Byte-Paare, Hypothesis-Round-
@@ -54,7 +56,8 @@ Funktionen: Fehlercodes (Mode 03/07/0A) mit deutschem Klartext, Readiness (Mode 
 PID 01, Otto + Diesel), Freeze Frame (Mode 02), FIN (Mode 09 PID 02) mit Offline-
 Dekodierung, sicheres Löschen, Sitzungen als JSON, PDF-Bericht und CSV, Adapter-
 Mitschnitt, GUI mit Tabs (Fehlercodes / Readiness / Freeze Frame / Fahrzeug /
-Live-Daten), helles und dunkles Design. Live-Daten: 51 Mode-01-PIDs, CSV-Aufzeichnung,
+Live-Daten), helles und dunkles Design. Live-Daten: 116 Werte aus 82 Mode-01-PIDs
+(auch Lambdasonden 1–8, Nachkat-Trimm, Drehmomentstufen, 66/67), CSV-Aufzeichnung,
 Kacheln mit Verlaufskurve, CLI `obd-diag live`.
 
 ## Aufbau (src/obd_diag)
@@ -68,8 +71,9 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   `00A` / `0:` / `1:`; `FrameSequenceError` bei vermischten Frames), `headers.py`
   (Antworten mit Headern, ISO-TP je Steuergerät), `dtc_decode.py`, `obd.py`
   (`read_dtcs`, `clear_dtcs`, `read_pid`, `read_rpms`, `read_freeze_frame`), `pids.py`
-  (`PIDS`: `PidSpec` je PID mit Schlüssel, Name, Einheit, Formel nach J1979,
-  `read_supported_pids` über alle Steuergeräte, `read_value`).
+  (`PIDS`: Schlüssel → `PidSpec` je Wert, mehrere Werte können eine PID teilen;
+  `decode` darf `None` liefern; `read_supported_pids` über alle Steuergeräte,
+  `read_values` je PID mit einer Anfrage, `read_value` nur für Tests).
 - `services/` – `diagnostics.py` (`scan`), `clear.py` (Löschen), `readiness.py`,
   `vehicle.py` (`read_vin`, `decode_vin`, `lookup_vpic`), `session.py`
   (`run_diagnosis`, JSON speichern/laden), `storage.py` (XDG-Pfade, atomares
@@ -101,7 +105,9 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   und vorhandener Sicherung) und per AST, wer `allow_clear`/`clear_dtcs`/`clear_codes`/
   `.transport`/pyserial erreichen darf. Mutationstests von `clear.py`: alle erkannt;
   in `elm327.py`/`obd.py` überleben beim Löschpfad nur Text- und Timeout-Mutanten.
-  Diese Garantien nicht aufweichen.
+  Diese Garantien nicht aufweichen. Wegen der Sperre schaltet `tests/conftest.py`
+  Löschen für alle Tests frei; `@pytest.mark.clear_disabled` (z. B.
+  `tests/unit/test_clear_disabled.py`) prüft die ausgelieferte Sperre.
 - **CAN-Zählbyte**: Bei CAN wird das Zählbyte nach dem Mode-Byte immer gelesen,
   Füllbytes danach werden ignoriert, zu wenige Codes → `ValueError`. Ob CAN, kommt
   aus `ATDPN` (unklar → nachfragen, notfalls Header-Form per `ATH1 0100`). Legacy-
@@ -138,7 +144,12 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   python-OBD. Bewusste Abweichungen nach J1979: `32` (16-Bit-Zweierkomplement, python-
   OBD wertet A und B einzeln aus) und `44` (2/65536 statt gerundet 0,0000305).
 - **Serieller Transport**: Ein-/Ausgabefehler (abgezogener Adapter, EIO) werden zu
-  `TransportError` („Verbindung … unterbrochen“).
+  `TransportError` („Verbindung … unterbrochen“), auch `termios.error`, das pyserial
+  beim Leeren des Puffers bzw. Umstellen des Timeouts wirft (abgezogen zwischen zwei
+  Befehlen). Der Architekturtest erlaubt `termios` daher nur in `serial.py` und nur
+  als `termios.error`. `close` schluckt Fehler, damit sie
+  die eigentliche Meldung nicht verdecken. `tests/integration/test_disconnect.py`:
+  Adapter am pty, der mitten in Diagnose bzw. Live verschwindet oder verstummt.
 - **PDF**: bettet DejaVu/Liberation/Noto ein, falls installiert, sonst Helvetica.
   Schriften laufen unterschiedlich breit; PDF-Tests vergleichen Text daher ohne
   Zeilenumbrüche. In der CI ist es DejaVu.
@@ -166,11 +177,10 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   auf alle FINs mit 1–5 angewendet. CAN-Plausibilitätsgrenze „ab 2000“ ist geschätzt.
 - Wird `ATRV` nicht unterstützt, ist Löschen trotzdem erlaubt (nur bekannte niedrige
   Spannung blockiert) – bewusst, ggf. mit dem Nutzer klären.
-- Version 0.1.0 setzen und Release taggen (mit dem Nutzer absprechen).
-- v0.2 (Branch `live-daten`): mit dem Nutzer über Merge/PR sprechen. Nicht
-  aufgenommen sind PIDs mit mehreren Werten oder Statusbyte (Lambdasonden, 70
-  Ladedruck, 7A–7C Partikelfilter); Liste im Docstring von `protocol/pids.py`. Die
-  rote Stopp-Schaltfläche wirkt im hellen Design unter Fusion etwas blass.
+- Release-Tag v0.2.0 setzen (mit dem Nutzer absprechen).
+- Nicht aufgenommen sind PIDs mit Statusbyte, deren Aufbau in freien Quellen nicht
+  eindeutig ist (68–7F, u. a. 70 Ladedruck, 7A–7C Partikelfilter); Liste im Docstring
+  von `protocol/pids.py`. Erst mit der Norm (J1979-DA) oder echten Antworten angehen.
 - Nächste Roadmap-Schritte: v0.3+ Bluetooth LE, OBDb-Profile (CC-BY-SA beachten),
   SocketCAN/UDS mit Steuergeräte-Erkennung. Entwurf samt Sicherheitskonzept
   (Freigabeliste, gesperrte Dienste, Adresssuche nur im Diagnosebereich) steht im

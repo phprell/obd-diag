@@ -176,6 +176,15 @@ def test_header_retry_restores_ath0_on_error() -> None:
     assert transport.sent == ["03", "ATH1", "03", "ATH0"]
 
 
+def test_header_retry_with_wrong_code_count_is_elm_error() -> None:
+    # Mit Headern sauber getrennt, aber das Zählbyte verspricht mehr Codes als kommen
+    short = "7E9100A430901330420\r7E8100A430401330300\r7E92101010102000000\r7E821C1000171000000"
+    transport = FakeTransport({"03": _MIXED_03}, headers_on={"03": short})
+    with pytest.raises(ElmError, match=r"^03 \(mit Headern\): "):
+        read_dtcs(Elm327(transport), 0x03, can=True)
+    assert transport.sent == ["03", "ATH1", "03", "ATH0"]
+
+
 def test_non_hex_answer_is_not_retried_with_headers() -> None:
     transport = FakeTransport({"03": "43 01 33\rGARBAGE"})
     with pytest.raises(ElmError):

@@ -178,7 +178,10 @@ _ANSWER = st.one_of(
     st.sampled_from(["NO DATA", "?", "CAN ERROR", "STOPPED", "OK", "7F0112", "41", ""]),
     st.builds(lambda a, b: f"{a}\r{b}", _HEX, _HEX),  # zwei Steuergeräte
 )
-_PID_COMMANDS = [f"01{pid:02X}" for pid in PIDS] + ["0100", "0120", "0140", "0160", "0180"]
+_PID_COMMANDS = [
+    *sorted({f"01{s.pid:02X}" for s in PIDS.values()}),
+    *("0100", "0120", "0140", "0160", "0180"),
+]
 
 
 @settings(max_examples=300, deadline=None)
@@ -255,7 +258,7 @@ def test_rounds_never_come_faster_than_allowed(
     samples: list[LiveSample] = []
     run_live(
         Elm327(transport),
-        [PIDS[0x0C]],
+        [PIDS["rpm"]],
         on_sample=samples.append,
         should_stop=lambda: False,
         interval=interval,
@@ -300,7 +303,7 @@ def test_throttling_starts_below_the_limit(answer: str, throttled: bool) -> None
     clock = FakeClock()
     run_live(
         Elm327(FakeTransport({**RUNNING, "ATRV": answer})),
-        [PIDS[0x0C]],
+        [PIDS["rpm"]],
         on_sample=samples.append,
         should_stop=lambda: False,
         max_samples=1,
@@ -312,5 +315,29 @@ def test_throttling_starts_below_the_limit(answer: str, throttled: bool) -> None
 
 def test_recorder_keeps_its_path(tmp_path: Path) -> None:
     path = tmp_path / "live.csv"
-    with live.LiveRecorder(path, [PIDS[0x0C]]) as recorder:
+    with live.LiveRecorder(path, [PIDS["rpm"]]) as recorder:
         assert recorder.path == path
+
+
+def test_values_of_one_pid_are_read_with_one_query_per_round() -> None:
+    transport = WireCheckingTransport({**RUNNING, "0114": "41145A80", "0167": "4167037B50"})
+    samples: list[LiveSample] = []
+    clock = FakeClock()
+    specs = [PIDS[k] for k in ("o2_s1_voltage", "rpm", "o2_s1_trim", "coolant_temp_2")]
+    run_live(
+        Elm327(transport),
+        specs,
+        on_sample=samples.append,
+        should_stop=lambda: False,
+        max_samples=2,
+        clock=clock,
+        sleep=clock.sleep,
+    )
+    assert transport.sent == ["ATRV", "0114", "010C", "0167", "0114", "010C", "0167"]
+    assert samples[0].values == {
+        "o2_s1_voltage": 0.45,
+        "rpm": 1726.0,
+        "o2_s1_trim": 0.0,
+        "coolant_temp_2": 40,
+    }
+    assert list(samples[0].values) == [s.key for s in specs]  # Reihenfolge der Auswahl

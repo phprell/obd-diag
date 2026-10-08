@@ -222,6 +222,18 @@ def test_protocol_unreadable_headers_stay_unknown() -> None:
     assert not protocol.is_can
 
 
+def test_protocol_header_probe_adapter_error_stays_unknown() -> None:
+    # Scheitert die Probe mit ATH1 an einem Adapterfehler, bleibt es bei „unbekannt“,
+    # und ATH0 wird trotzdem zurückgestellt
+    transport = FakeTransport(
+        {"0100": "4100BE3FA813", "ATDPN": "A0", "ATDP": "AUTO"}, headers_on={"0100": "CAN ERROR"}
+    )
+    protocol = Elm327(transport).protocol()
+    assert transport.sent == ["0100", "ATDPN", "ATDPN", "ATH1", "0100", "ATH0", "ATDP"]
+    assert protocol == ObdProtocol("0", "AUTO")
+    assert not protocol.is_can
+
+
 def test_failed_header_restore_aborts_instead_of_misreading() -> None:
     """Bleibt der Adapter nach dem Header-Fallback auf ATH1, würde alles Weitere falsch
     gelesen; das darf kein Aufrufer als bloß fehlende Angabe abfangen."""

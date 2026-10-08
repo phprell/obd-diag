@@ -235,7 +235,8 @@ def _uses(name: str, *, attribute_only: bool = False) -> set[str]:
         # Live-Dienst fragt Werte ab.
         ("run_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
         ("prepare_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
-        ("read_value", {"services/live.py:_read_value"}),
+        ("read_values", {"services/live.py:_read_values", "protocol/pids.py:read_value"}),
+        ("read_value", set()),  # nur für Tests; der Live-Dienst fragt je PID einmal
         ("read_supported_pids", {"services/live.py:prepare_live"}),
         # Den Transport eines Elm327 (``elm.transport``) fasst nur Elm327 selbst an.
         (
@@ -269,6 +270,36 @@ def test_pyserial_is_used_only_in_the_transport_layer() -> None:
     assert importers == {"transport/serial.py", "transport/discovery.py"}
 
 
+# Ausnahme: der serielle Transport fängt ``termios.error`` (so meldet pyserial einen
+# abgezogenen Adapter beim Leeren des Puffers). Er darf termios importieren, aber nur
+# dieses eine Attribut benutzen; ``test_termios_is_only_used_for_its_error_type`` prüft das.
+_ERROR_TYPE_ONLY = {("transport/serial.py", "termios")}
+
+
+@source_check
+def test_termios_is_only_used_for_its_error_type() -> None:
+    for rel, module in _ERROR_TYPE_ONLY:
+        tree = next(t for r, t in _modules() if r == rel)
+        uses = [node for node in ast.walk(tree) if isinstance(node, ast.Name) and node.id == module]
+        attributes = {
+            node.attr
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == module
+        }
+        assert uses, f"{rel} benutzt {module} nicht mehr; Ausnahme entfernen"
+        assert attributes == {"error"}, attributes
+        # jeder Name-Knoten ist der Wert eines ``.error``-Zugriffs, nichts sonst
+        assert len(uses) == sum(
+            1
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == module
+        )
+
+
 @source_check
 def test_no_raw_io_or_dynamic_attribute_access() -> None:
     """Keine Hintertür am Transport vorbei: kein Socket, kein os.write/ioctl, kein
@@ -283,7 +314,11 @@ def test_no_raw_io_or_dynamic_attribute_access() -> None:
                     if isinstance(node, ast.Import)
                     else [node.module or ""]
                 )
-                offenders += [f"{rel}: import {n}" for n in names if n in forbidden_modules]
+                offenders += [
+                    f"{rel}: import {n}"
+                    for n in names
+                    if n in forbidden_modules and (rel, n) not in _ERROR_TYPE_ONLY
+                ]
             if isinstance(node, ast.Call):
                 func = node.func
                 if isinstance(func, ast.Name) and func.id in {"exec", "eval", "setattr", "getattr"}:

@@ -6,6 +6,7 @@ Die PID-Tabelle ersetzt ``tests.live_fakes``; nur ``PidSpec`` kommt aus
 
 import contextlib
 import re
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -349,12 +350,12 @@ def test_bus_error_on_some_values_or_now_and_then_does_not_abort() -> None:
 
 
 def test_value_error_from_decoding_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    def broken(elm: Elm327, spec: pids.PidSpec) -> float | None:
-        if spec is SPEED:
+    def broken(elm: Elm327, specs: Sequence[pids.PidSpec]) -> dict[str, float | None]:
+        if SPEED in specs:
             raise ValueError("kaputte Antwort")
-        return live_fakes.fake_read_value(elm, spec)
+        return live_fakes.fake_read_values(elm, specs)
 
-    monkeypatch.setattr(pids, "read_value", broken)
+    monkeypatch.setattr(pids, "read_values", broken)
     _, samples = _run(Elm327(FakeTransport(CAR)), [RPM, SPEED], FakeClock(), max_samples=1)
     assert samples[0].values == {"rpm": 1726.0, "speed": None}
 
@@ -384,11 +385,11 @@ def test_transport_error_aborts(tmp_path: Path) -> None:
 
 
 def test_forbidden_command_is_not_swallowed(monkeypatch: pytest.MonkeyPatch) -> None:
-    def writes(elm: Elm327, spec: pids.PidSpec) -> float | None:
+    def writes(elm: Elm327, specs: Sequence[pids.PidSpec]) -> dict[str, float | None]:
         elm.command("1101")  # Programmierfehler: kein ElmError, darf nicht zu None werden
-        return None
+        return {}
 
-    monkeypatch.setattr(pids, "read_value", writes)
+    monkeypatch.setattr(pids, "read_values", writes)
     transport = FakeTransport(CAR)
     with pytest.raises(Exception, match="nicht freigegeben") as info:
         _run(Elm327(transport), [RPM], FakeClock(), max_samples=1)
@@ -523,7 +524,7 @@ def test_broken_answers_never_lead_to_writes(broken: dict[str, str]) -> None:
 
 # Sobald die echte PID-Tabelle da ist: dieselbe Garantie mit ihr statt mit den Fakes.
 _REAL_PIDS = dict(pids.PIDS)
-_REAL_FUNCTIONS = (pids.read_supported_pids, pids.read_value, pids.pid_by_key)
+_REAL_FUNCTIONS = (pids.read_supported_pids, pids.read_values, pids.pid_by_key)
 
 
 @pytest.mark.skipif(not _REAL_PIDS, reason="protocol.pids noch nicht implementiert")
@@ -532,9 +533,39 @@ def test_real_pid_table_never_leads_to_writes(broken: dict[str, str]) -> None:
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(pids, "PIDS", _REAL_PIDS)
         mp.setattr(pids, "read_supported_pids", _REAL_FUNCTIONS[0])
-        mp.setattr(pids, "read_value", _REAL_FUNCTIONS[1])
+        mp.setattr(pids, "read_values", _REAL_FUNCTIONS[1])
         mp.setattr(pids, "pid_by_key", _REAL_FUNCTIONS[2])
         transport = WireCheckingTransport({**CAR, **broken})
         _guarded_run(transport)
     assert CLEAR_COMMAND not in transport.sent
     assert all(is_read_only(c) for c in transport.sent), transport.sent
+
+
+def test_bus_gone_from_the_first_round_aborts_after_exactly_max_rounds() -> None:
+    # Zündung schon aus: jede Runde scheitert, erst Runde MAX_FAILED_ROUNDS bricht ab.
+    # Die Meldung nennt den letzten Adapterfehler (hier den von 010D).
+    samples: list[LiveSample] = []
+    responses = {**CAR, "010C": "CAN ERROR", "010D": "BUS ERROR"}
+    with pytest.raises(ElmError, match=r"3 Runden nacheinander \(Zündung aus\?\): 010D: BUS ERROR"):
+        run_live(
+            Elm327(FakeTransport(responses)),
+            [RPM, SPEED],
+            on_sample=samples.append,
+            should_stop=lambda: False,
+            clock=(clock := FakeClock()),
+            sleep=clock.sleep,
+        )
+    assert MAX_FAILED_ROUNDS == 3
+    assert len(samples) == MAX_FAILED_ROUNDS - 1  # die abbrechende Runde wird nicht gemeldet
+
+
+def test_selection_messages_list_every_value() -> None:
+    with pytest.raises(SelectionError) as info:
+        select_pids(LiveSetup("", "", []), ["foo", "bar"])
+    assert str(info.value) == "unbekannte Werte: foo, bar (verfügbar: keine)"
+    with pytest.raises(SelectionError) as info:
+        select_pids(LiveSetup("", "", [SPEED]), ["maf", "rpm"])
+    assert str(info.value) == "vom Fahrzeug nicht unterstützt: maf, rpm (verfügbar: speed)"
+    with pytest.raises(SelectionError) as info:
+        select_pids(LiveSetup("", "", [SPEED]), ["maf", "rpm"], skip_unsupported=True)
+    assert str(info.value) == "vom Fahrzeug nicht unterstützt: maf, rpm (verfügbar: speed)"

@@ -12,6 +12,17 @@ def fake_transport() -> FakeTransport:
 
 
 @pytest.fixture(autouse=True)
+def _clear_enabled(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Löschen ist ausgeliefert gesperrt (``services/clear.py``). Die Tests des
+    Löschablaufs prüfen ihn trotzdem vollständig, damit er bei der Freigabe stimmt;
+    Tests mit ``@pytest.mark.clear_disabled`` sehen die ausgelieferte Sperre."""
+    from obd_diag.services import clear
+
+    if request.node.get_closest_marker("clear_disabled") is None:
+        monkeypatch.setattr(clear, "CLEAR_ENABLED", True)
+
+
+@pytest.fixture(autouse=True)
 def _emulator_dtc_count_byte(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Fehlercode-Antworten des ELM327-emulator standardgemäß (siehe emulator_patches)."""
     try:

@@ -40,6 +40,9 @@ QtObject {
     readonly property color accent: dark ? "#60a5fa" : "#1d4ed8"
     // Hintergrund der Hauptschaltfläche (weiße Schrift)
     readonly property color accentButton: dark ? "#1e40af" : "#1e3a8a"
+    // Stopp-Schaltfläche (weiße Schrift); Fusion hellt die Fläche mit einem Verlauf auf,
+    // daher dunkler als errorDot (sonst wirkt sie blass)
+    readonly property color stopButton: dark ? "#b91c1c" : "#991b1b"
     readonly property color border: dark ? "#3f3f46" : "#d4d4d8"
     readonly property color muted: dark ? "#a1a1aa" : "#52525b"
     readonly property color surface: dark ? "#232327" : "#ffffff"
