@@ -95,6 +95,12 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   Byte-Format, exakte Befehlsfolge jeder Funktion (gegen J1979/Datenblatt geprüft)
   und dass sonst niemand an den Transport schreibt; das Format prüfen zusätzlich
   `FakeTransport` und eine Fixture für den seriellen Transport in allen Tests.
+  `tests/fixtures/command_spec.yaml` nennt je erlaubtem Befehl Seite und Zitat aus dem
+  ELM327-Datenblatt (ELM327DSJ, v2.1) bzw. den J1979-Service, dazu verbotene Beispiele.
+  `tests/verification/test_command_spec.py` prüft Freigabeliste == Spezifikation
+  (erschöpfend über alle Hex-Befehle), `_commands_match_spec` in `tests/conftest.py` jeden
+  in irgendeinem Test gesendeten Befehl. Neue Befehle dort mit Quelle eintragen. Ausnahme
+  nur `@pytest.mark.foreign_commands` (fremde Mitschnitte in `test_traces.py`).
 - **Löschen** (`clear_codes`): Scan → Vorbedingungen (`0100` antwortet, Spannung
   ≥ 11,8 V falls lesbar, Drehzahl genau 0, unlesbare Drehzahl = Abbruch) → Freeze
   Frame → Sicherung (`~/.local/share/obd-diag/backups`, nie überschreiben) → erst dann

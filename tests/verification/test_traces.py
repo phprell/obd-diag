@@ -20,6 +20,9 @@ from obd_diag.protocol.obd import read_dtcs, read_pid, read_rpm
 from obd_diag.services.vehicle import read_vin
 from tests.verification.helpers import RawTransport
 
+# Die Mitschnitte enthalten Befehle anderer Programme (siehe ``_ForeignLogElm``).
+pytestmark = pytest.mark.foreign_commands
+
 
 class _ForeignLogElm(Elm327):
     """Die Mitschnitte stammen aus anderen Programmen und enthalten Befehle, die
