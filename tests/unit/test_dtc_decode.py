@@ -1,6 +1,6 @@
 import pytest
 
-from obd_diag.protocol.dtc_decode import decode_dtc, parse_dtc_response
+from obd_diag.protocol.dtc_decode import NegativeDtcResponse, decode_dtc, parse_dtc_response
 
 
 @pytest.mark.parametrize(
@@ -67,3 +67,17 @@ def test_can_no_codes() -> None:
 def test_negative_response_is_skipped() -> None:
     assert parse_dtc_response("7F0A11", mode=0x0A, can=True) == []
     assert parse_dtc_response("7F0311\n43010133", can=True) == ["P0133"]
+
+
+@pytest.mark.parametrize("nrc", [0x10, 0x21, 0x22, 0x31, 0x33, 0x78])
+def test_other_negative_responses_are_not_read_as_no_codes(nrc: int) -> None:
+    # Beschäftigt, Bedingungen nicht erfüllt, Antwort folgt …: der Fehlerspeicher ist
+    # unbekannt, nicht leer
+    with pytest.raises(NegativeDtcResponse) as error:
+        parse_dtc_response(f"43010133\n7F03{nrc:02X}", can=True)
+    assert (error.value.mode, error.value.nrc) == (0x03, nrc)
+
+
+def test_negative_response_without_reason_is_not_skipped() -> None:
+    with pytest.raises(NegativeDtcResponse):
+        parse_dtc_response("7F03", can=True)

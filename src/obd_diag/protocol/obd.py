@@ -8,11 +8,16 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from obd_diag.protocol.dtc_decode import decode_dtc, parse_dtc_messages, parse_dtc_response
+from obd_diag.protocol.dtc_decode import (
+    RESPONSE_PENDING,
+    NegativeDtcResponse,
+    decode_dtc,
+    parse_dtc_messages,
+)
 from obd_diag.protocol.elm327 import Elm327, ElmError, NoDataError
 from obd_diag.protocol.frames import FrameSequenceError, split_messages
 from obd_diag.protocol.headers import EcuMessage, parse_header_response
-from obd_diag.transport import TransportError
+from obd_diag.transport import TransportError, TransportTimeout
 
 log = logging.getLogger(__name__)
 
@@ -37,13 +42,42 @@ def read_with_headers(elm: Elm327, cmd: str, reason: Exception) -> list[EcuMessa
         raise ElmError(f"{cmd}: {reason}; auch mit Headern nicht lesbar: {e}") from e
 
 
-def read_dtcs(elm: Elm327, mode: int, *, can: bool) -> list[str]:
+# Wie lange auf die endgültige Antwort nach ``7F <Mode> 78`` gewartet wird (Sekunden).
+# SAE J1979 bzw. Datenblatt ELM327DSJ S. 45: bis zu 5 s, nach jedem weiteren 78 neu.
+DTC_PENDING_TIMEOUT = 5.0
+
+
+def _open_pending(messages: list[bytes], mode: int) -> int:
+    """Wie viele ``7F <Mode> 78`` noch keine spätere positive Antwort gefunden haben.
+
+    Ohne Header lässt sich eine Antwort keinem Steuergerät zuordnen; gezählt wird daher
+    nach Reihenfolge: jede positive Antwort nach einem ``78`` gilt als dessen Antwort.
+    """
+    sid = mode + 0x40
+    pending = 0
+    for message in messages:
+        if message[:3] == bytes([0x7F, mode, RESPONSE_PENDING]):
+            pending += 1
+        elif pending and message[:1] == bytes([sid]):
+            pending -= 1
+    return pending
+
+
+def read_dtcs(
+    elm: Elm327, mode: int, *, can: bool, pending_timeout: float = DTC_PENDING_TIMEOUT
+) -> list[str]:
     """Fehlercodes aller Steuergeräte für Mode 03, 07 oder 0A.
 
     ``NO DATA`` heißt: kein Code gespeichert, also eine leere Liste. Sind Frames
     mehrerer Steuergeräte vermischt (ohne Header nicht zuzuordnen), wird die Anfrage
     einmal mit Headern (``ATH1``) wiederholt; die Codes kommen dann nach
     Steuergeräte-Adresse geordnet (z. B. 7E8 vor 7E9), sonst in Eingangsreihenfolge.
+
+    Meldet ein Steuergerät ``7F <Mode> 78`` (Antwort folgt) und steht die Antwort nicht
+    schon dabei, wird ohne erneutes Senden bis ``pending_timeout`` Sekunden
+    weitergelesen. Kommt sie nicht, oder lehnt ein Steuergerät aus anderem Grund ab als
+    „Mode nicht unterstützt“, gibt es ``NegativeResponseError`` statt einer leeren Liste:
+    der Fehlerspeicher ist dann unbekannt, nicht leer.
     """
     if mode not in DTC_MODES:
         raise ValueError(f"Mode {mode:02X} liefert keine Fehlercodes")
@@ -52,17 +86,34 @@ def read_dtcs(elm: Elm327, mode: int, *, can: bool) -> list[str]:
     if response is None:
         return []
     try:
-        return parse_dtc_response(response, mode, can=can)
+        messages = split_messages(response)
     except FrameSequenceError as e:
-        reason: Exception = e
+        # Vermischte mehrteilige Antworten gibt es nur bei CAN; dort steht das Zählbyte.
+        headed = read_with_headers(elm, cmd, e)
+        return _parse_dtcs(f"{cmd} (mit Headern)", [m.data for m in headed], mode, can=True)
     except ValueError as e:
         raise ElmError(f"{cmd}: {e}") from e
-    # Vermischte mehrteilige Antworten gibt es nur bei CAN; dort steht das Zählbyte.
-    messages = read_with_headers(elm, cmd, reason)
+    deadline = time.monotonic() + pending_timeout
+    while _open_pending(messages, mode):
+        remaining = deadline - time.monotonic()
+        try:
+            if remaining <= 0:
+                raise TimeoutError
+            more = elm.read_more(cmd, remaining)
+        except (TimeoutError, TransportTimeout, NoDataError) as e:
+            raise NegativeResponseError(mode, RESPONSE_PENDING) from e
+        messages += _messages(cmd, more)
+    final = [m for m in messages if m[:3] != bytes([0x7F, mode, RESPONSE_PENDING])]
+    return _parse_dtcs(cmd, final, mode, can=can)
+
+
+def _parse_dtcs(cmd: str, messages: list[bytes], mode: int, *, can: bool) -> list[str]:
     try:
-        return parse_dtc_messages([m.data for m in messages], mode, can=True)
+        return parse_dtc_messages(messages, mode, can=can)
+    except NegativeDtcResponse as e:
+        raise NegativeResponseError(e.mode, e.nrc) from e
     except ValueError as e:
-        raise ElmError(f"{cmd} (mit Headern): {e}") from e
+        raise ElmError(f"{cmd}: {e}") from e
 
 
 # Gründe negativer Antworten (``7F <Mode> <NRC>``, ISO 14229 bzw. ISO 15031-5)
@@ -74,6 +125,7 @@ _NRC_TEXT = {
     0x22: "Bedingungen nicht erfüllt",
     0x31: "Anfrage außerhalb des gültigen Bereichs",
     0x33: "Zugriff verweigert",
+    0x78: "Antwort angekündigt, aber nicht gekommen",
 }
 _RESPONSE_PENDING = 0x78  # Steuergerät arbeitet noch, die eigentliche Antwort folgt
 

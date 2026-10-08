@@ -4,6 +4,25 @@ from obd_diag.protocol.frames import split_messages
 
 _SYSTEM = "PCBU"
 
+# Ablehnungsgründe (``7F <Mode> <NRC>``, ISO 14229-1 / ISO 15031-5), die nur heißen: dieses
+# Steuergerät kennt den Mode nicht (z. B. 0A bei älteren). Es hat dann keine Codes dazu.
+UNSUPPORTED_NRCS = frozenset({0x11, 0x12})
+RESPONSE_PENDING = 0x78  # Steuergerät arbeitet noch, die eigentliche Antwort folgt
+
+
+class NegativeDtcResponse(ValueError):
+    """Ein Steuergerät hat die Anfrage abgelehnt oder noch nicht beantwortet.
+
+    Anders als „Mode nicht unterstützt“ heißt das nicht „keine Codes“: der Fehlerspeicher
+    dieses Steuergeräts ist unbekannt (z. B. ``21`` beschäftigt, ``22`` Bedingungen nicht
+    erfüllt, ``78`` Antwort folgt).
+    """
+
+    def __init__(self, mode: int, nrc: int) -> None:
+        self.mode = mode
+        self.nrc = nrc
+        super().__init__(f"Steuergerät lehnt Mode {mode:02X} ab (Antwort 7F {mode:02X} {nrc:02X})")
+
 
 def decode_dtc(high: int, low: int) -> str:
     """Zwei Rohbytes in einen Code wie ``P0133`` umwandeln."""
@@ -18,7 +37,9 @@ def parse_dtc_response(response: str, mode: int = 0x03, *, can: bool = False) ->
     werden zusammengesetzt. Bei CAN (ISO 15765-4) folgt auf das Mode-Byte ein
     Zählbyte (SAE J1979); Bytes nach den gezählten Codes sind Füllbytes. Ältere
     Protokolle füllen stattdessen mit ``00 00`` auf. Negative Antworten (``7F``)
-    einzelner Steuergeräte werden übersprungen.
+    einzelner Steuergeräte werden nur übersprungen, wenn sie „Mode nicht unterstützt“
+    heißen (``UNSUPPORTED_NRCS``); jede andere ergibt ``NegativeDtcResponse``, damit eine
+    Ablehnung nie als „keine Codes“ gelesen wird.
 
     ``ValueError`` bei unerwarteten Antworten; ``FrameSequenceError`` (Unterklasse),
     wenn Frames mehrerer Steuergeräte vermischt sind (dann mit Headern neu lesen).
@@ -32,7 +53,9 @@ def parse_dtc_messages(messages: list[bytes], mode: int = 0x03, *, can: bool = F
     codes: list[str] = []
     for message in messages:
         if len(message) >= 2 and message[0] == 0x7F and message[1] == mode:
-            continue
+            if len(message) >= 3 and message[2] in UNSUPPORTED_NRCS:
+                continue
+            raise NegativeDtcResponse(mode, message[2] if len(message) >= 3 else 0x00)
         if not message or message[0] != sid:
             raise ValueError(
                 f"unerwartete Antwort auf Mode {mode:02X}: {message.hex(' ').upper()!r}"

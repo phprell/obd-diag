@@ -112,6 +112,13 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   Füllbytes danach werden ignoriert, zu wenige Codes → `ValueError`. Ob CAN, kommt
   aus `ATDPN` (unklar → nachfragen, notfalls Header-Form per `ATH1 0100`). Legacy-
   Antworten mit `can=True` zu lesen ist bewusst nicht mehr toleriert.
+- **Ablehnungen beim Fehlercode-Lesen**: `7F <Mode> 11/12` (Mode nicht unterstützt) heißt
+  „keine Codes von diesem Steuergerät“; jede andere Ablehnung ist `NegativeResponseError`,
+  nie eine leere Liste. Bei `7F <Mode> 78` wird ohne erneutes Senden bis
+  `DTC_PENDING_TIMEOUT` (5 s) weitergelesen; ohne Header zählt jede spätere positive
+  Antwort als die angekündigte.
+- **Wartezeiten**: `Elm327` wartet 10 s je Befehl (der ELM327 wartet nach `78` selbst
+  bis 5 s, Datenblatt S. 45), das erste `0100` nach `ATSP0` 30 s (Protokollsuche).
 - **Header-Rückfall**: Vermischen sich mehrteilige Antworten mehrerer Steuergeräte
   (ATH0), wird die Anfrage mit `ATH1` wiederholt und je CAN-ID zusammengesetzt; Codes
   dann nach Steuergerät sortiert. Scheitert das Zurückschalten auf `ATH0`, wird ein

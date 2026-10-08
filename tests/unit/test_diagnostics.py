@@ -1,7 +1,7 @@
 import pytest
 
 from obd_diag.data.dtc_catalog import DtcInfo
-from obd_diag.protocol.elm327 import Elm327, UnknownCommandError
+from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, scan
 from tests.fakes import CAN_CAR, FakeCatalog, FakeTransport
 
@@ -67,3 +67,10 @@ def test_scan_defaults_to_german() -> None:
     catalog = FakeCatalog({})
     scan(Elm327(FakeTransport(CAN_CAR)), catalog)
     assert {lang for _, lang in catalog.lookups} == {"de"}
+
+
+def test_scan_does_not_report_no_codes_when_an_ecu_refuses() -> None:
+    # Früher übersprungen: 7F 03 78 ergab „keine gespeicherten Codes“
+    transport = FakeTransport({**CAN_CAR, "03": "7F0378"})
+    with pytest.raises(ElmError, match="7F 03 78"):
+        scan(Elm327(transport), None)
