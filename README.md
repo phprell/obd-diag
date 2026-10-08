@@ -1,25 +1,25 @@
 # obd-diag
 
 OBD-II-Diagnose für Linux über ELM327-kompatible Adapter: Fehlercodes lesen und erklären,
-Freeze Frame, Readiness, FIN – später Live-Daten und eine QML-Oberfläche.
+Freeze Frame, Readiness, FIN, Live-Daten mit Aufzeichnung, als Kommandozeile und
+Desktop-Oberfläche (PySide6/QML). Standardmäßig nur lesend: der einzige schreibende
+Befehl ist das Löschen der Fehlercodes, und das nur nach Prüfung und Sicherung.
 
 Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/artifact/de949a8a-4f58-41b4-a629-6b9d238bdac7)
 
 ## Stand
 
-Roadmap-Schritt 1 (Grundgerüst): Transport-Schicht für USB-Seriell, minimaler
-ELM327-Treiber, DTC-Dekodierung, Tests gegen Fake und Emulator, CI.
-Roadmap-Schritt 2: `obd-diag scan` liest Fehlercodes und erklärt sie.
-Roadmap-Schritt 3: `obd-diag clear` löscht Codes nach Sicherung, `obd-diag ports`
-findet Adapter; dazu die Desktop-Oberfläche (PySide6/QML) mit Verbinden, Fehlerliste,
-Detailansicht und Löschen.
-Roadmap-Schritt 4 (in Arbeit): Diagnosesitzungen speichern, `obd-diag export` als
-PDF-Bericht und CSV, `obd-diag diagnose` (Fehlercodes, Readiness, Freeze Frame, FIN in
-einem Durchgang) und `obd-diag vin`; die Oberfläche zeigt Readiness, Freeze Frame und
-Fahrzeug und kann Sitzungen speichern, öffnen und exportieren.
-Dazu robustere Adapter-Kommunikation: vermischte mehrteilige Antworten mehrerer
-Steuergeräte, Freeze Frame ohne Frame-Nummer, verzögerte Bestätigung beim Löschen,
-unklare Protokollnummer und abweichendes Echo (siehe „Protokoll-Details“).
+- **v0.1** (Roadmap-Schritte 1–4, in `main`): Fehlercodes (Mode 03/07/0A) mit deutschem
+  Klartext, Readiness, Freeze Frame, FIN mit Offline-Dekodierung, sicheres Löschen,
+  Diagnosesitzungen als JSON, PDF-Bericht und CSV, Adapter-Mitschnitt, Oberfläche
+  mit hellem und dunklem Design.
+- **v0.2** (Branch `live-daten`): Live-Daten nach SAE J1979 (51 Werte), Aufzeichnung
+  als CSV, Reiter „Live-Daten“ und `obd-diag live`.
+- **Noch nicht am echten Auto getestet.** Die Antwortverarbeitung ist ohne Hardware
+  gegen Datenblatt, echte Mitschnitte und python-OBD geprüft (siehe „Entwicklung“).
+  Ablauf für den ersten Test: „Erster Test am Auto“ unten.
+- Geplant (v0.3+): Bluetooth LE, Community-Profile, Fehlerspeicher aller
+  Steuergeräte über UDS (nur lesend), siehe Designdokument.
 
 ## Entwicklung
 
@@ -35,14 +35,20 @@ Ohne uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytes
 `tests/verification` prüft die Antwortverarbeitung ohne Adapter gegen echte Mitschnitte
 (ELM327-Datenblatt, Nutzer-Logs aus python-OBD/ELMduino/AndrOBD, Quellen in
 `tests/fixtures/traces/`), gegen den DTC-Decoder von python-OBD und mit
-Hypothesis-Round-Trip- und Fuzz-Tests.
+Hypothesis-Round-Trip- und Fuzz-Tests. Die Formeln der Live-Daten werden für jeden
+Bytewert mit python-OBD verglichen (`test_pid_differential.py`); die zwei
+Abweichungen (PID `32` und `44`) sind dort gegen J1979 begründet. python-OBD steht
+unter GPL-2.0 und kommt nur in Tests vor.
 
-Mutationstests (Löschen, Ablage, Scan, Sitzung, Katalog, Mitschnitt; Konfiguration
-unter `[tool.mutmut]` in `pyproject.toml`, rund eine halbe Minute):
+Mutationstests (Freigabeliste, Löschen, Live-Daten, Ablage, Scan, Sitzung, Katalog,
+Mitschnitt; Konfiguration unter `[tool.mutmut]` in `pyproject.toml`, rund zwei
+Minuten):
 `uv run --with mutmut mutmut run`, danach `uv run --with mutmut mutmut results`.
-In `services/clear.py` darf kein Mutant überleben; die übrigen Überlebenden sind
-gleichwertig (z. B. `"utf-8"` → `"UTF-8"`, Groß-/Kleinschreibung in SQL). Der Ordner
-`mutants/` ist nur Arbeitskopie.
+In `services/clear.py` darf kein Mutant überleben. In `protocol/elm327.py`,
+`protocol/obd.py`, `protocol/pids.py` und `services/live.py` überleben nur Mutanten an
+Log- und Fehlertexten oder gleichwertige (z. B. `"utf-8"` → `"UTF-8"`); keiner davon
+ändert, ob oder wie oft etwas gesendet wird. Tests, die den Quelltext selbst prüfen,
+laufen unter mutmut nicht. Der Ordner `mutants/` ist nur Arbeitskopie.
 
 Die GUI-Tests (`tests/ui`) laufen ohne Bildschirm (`QT_QPA_PLATFORM=offscreen`, setzt
 `tests/ui/conftest.py`) und werden übersprungen, wenn PySide6 fehlt.
@@ -82,17 +88,66 @@ uv run obd-diag diagnose --port /dev/pts/5
 
 ### Echter Adapter
 
-Für den ersten Test am Auto: Motor aus, Zündung an, und nur lesende Befehle
-(`info`, `diagnose`), noch kein `clear`. Mit `--trace` wird die Kommunikation mit dem
-Adapter mitgeschnitten (siehe unten), damit sich Probleme ohne Auto nachvollziehen
-lassen.
-
 ```sh
 obd-diag info --port /dev/ttyUSB0
 ```
 
+Unterstützt werden ELM327-kompatible Adapter über USB und klassisches Bluetooth
+(`/dev/rfcomm*`). Bluetooth LE kommt erst mit v0.3. Billige „v1.5“-Klone sind oft
+fehlerhaft; Adapter mit echtem ELM327- oder STN-Chip (z. B. OBDLink) sind
+verlässlicher.
+
 Rechte: unter Arch heißt die Gruppe `uucp` (Debian/Ubuntu: `dialout`):
 `sudo usermod -aG uucp $USER` – oder die udev-Regel aus `packaging/` installieren.
+
+### Erster Test am Auto
+
+1. Motor aus, Zündung an (bei Start-Stopp-Knopf: drücken, ohne auf die Bremse zu
+   treten).
+2. `obd-diag ports` zeigt den Adapter, `obd-diag info --port …` Version und
+   Bordspannung.
+3. `obd-diag diagnose --port … --save --trace`: liest alles, nur lesend, und schneidet
+   die Kommunikation mit.
+4. Optional mit laufendem Motor: `obd-diag live --port … --duration 30 --record --trace`.
+5. Noch **kein** `clear`, bis Ausgabe und Mitschnitt geprüft sind. Aus dem Mitschnitt
+   wird mit `ReplayTransport` ein Regressionstest.
+
+Die genormte Diagnose sieht nur abgasrelevante Steuergeräte (Motor, Getriebe).
+Airbag, ABS, Komfortelektronik usw. brauchen herstellerspezifische Diagnose; die ist
+noch nicht eingebaut (geplant: nur lesend über UDS).
+
+### Sicherheit: was das Tool senden kann
+
+Das Tool soll am Auto nichts verändern können. Dafür gibt es eine harte Grenze im
+Code und Tests, die sie prüfen:
+
+- **Freigabeliste** (`protocol/elm327.py`): `Elm327.command` ist der einzige Weg zum
+  Adapter. Durch geht nur, was dort steht: Adapter-Befehle (`ATZ`, `ATE0`, `ATRV` …),
+  die nichts ans Fahrzeug senden, und lesende OBD-Anfragen (`01xx`, `02xx[00]`, `03`,
+  `07`, `0A`, `0902`). Alles andere wird **vor** dem Senden mit
+  `ForbiddenCommandError` abgewiesen, auch Kleinschreibung, Leerzeichen oder ein
+  angehängter zweiter Befehl.
+- **Löschen** (`04`) ist nur innerhalb von `clear_dtcs` freigeschaltet und läuft nur
+  über den Ablauf unter „Fehlercodes löschen“.
+- **Keine Codierung, kein Flashen, keine Servicefunktionen** (Routinen, Aktoren,
+  Anlernwerte). Das ist eine bewusste Entscheidung (`docs/adr/0002-nur-lesend.md`).
+
+Geprüft wird das so:
+
+- Freigabeliste mit Hypothesis: beliebiger Text ist entweder freigegeben oder wird
+  nie gesendet; für jede Funktion steht die exakte Befehlsfolge im Test, gegen
+  Datenblatt und J1979 geprüft.
+- Löschen mit beliebig kaputten Antworten: `04` geht höchstens einmal hinaus, und nur
+  wenn alle Vorbedingungen nachweislich erfüllt sind und die Sicherung auf der Platte
+  liegt.
+- Live-Daten mit beliebigen Antworten: nur Lesendes, nie `04`.
+- Aufrufgraph (AST): nur die vorgesehenen Stellen erreichen `allow_clear`,
+  `clear_dtcs`, `clear_codes`, den Transport und pyserial; keine Sockets, kein
+  `os.write`, kein `eval`/`getattr`.
+- Jeder gesendete Befehl hat auf der Leitung genau das ELM327-Format (Großbuchstaben,
+  Ziffern, ein CR), auch in den Emulator-Tests über den echten seriellen Transport.
+
+Siehe `tests/unit/test_command_guard.py`, `test_write_safety.py`, `test_live_safety.py`.
 
 ### Fehlercodes lesen
 
@@ -140,8 +195,9 @@ obd-diag clear --port /dev/ttyUSB0 --yes    # ohne Rückfrage
    Codes, wird nichts gesendet. Permanente Codes (Mode 0A) löscht Mode 04 nicht, sie
    verschwinden erst, wenn das Steuergerät den Fehler in Fahrzyklen als behoben sieht.
 2. Vorbedingungen: das Steuergerät antwortet (Zündung an), die Bordspannung liegt
-   nicht unter 11,8 V und die Drehzahl ist 0 (Motor aus). Ist die Drehzahl nicht
-   lesbar, wird ebenfalls abgelehnt.
+   nicht unter 11,8 V und die Drehzahl ist 0 (Motor aus). Antworten mehrere
+   Steuergeräte (z. B. Motor und Getriebe), muss jedes gültig 0 melden. Ist eine
+   Drehzahl nicht lesbar, wird ebenfalls abgelehnt.
 3. Rückfrage: die Codes werden aufgelistet, gelöscht wird nur nach Eingabe von `ja`
    (oder mit `--yes`).
 4. Sicherung: Scan-Ergebnis, Freeze Frame (Mode 02: auslösender Code, Last,
@@ -242,6 +298,46 @@ Im Emulator antworten `0101` und `0902` standardgemäß (die FIN wechselt reihum
 drei Beispielen); Mode 02 erwartet er ohne Frame-Nummer, der Freeze Frame bleibt dort
 leer. `tests/integration/test_diagnosis_emulator.py` stellt das für die Tests um.
 
+### Live-Daten
+
+```sh
+obd-diag live --port /dev/ttyUSB0 --list                      # unterstützte Werte
+obd-diag live --port /dev/ttyUSB0                             # übliche Werte, Strg+C beendet
+obd-diag live --port /dev/ttyUSB0 --pids rpm,speed,fuel_rail_pressure --interval 0.5
+obd-diag live --port /dev/ttyUSB0 --duration 60 --record      # 60 s als CSV aufzeichnen
+```
+
+```
+Zeit (s)  Motordrehzahl (1/min)  Geschwindigkeit (km/h)  Kühlmitteltemperatur (°C)  …  Spannung (V)
+     0.0                   1726                      50                         86  …          14.1
+     1.0                   1731                      51                         86  …          14.1
+```
+
+- **Werte:** 51 Mode-01-PIDs nach SAE J1979 (`protocol/pids.py`), u. a. Drehzahl,
+  Geschwindigkeit, Kühlmittel-, Ansaugluft- und Öltemperatur, Last, Luftmasse,
+  Saugrohr- und Raildruck, AGR, Lambda-Sollwert, Kraftstofftrimm, Tankfüllstand,
+  Kraftstoffverbrauch und Kilometerstand. Angefragt werden nur Werte, die das
+  Fahrzeug als unterstützt meldet (`0100`, `0120` … über alle Steuergeräte).
+  Ohne `--pids`: Drehzahl, Geschwindigkeit, Kühlmitteltemperatur, Last,
+  Ansauglufttemperatur und Steuergerätespannung, soweit unterstützt.
+- **Nicht enthalten:** PIDs mit mehreren Werten oder Statusbyte, darunter
+  Lambdasonden, Ladedruck (`70`) und Partikelfilter (`7A`–`7C`); Liste im Docstring
+  von `protocol/pids.py`.
+- **Ablauf:** Runde für Runde wird jeder Wert einmal gelesen; ist einer nicht lesbar,
+  steht „-“ (in der CSV eine leere Zelle), die Abfrage läuft weiter. Meldet der Adapter
+  drei Runden lang bei jedem Wert einen Busfehler (z. B. Zündung aus), endet sie mit
+  einer Fehlermeldung. Die Bordspannung wird jede zehnte Runde gelesen; unter 11,8 V
+  wird nur noch alle 5 s abgefragt.
+- **Aufzeichnung:** CSV unter `$XDG_DATA_HOME/obd-diag/recordings/`
+  (`live-JJJJMMTT-HHMMSS.csv`) oder in der angegebenen Datei, die nicht überschrieben
+  wird. Format wie beim Export: UTF-8 mit BOM, `;`, Dezimalkomma; erste Spalte
+  `Zeit (s)`, dann je Wert `Name (Einheit)`, zuletzt `Bordspannung (V)`. Jede Zeile
+  wird sofort geschrieben, ein Abbruch verliert also nichts.
+- **Nur lesend:** gesendet werden nur `01xx` und `ATRV`.
+
+Während der Fahrt nur durch Beifahrer bedienen. Gegen den Emulator liefert
+`tools/emulator.py` zufällig wechselnde Werte bei laufendem Motor.
+
 ### Diagnosesitzungen und Export
 
 Eine Diagnosesitzung (Scan mit Klartexten, Readiness, Freeze Frame, FIN, Zeitpunkt)
@@ -287,7 +383,7 @@ ohne es bleibt eine Kopfzeilen-Installation (z. B. auf dem Raspberry Pi) klein.
 Oben Port und Baudrate wählen – die Liste zeigt gefundene Adapter, ein Pfad lässt sich
 auch eintippen – und „Verbinden & Scannen“ drücken. Das liest in einem Durchgang
 Fehlercodes, Readiness, Freeze Frame und FIN (nur lesend). Rechts oben steht dann das
-Fahrzeug (Hersteller und FIN), darunter vier Reiter:
+Fahrzeug (Hersteller und FIN), darunter fünf Reiter:
 
 - **Fehlercodes**: links die Codes nach gespeichert, ausstehend und permanent
   gruppiert, rechts die Erklärung des gewählten Codes mit Ursachen, Symptomen und
@@ -299,6 +395,13 @@ Fahrzeug (Hersteller und FIN), darunter vier Reiter:
   (Motorlast, Kühlmitteltemperatur, Drehzahl, Geschwindigkeit).
 - **Fahrzeug**: FIN, Hersteller, Land, Modelljahr, Prüfziffer; auf Wunsch Angaben aus
   NHTSA vPIC (Modell, Motor …).
+- **Live-Daten**: Werte auswählen (die vom Fahrzeug unterstützten erscheinen nach dem
+  ersten Start), Intervall 0,5/1/2 s, „Aufzeichnen (CSV)“, dann Start. Je Wert eine
+  Kachel mit aktuellem Wert, kleinster/größter gesehener Wert und einer Kurve der
+  letzten 120 Werte; die Kurve skaliert nach den gezeigten Werten. Oben Bordspannung,
+  Laufzeit und Runden. Solange Live-Daten laufen, sind Scan, Löschen und Export
+  gesperrt (am Adapter läuft immer nur eine Aktion); umgekehrt startet Live nicht
+  während einer Diagnose.
 
 Antwortet das Steuergerät auf einen Teil nicht, zeigt der Reiter „Nicht verfügbar“.
 Unten: Adapter, Protokoll, Bordspannung (rot bei niedriger Spannung).
@@ -338,7 +441,7 @@ wieder; die Oberfläche bleibt dabei bedienbar.
 
 ### Mitschnitt (`--trace`)
 
-Alle Befehle mit Adapter (`info`, `scan`, `diagnose`, `vin`, `clear`) schneiden mit
+Alle Befehle mit Adapter (`info`, `scan`, `diagnose`, `vin`, `clear`, `live`) schneiden mit
 `--trace` jede gesendete und empfangene Zeile mit Zeitstempel mit:
 
 ```sh
@@ -395,8 +498,8 @@ echter Adapter und Steuergeräte fängt das Tool so ab:
 ```
 src/obd_diag/
 ├── transport/   # Byte-Kanal zum Adapter (Protocol, USB-Seriell, Adaptersuche)
-├── protocol/    # ELM327-Befehle, OBD-II-Dekodierung
-├── services/    # Diagnose-Abläufe (Scan, Löschen, Sitzung speichern/laden)
+├── protocol/    # ELM327-Befehle mit Freigabeliste, OBD-II-Dekodierung, PID-Tabelle
+├── services/    # Abläufe: Scan, Löschen, Sitzung speichern/laden, Live-Daten
 ├── data/        # DTC-Katalog (SQLite), WMI-Tabelle für die FIN
 ├── export/      # PDF-Bericht und CSV einer Sitzung
 ├── ui/          # Desktop-Oberfläche: View-Models (Python) und QML

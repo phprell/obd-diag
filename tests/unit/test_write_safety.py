@@ -141,7 +141,18 @@ def test_clear_with_arbitrary_answers_sends_04_only_when_safe(
     # Die Prüfung der Drehzahl kam vor dem Löschen, danach nur noch Lesendes.
     index = sent.index(CLEAR_COMMAND)
     assert "010C" in sent[:index]
-    assert sent[index - len(FREEZE) - len(PRECONDITIONS) : index - len(FREEZE)] == PRECONDITIONS
+    # Unmittelbar vor 04: genau die Vorbedingungen, dann genau eine der drei möglichen
+    # Freeze-Frame-Folgen (J1979-Format; Rückfall auf 0202 gescheitert; Rückfall geglückt,
+    # dann alles ohne Frame-Nummer, siehe ``read_freeze_frame``).
+    freeze_variants = [
+        FREEZE,
+        [FREEZE[0], "0202", *FREEZE[1:]],
+        [FREEZE[0], *(c[:4] for c in FREEZE)],
+    ]
+    assert any(
+        sent[index - len(f) - len(PRECONDITIONS) : index] == [*PRECONDITIONS, *f]
+        for f in freeze_variants
+    ), sent
     assert all(is_read_only(c) for c in sent[index + 1 :])
     # Beim Senden lag genau eine vollständige Sicherung mit den Codes vor.
     ((backup,),) = transport.backups_at_clear
@@ -220,6 +231,12 @@ def _uses(name: str, *, attribute_only: bool = False) -> set[str]:
         ("clear_dtcs", {"services/clear.py:clear_codes"}),
         # clear_codes: nur die Kommandozeile (nach Rückfrage) und die GUI (nach Dialog)
         ("clear_codes", {"cli.py:_run_clear", "ui/backend.py:clear_port"}),
+        # Live-Daten: nur Kommandozeile und GUI-Backend starten die Abfrage, und nur der
+        # Live-Dienst fragt Werte ab.
+        ("run_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
+        ("prepare_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
+        ("read_value", {"services/live.py:_read_value"}),
+        ("read_supported_pids", {"services/live.py:prepare_live"}),
         # Den Transport eines Elm327 (``elm.transport``) fasst nur Elm327 selbst an.
         (
             "transport",

@@ -4,14 +4,36 @@ import argparse
 import dataclasses
 import json
 import sys
+import time
+from collections.abc import Callable
 from pathlib import Path
 
 from obd_diag import __version__
 from obd_diag.data.dtc_catalog import DtcCatalog
 from obd_diag.protocol.elm327 import Elm327, ElmError
 from obd_diag.protocol.obd import FreezeFrame
+from obd_diag.protocol.pids import PidSpec
 from obd_diag.services.clear import ClearRefused, check_preconditions, clear_codes, clearable_codes
-from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult, scan, scan_to_dict
+from obd_diag.services.diagnostics import (
+    LOW_VOLTAGE,
+    DiagnosticCode,
+    DtcKind,
+    ScanResult,
+    scan,
+    scan_to_dict,
+)
+from obd_diag.services.live import (
+    DEFAULT_INTERVAL,
+    LOW_VOLTAGE_INTERVAL,
+    LiveRecorder,
+    LiveSample,
+    SelectionError,
+    new_recording_path,
+    prepare_live,
+    recording_dir,
+    run_live,
+    select_pids,
+)
 from obd_diag.services.readiness import ALL_COMPLETE_LABEL, AU_NOTE, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
 from obd_diag.services.storage import trace_dir
@@ -68,6 +90,7 @@ def _scan_json(result: ScanResult) -> str:
 
 
 _AUTO_TRACE = "auto"
+_AUTO_RECORD = "auto"
 
 
 def _transport(args: argparse.Namespace) -> Transport:
@@ -322,6 +345,151 @@ def _run_export(args: argparse.Namespace, parser: argparse.ArgumentParser) -> in
     return 0
 
 
+# --- Live-Daten ---------------------------------------------------------------------
+
+LIVE_SAFETY_NOTE = "Hinweis: Während der Fahrt nur durch Beifahrer bedienen."
+MIN_INTERVAL = 0.1  # Sekunden; schneller kommt ein ELM327 ohnehin nicht hinterher
+_MISSING = "-"  # nicht lesbarer Wert in der Tabelle (kein Gedankenstrich)
+
+
+def _number(text: str, valid: Callable[[float], bool], requirement: str) -> float:
+    try:
+        value = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"keine Zahl: {text!r}") from None
+    if not valid(value):  # nan erfüllt keinen Vergleich
+        raise argparse.ArgumentTypeError(requirement)
+    return value
+
+
+def _interval(text: str) -> float:
+    return _number(text, lambda v: v >= MIN_INTERVAL, f"mindestens {MIN_INTERVAL:g} Sekunden")
+
+
+def _duration(text: str) -> float:
+    return _number(text, lambda v: v > 0, "muss größer als 0 sein")
+
+
+def _keys(text: str) -> list[str]:
+    return [key.strip().lower() for key in text.split(",") if key.strip()]
+
+
+def _live_number(value: float | None) -> str:
+    if value is None:
+        return _MISSING
+    text = f"{value:.2f}".rstrip("0").rstrip(".")
+    return "0" if text == "-0" else text
+
+
+class _LiveTable:
+    """Feste Spalten: Zeit, je Wert ``Name (Einheit)``, Bordspannung."""
+
+    def __init__(self, pids: list[PidSpec]) -> None:
+        self.pids = pids
+        self.headers = ["Zeit (s)", *(f"{p.name} ({p.unit})" for p in pids), "Spannung (V)"]
+        self.widths = [max(len(h), 8) for h in self.headers]
+        self.rounds = 0
+        self.throttled = False
+
+    def print_header(self) -> None:
+        print("  ".join(h.rjust(w) for h, w in zip(self.headers, self.widths, strict=True)))
+
+    def on_sample(self, sample: LiveSample) -> None:
+        if sample.throttled != self.throttled:
+            self.throttled = sample.throttled
+            if sample.throttled and sample.voltage is not None:
+                print(
+                    f"Hinweis: Bordspannung {sample.voltage:.1f} V unter {LOW_VOLTAGE:.1f} V, "
+                    f"Abfrage nur alle {LOW_VOLTAGE_INTERVAL:g} s.",
+                    file=sys.stderr,
+                )
+            else:
+                print("Hinweis: Bordspannung wieder ausreichend.", file=sys.stderr)
+        cells = [
+            f"{sample.elapsed:.1f}",
+            *(_live_number(sample.values.get(p.key)) for p in self.pids),
+            _MISSING if sample.voltage is None else f"{sample.voltage:.1f}",
+        ]
+        print("  ".join(c.rjust(w) for c, w in zip(cells, self.widths, strict=True)), flush=True)
+        self.rounds += 1
+
+
+def _print_available(pids: list[PidSpec]) -> None:
+    if not pids:
+        print("Das Fahrzeug meldet keine bekannten Live-Werte.")
+        return
+    key_width = max(len("Schlüssel"), *(len(p.key) for p in pids))
+    name_width = max(len("Name"), *(len(p.name) for p in pids))
+    print(f"{'Schlüssel':<{key_width}}  {'Name':<{name_width}}  Einheit")
+    for p in pids:
+        print(f"{p.key:<{key_width}}  {p.name:<{name_width}}  {p.unit}")
+
+
+def _run_live(args: argparse.Namespace) -> int:
+    keys = None if args.pids is None else _keys(args.pids)
+    if not args.list:
+        print(LIVE_SAFETY_NOTE, file=sys.stderr)
+    table: _LiveTable | None = None
+    record: Path | None = None
+    try:
+        with _transport(args) as transport:
+            elm = Elm327(transport)
+            setup = prepare_live(elm)
+            if args.list:
+                _print_available(setup.available)
+                return 0
+            try:
+                pids = select_pids(setup, keys)
+            except SelectionError as e:
+                print(f"Fehler: {e}", file=sys.stderr)
+                if keys is None:
+                    print("Mit --list anzeigen, mit --pids wählen.", file=sys.stderr)
+                return 1
+            if args.record is not None:
+                record = (
+                    new_recording_path(recording_dir())
+                    if args.record == _AUTO_RECORD
+                    else Path(args.record)
+                )
+            print(f"Adapter: {setup.adapter}, Protokoll: {setup.protocol}", file=sys.stderr)
+            recorder = None if record is None else LiveRecorder(record, pids)
+            if record is not None:
+                print(f"Aufzeichnung: {record}", file=sys.stderr)
+            table = _LiveTable(pids)
+            table.print_header()
+            start = time.monotonic()
+            duration: float | None = args.duration
+            try:
+                run_live(
+                    elm,
+                    pids,
+                    on_sample=table.on_sample,
+                    should_stop=lambda: (
+                        duration is not None and time.monotonic() - start >= duration
+                    ),
+                    interval=args.interval,
+                    recorder=recorder,
+                    clock=time.monotonic,
+                    sleep=time.sleep,
+                )
+            finally:
+                if recorder is not None:
+                    recorder.close()
+    except KeyboardInterrupt:
+        print(file=sys.stderr)  # hinter dem ^C des Terminals
+    except ValueError as e:
+        print(f"Fehler: Unerwartete Antwort vom Fahrzeug: {e}", file=sys.stderr)
+        return 1
+    except OSError as e:
+        print(f"Fehler: {e.filename or ''}: {e.strerror or e}", file=sys.stderr)
+        return 1
+    rounds = 0 if table is None else table.rounds
+    print(f"Beendet nach {rounds} {'Runde' if rounds == 1 else 'Runden'}.", file=sys.stderr)
+    if record is not None and table is not None:
+        print(f"Aufzeichnung: {record}", file=sys.stderr)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="obd-diag")
     parser.add_argument("--version", action="version", version=__version__)
@@ -380,6 +548,39 @@ def main(argv: list[str] | None = None) -> int:
     )
     vin_parser.add_argument("--json", action="store_true", help="Ergebnis als JSON ausgeben")
     vin_parser.add_argument("--online-vin", action="store_true", help=online_help)
+    live_parser = sub.add_parser(
+        "live",
+        parents=[connection],
+        help="Live-Daten (Mode 01) fortlaufend anzeigen und aufzeichnen; Ende mit Strg+C",
+    )
+    live_parser.add_argument(
+        "--pids",
+        metavar="SCHLÜSSEL,...",
+        help="Werte, z. B. rpm,speed,coolant_temp (Standard: die üblichen, soweit "
+        "unterstützt; Schlüssel zeigt --list)",
+    )
+    live_parser.add_argument(
+        "--list", action="store_true", help="unterstützte Werte mit Schlüssel anzeigen und beenden"
+    )
+    live_parser.add_argument(
+        "--interval",
+        type=_interval,
+        default=DEFAULT_INTERVAL,
+        metavar="SEK",
+        help=f"Abstand der Abfragerunden (Standard {DEFAULT_INTERVAL:g}, mindestens "
+        f"{MIN_INTERVAL:g})",
+    )
+    live_parser.add_argument(
+        "--duration", type=_duration, metavar="SEK", help="nach SEK Sekunden beenden"
+    )
+    live_parser.add_argument(
+        "--record",
+        nargs="?",
+        const=_AUTO_RECORD,
+        metavar="DATEI.csv",
+        help="als CSV aufzeichnen (ohne DATEI: unter $XDG_DATA_HOME/obd-diag/recordings); "
+        "vorhandene Dateien werden nicht überschrieben",
+    )
     sub.add_parser("ports", help="angeschlossene Adapter auflisten")
     export_parser = sub.add_parser(
         "export", help="gespeicherte Diagnosesitzung (JSON) als PDF-Bericht oder CSV ausgeben"
@@ -405,6 +606,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_diagnose(args)
         elif args.command == "vin":
             return _run_vin(args)
+        elif args.command == "live":
+            return _run_live(args)
         elif args.command == "ports":
             _run_ports()
         elif args.command == "export":

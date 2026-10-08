@@ -3,7 +3,7 @@ import tty
 
 import pytest
 
-from obd_diag.transport import TransportTimeout
+from obd_diag.transport import TransportError, TransportTimeout
 from obd_diag.transport.serial import SerialTransport
 
 
@@ -29,3 +29,12 @@ def test_read_timeout(pty_pair: tuple[int, str]) -> None:
     _, device = pty_pair
     with SerialTransport(device) as transport, pytest.raises(TransportTimeout):
         transport.read_until(b">", 0.1)
+
+
+def test_lost_connection_is_a_transport_error(pty_pair: tuple[int, str]) -> None:
+    # Wie ein abgezogener USB-Adapter: die Gegenseite verschwindet, read liefert EIO.
+    master, device = pty_pair
+    with SerialTransport(device) as transport:
+        os.close(master)
+        with pytest.raises(TransportError, match="unterbrochen"):
+            transport.read_until(b">", 1.0)

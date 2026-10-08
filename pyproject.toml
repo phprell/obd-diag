@@ -75,6 +75,8 @@ source_paths = ["src/obd_diag"]
 only_mutate = [
     "src/obd_diag/protocol/elm327.py",
     "src/obd_diag/protocol/obd.py",
+    "src/obd_diag/protocol/pids.py",
+    "src/obd_diag/services/live.py",
     "src/obd_diag/services/clear.py",
     "src/obd_diag/services/storage.py",
     "src/obd_diag/services/diagnostics.py",
