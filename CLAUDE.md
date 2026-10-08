@@ -3,6 +3,10 @@
 Linux-OBD-II-Diagnose-Tool für ELM327-kompatible Adapter: Kommandozeile und
 PySide6/QML-Oberfläche, Python 3.12+. Repo: github.com/phprell/obd-diag (privat).
 
+Entscheidungen: `docs/adr/` (0001 Schichten, 0002 nur lesend/Freigabeliste, 0003
+Live-Daten). Nutzer-Doku: README.md (u. a. „Sicherheit: was das Tool senden kann“,
+„Erster Test am Auto“, „Live-Daten“).
+
 Spezifikation und Roadmap: Claude-Docs-Dokument „OBD-Diagnose – Designvorschlag“
 https://claude.ai/code/artifact/de949a8a-4f58-41b4-a629-6b9d238bdac7 (über den
 Claude-Docs-Connector lesen; Architektur- und Roadmap-Änderungen dort nachziehen).
@@ -25,7 +29,8 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
 - `uv sync` – Umgebung; danach Katalog bauen: `uv run python tools/build_dtc_db.py`
   (lädt OBDex-YAML von GitHub, ~9 s; `--source DIR` für einen lokalen Klon)
 - `uv run ruff format . && uv run ruff check . && uv run mypy` (strict)
-- `uv run pytest` – ca. 1180 Tests, ~2,5 min (Emulator-Tests sind langsam).
+- `uv run pytest` – ca. 1240 Tests, ~3 min (Emulator-Tests und der PID-Vergleich mit
+  python-OBD sind langsam).
   **Exit-Code von pytest selbst prüfen**, nicht durch `| tail` (hat schon einmal
   einen roten Stand auf main gebracht).
 - `uv run python tools/emulator.py [--stored P0420,P0300 --pending P0171 --engine-off]`
@@ -124,6 +129,9 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   skalieren nach den gezeigten Werten (der volle J1979-Bereich ließe sie flach).
   Die CSV-Methode heißt `LiveRecorder.add`, nicht `write`: der Architekturtest sucht
   `.write(`-Aufrufe, und er wird nicht umgangen, sondern ernst genommen.
+  Formeln: `tests/verification/test_pid_differential.py` vergleicht jeden Bytewert mit
+  python-OBD. Bewusste Abweichungen nach J1979: `32` (16-Bit-Zweierkomplement, python-
+  OBD wertet A und B einzeln aus) und `44` (2/65536 statt gerundet 0,0000305).
 - **Serieller Transport**: Ein-/Ausgabefehler (abgezogener Adapter, EIO) werden zu
   `TransportError` („Verbindung … unterbrochen“).
 - **PDF**: bettet DejaVu/Liberation/Noto ein, falls installiert, sonst Helvetica.
