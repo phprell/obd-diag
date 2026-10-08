@@ -500,7 +500,8 @@ def _run_live(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """Alle Befehle und Optionen; auch Quelle der CLI-Referenz in der Dokumentation."""
     parser = argparse.ArgumentParser(prog="obd-diag")
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -600,7 +601,13 @@ def main(argv: list[str] | None = None) -> int:
     export_parser.add_argument(
         "--csv", type=Path, metavar="DATEI.csv", help="CSV, eine Zeile pro Fehlercode"
     )
+    # für Fehlermeldungen mit der Aufrufzeile von ``export``
+    export_parser.set_defaults(export_parser=export_parser)
+    return parser
 
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
     args = parser.parse_args(argv)
     try:
         if args.command == "info":
@@ -621,7 +628,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "ports":
             _run_ports()
         elif args.command == "export":
-            return _run_export(args, export_parser)
+            return _run_export(args, args.export_parser)
     except (TransportError, ElmError) as e:
         print(f"Fehler: {e}", file=sys.stderr)
         return 1
