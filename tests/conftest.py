@@ -2,6 +2,7 @@ from collections.abc import Iterator
 
 import pytest
 
+from tests.command_spec import load_spec
 from tests.emulator_patches import patch_dtc_count_byte
 from tests.fakes import FakeTransport
 
@@ -45,6 +46,41 @@ def _serial_wire_format(monkeypatch: pytest.MonkeyPatch) -> None:
 
     def checked(self: SerialTransport, data: bytes) -> None:
         assert WIRE_FORMAT.fullmatch(data), f"falsches Befehlsformat: {data!r}"
+        cmd = data.decode("ascii").removesuffix("\r")
+        assert load_spec().allows(cmd), f"{cmd!r} steht nicht in command_spec.yaml"
         original(self, data)
 
     monkeypatch.setattr(SerialTransport, "write", checked)
+
+
+@pytest.fixture(autouse=True)
+def _commands_match_spec(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Jeder Befehl, der in irgendeinem Test tatsächlich an einen Transport geht, muss in
+    ``tests/fixtures/command_spec.yaml`` stehen (Datenblatt bzw. J1979, mit Seite).
+
+    ``Elm327.command`` ist der einzige Weg zum Adapter (Architekturtest in
+    ``test_command_guard.py``). Weist die Freigabeliste einen Befehl ab, ist nichts
+    gesendet; kommt er durch, muss die Spezifikation ihn erlauben. Ausgenommen sind nur
+    Tests mit ``@pytest.mark.foreign_commands``, die Mitschnitte anderer Programme
+    nachspielen und die Freigabeliste dafür ausdrücklich umgehen."""
+    if request.node.get_closest_marker("foreign_commands") is not None:
+        return
+    from obd_diag.protocol.elm327 import Elm327, ForbiddenCommandError
+
+    original = Elm327.command
+
+    def checked(self: Elm327, cmd: str) -> str:
+        allowed = load_spec().allows(cmd)
+        try:
+            result = original(self, cmd)
+        except ForbiddenCommandError:
+            raise  # nichts gesendet
+        except Exception:
+            if not allowed:
+                pytest.fail(f"{cmd!r} gesendet, steht aber nicht in command_spec.yaml")
+            raise
+        if not allowed:
+            pytest.fail(f"{cmd!r} gesendet, steht aber nicht in command_spec.yaml")
+        return result
+
+    monkeypatch.setattr(Elm327, "command", checked)
