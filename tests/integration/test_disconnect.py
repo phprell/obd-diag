@@ -91,10 +91,17 @@ class VanishingAdapter:
                     return
 
     def _wait_until_read(self) -> None:
-        """Wartet, bis das Tool alle gesendeten Bytes vom pty gelesen hat."""
+        """Wartet, bis das Tool alle gesendeten Bytes vom pty gelesen hat.
+
+        Der Kernel reicht Geschriebenes asynchron an die Slave-Seite weiter; direkt nach
+        ``os.write`` kann FIONREAD daher noch 0 melden, obwohl die Antwort unterwegs ist.
+        Erst wenn die Warteschlange mehrmals hintereinander leer ist, gilt sie als gelesen.
+        """
+        empty = 0
         for _ in range(500):
             waiting = fcntl.ioctl(self._slave, termios.FIONREAD, b"\0\0\0\0")
-            if int.from_bytes(waiting, "little") == 0:
+            empty = empty + 1 if int.from_bytes(waiting, "little") == 0 else 0
+            if empty >= 5:
                 return
             time.sleep(0.002)
         raise AssertionError("Antwort wurde nicht gelesen")
