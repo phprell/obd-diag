@@ -223,3 +223,17 @@ def test_invalid_options(car: Car, argv: list[str], capsys: pytest.CaptureFixtur
         main(["live", *argv])
     assert info.value.code == 2
     assert car.transports == []
+
+
+def test_broken_vehicle_answer_is_named(
+    car: Car, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Ein ValueError aus der Einrichtung (z. B. kaputte Frames) liegt nicht an der Auswahl
+    def broken(elm: object) -> object:
+        raise ValueError("Frame 2 fehlt")
+
+    monkeypatch.setattr(cli, "prepare_live", broken)
+    assert main(["live", "--pids", "rpm"]) == 1
+    assert capsys.readouterr().err.endswith(
+        "Fehler: Unerwartete Antwort vom Fahrzeug: Frame 2 fehlt\n"
+    )

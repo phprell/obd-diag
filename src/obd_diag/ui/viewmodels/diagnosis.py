@@ -9,7 +9,13 @@ from PySide6.QtCore import Property, QObject, QSettings, QStandardPaths, QUrl, S
 from PySide6.QtGui import QDesktopServices
 
 from obd_diag.protocol.elm327 import ElmError
-from obd_diag.services.clear import ClearRefused, ClearResult, clearable_codes
+from obd_diag.services.clear import (
+    CLEAR_DISABLED_MESSAGE,
+    ClearRefused,
+    ClearResult,
+    clear_enabled,
+    clearable_codes,
+)
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
 from obd_diag.services.session import Session, default_session_dir
 from obd_diag.services.storage import trace_dir
@@ -224,10 +230,20 @@ class DiagnosisViewModel(QObject):
     @Property(bool, notify=stateChanged)
     def canClear(self) -> bool:
         # Nur gespeicherte und ausstehende Codes lassen sich löschen (Mode 04), und nur
-        # am verbundenen Fahrzeug, nicht in einer geöffneten Sitzung
+        # am verbundenen Fahrzeug, nicht in einer geöffneten Sitzung; und nur, wenn
+        # Löschen überhaupt freigegeben ist (services/clear.py)
         return (
-            not self._busy and not self._blocked and not self._view_only and bool(self._clearable())
+            clear_enabled()
+            and not self._busy
+            and not self._blocked
+            and not self._view_only
+            and bool(self._clearable())
         )
+
+    @Property(str, constant=True)
+    def clearDisabledReason(self) -> str:
+        """Leer, wenn Löschen freigegeben ist; sonst der Grund für den Tooltip."""
+        return "" if clear_enabled() else CLEAR_DISABLED_MESSAGE
 
     @Property(str, notify=stateChanged)
     def errorMessage(self) -> str:

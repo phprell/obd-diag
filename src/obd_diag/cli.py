@@ -13,7 +13,14 @@ from obd_diag.data.dtc_catalog import DtcCatalog
 from obd_diag.protocol.elm327 import Elm327, ElmError
 from obd_diag.protocol.obd import FreezeFrame
 from obd_diag.protocol.pids import PidSpec
-from obd_diag.services.clear import ClearRefused, check_preconditions, clear_codes, clearable_codes
+from obd_diag.services.clear import (
+    CLEAR_DISABLED_MESSAGE,
+    ClearRefused,
+    check_preconditions,
+    clear_codes,
+    clear_enabled,
+    clearable_codes,
+)
 from obd_diag.services.diagnostics import (
     LOW_VOLTAGE,
     DiagnosticCode,
@@ -147,6 +154,9 @@ def _confirm() -> bool:
 
 
 def _run_clear(args: argparse.Namespace) -> int:
+    if not clear_enabled():
+        print(f"Fehler: {CLEAR_DISABLED_MESSAGE}", file=sys.stderr)
+        return 1
     catalog = _open_catalog()
     try:
         with _transport(args) as transport:

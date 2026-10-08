@@ -15,6 +15,11 @@ dokumentieren.
   (Fehlercodes löschen), nur über `services/clear.py` mit Vorbedingungen (Zündung an,
   Drehzahl 0 bei allen antwortenden Steuergeräten, Bordspannung nicht zu niedrig),
   Rückfrage und vorheriger Sicherung.
+- Bis das Lesen an einem echten Fahrzeug geprüft ist, ist auch das Löschen gesperrt
+  (`CLEAR_ENABLED = False`, Nachtrag 2026-10-08). Die Sperre greift in `clear_codes`
+  vor der ersten Anfrage; CLI und GUI bieten es gar nicht erst an. Die Tests des
+  Löschablaufs laufen mit freigegebenem Löschen weiter, damit er bei der Freigabe
+  geprüft ist.
 - `Elm327.command` ist der einzige Weg zum Adapter und prüft jeden Befehl gegen eine
   Freigabeliste (Adapter-Befehle und lesende OBD-Anfragen). Alles andere wird vor dem
   Senden abgewiesen (`ForbiddenCommandError`, bewusst kein `ElmError`, damit es kein

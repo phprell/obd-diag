@@ -3,6 +3,10 @@
 Ablauf: Vorbedingungen prüfen (Zündung an, Motor aus), Codes und Freeze Frame
 sichern, erst dann löschen und zur Kontrolle neu einlesen. Schlägt irgendein Schritt
 vor dem Löschen fehl, wird Mode 04 nicht gesendet.
+
+Derzeit gesperrt (``CLEAR_ENABLED``): Erst wenn das Lesen an einem echten Fahrzeug
+geprüft ist, wird Löschen freigegeben. Die Sperre greift in ``clear_codes`` vor der
+ersten Anfrage; CLI und GUI fragen ``clear_enabled`` zusätzlich vorher ab.
 """
 
 import dataclasses
@@ -30,6 +34,19 @@ from obd_diag.services.diagnostics import (
     scan_to_dict,
 )
 from obd_diag.services.storage import data_dir, write_new_json
+
+# Löschen ist gesperrt, bis das Lesen an einem echten Fahrzeug geprüft ist (Wunsch des
+# Nutzers, 2026-10-08). Freigeben nur bewusst, nach Prüfung von Ausgabe und Mitschnitt.
+CLEAR_ENABLED = False
+CLEAR_DISABLED_MESSAGE = (
+    "Löschen ist vorerst deaktiviert: Erst muss das Lesen an einem echten Fahrzeug "
+    "geprüft sein. Es wurde nichts gesendet."
+)
+
+
+def clear_enabled() -> bool:
+    """Ob Löschen freigegeben ist (zur Laufzeit gelesen, damit Tests es umstellen können)."""
+    return CLEAR_ENABLED
 
 
 class ClearRefused(Exception):
@@ -132,8 +149,11 @@ def clear_codes(
     Reihenfolge: Scan, Vorbedingungen, Freeze Frame lesen, Sicherung schreiben, erst
     dann Mode 04, zum Schluss Kontroll-Scan. ``ClearRefused`` vor dem Löschen heißt:
     nichts wurde verändert. Lehnt das Steuergerät Mode 04 ab, bleibt die Sicherung
-    liegen und ``ClearRefused`` nennt den Grund.
+    liegen und ``ClearRefused`` nennt den Grund. Ist Löschen gesperrt
+    (``CLEAR_ENABLED``), kommt ``ClearRefused`` sofort, ohne dass etwas gesendet wird.
     """
+    if not clear_enabled():
+        raise ClearRefused(CLEAR_DISABLED_MESSAGE)
     before = scan(elm, catalog, lang)
     if not clearable_codes(before):
         raise ClearRefused("Keine gespeicherten oder ausstehenden Fehlercodes, nichts zu löschen.")

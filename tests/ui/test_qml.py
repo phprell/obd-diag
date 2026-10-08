@@ -15,7 +15,7 @@ from PySide6.QtQml import QQmlApplicationEngine, QQmlError
 from PySide6.QtQuick import QQuickWindow
 from pytestqt.qtbot import QtBot
 
-from obd_diag.services.clear import ClearRefused
+from obd_diag.services.clear import CLEAR_DISABLED_MESSAGE, ClearRefused
 from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel
 from obd_diag.ui.window import load_main_window, set_style
 from tests.samples import full_session, minimal_session
@@ -91,6 +91,20 @@ def test_scan_fills_list_and_detail(qtbot: QtBot, ui: Ui) -> None:
     ui.vm.setProperty("selectedIndex", 1)
     qtbot.waitUntil(lambda: ui.prop("detailCode", "text") == "P1234")
     assert ui.prop("codeList", "currentIndex") == 1
+    assert ui.warnings == []
+
+
+@pytest.mark.clear_disabled
+def test_clear_button_stays_disabled_while_clearing_is_locked(
+    qtbot: QtBot, ui: Ui, fake_backend: FakeBackend
+) -> None:
+    ui.vm.connectAndScan(ui.prop("portBox", "editText"), 38400)
+    qtbot.waitUntil(lambda: ui.prop("codeList", "count") == 4)
+    assert ui.vm.property("canClear") is False
+    assert ui.prop("clearButton", "enabled") is False
+    assert ui.prop("clearTooltip", "text") == CLEAR_DISABLED_MESSAGE
+    ui.vm.clearCodes()  # auch direkt aufgerufen: nichts geht an das Backend
+    assert [c[0] for c in fake_backend.calls] == ["diagnose"]
     assert ui.warnings == []
 
 

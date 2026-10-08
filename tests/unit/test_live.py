@@ -539,3 +539,33 @@ def test_real_pid_table_never_leads_to_writes(broken: dict[str, str]) -> None:
         _guarded_run(transport)
     assert CLEAR_COMMAND not in transport.sent
     assert all(is_read_only(c) for c in transport.sent), transport.sent
+
+
+def test_bus_gone_from_the_first_round_aborts_after_exactly_max_rounds() -> None:
+    # Zündung schon aus: jede Runde scheitert, erst Runde MAX_FAILED_ROUNDS bricht ab.
+    # Die Meldung nennt den letzten Adapterfehler (hier den von 010D).
+    samples: list[LiveSample] = []
+    responses = {**CAR, "010C": "CAN ERROR", "010D": "BUS ERROR"}
+    with pytest.raises(ElmError, match=r"3 Runden nacheinander \(Zündung aus\?\): 010D: BUS ERROR"):
+        run_live(
+            Elm327(FakeTransport(responses)),
+            [RPM, SPEED],
+            on_sample=samples.append,
+            should_stop=lambda: False,
+            clock=(clock := FakeClock()),
+            sleep=clock.sleep,
+        )
+    assert MAX_FAILED_ROUNDS == 3
+    assert len(samples) == MAX_FAILED_ROUNDS - 1  # die abbrechende Runde wird nicht gemeldet
+
+
+def test_selection_messages_list_every_value() -> None:
+    with pytest.raises(SelectionError) as info:
+        select_pids(LiveSetup("", "", []), ["foo", "bar"])
+    assert str(info.value) == "unbekannte Werte: foo, bar (verfügbar: keine)"
+    with pytest.raises(SelectionError) as info:
+        select_pids(LiveSetup("", "", [SPEED]), ["maf", "rpm"])
+    assert str(info.value) == "vom Fahrzeug nicht unterstützt: maf, rpm (verfügbar: speed)"
+    with pytest.raises(SelectionError) as info:
+        select_pids(LiveSetup("", "", [SPEED]), ["maf", "rpm"], skip_unsupported=True)
+    assert str(info.value) == "vom Fahrzeug nicht unterstützt: maf, rpm (verfügbar: speed)"

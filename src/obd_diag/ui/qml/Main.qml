@@ -409,9 +409,11 @@ ApplicationWindow {
                 }
                 ToolTip {
                     objectName: "clearTooltip"
-                    visible: clearHover.hovered && window.vm.viewOnly
+                    visible: clearHover.hovered
+                             && (window.vm.clearDisabledReason !== "" || window.vm.viewOnly)
                     delay: 400
-                    text: "nur bei verbundenem Fahrzeug"
+                    text: window.vm.clearDisabledReason !== "" ? window.vm.clearDisabledReason
+                                                               : "nur bei verbundenem Fahrzeug"
                 }
             }
         }

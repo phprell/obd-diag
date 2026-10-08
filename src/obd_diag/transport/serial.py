@@ -1,11 +1,18 @@
 """USB-Seriell-Transport über pyserial (z. B. /dev/ttyUSB0)."""
 
+import contextlib
+import termios
 from types import TracebackType
 from typing import Self
 
 import serial
 
 from obd_diag.transport.base import TransportError, TransportTimeout
+
+# Fehler, die ein verschwundener Adapter auslöst: pyserial meldet sie je nach Aufruf als
+# SerialException, OSError oder, beim Leeren des Puffers und beim Umstellen des
+# Timeouts (tcflush, tcsetattr), als termios.error, das kein OSError ist.
+_IO_ERRORS = (serial.SerialException, OSError, termios.error)
 
 
 class SerialTransport:
@@ -22,8 +29,11 @@ class SerialTransport:
 
     def close(self) -> None:
         if self._serial is not None:
-            self._serial.close()
-            self._serial = None
+            port, self._serial = self._serial, None
+            # Ist der Adapter abgezogen, kann schon das Schließen scheitern. Das darf die
+            # eigentliche Meldung (``TransportError`` aus read/write) nicht verdecken.
+            with contextlib.suppress(*_IO_ERRORS):
+                port.close()
 
     def write(self, data: bytes) -> None:
         port = self._port()
@@ -32,7 +42,7 @@ class SerialTransport:
         try:
             port.reset_input_buffer()
             port.write(data)
-        except (serial.SerialException, OSError) as e:
+        except _IO_ERRORS as e:
             raise self._lost(e) from e
 
     def read_until(self, terminator: bytes, timeout: float) -> bytes:
@@ -40,7 +50,7 @@ class SerialTransport:
         try:
             port.timeout = timeout
             data = port.read_until(terminator)
-        except (serial.SerialException, OSError) as e:
+        except _IO_ERRORS as e:
             raise self._lost(e) from e
         if not data.endswith(terminator):
             raise TransportTimeout(f"keine Antwort von {self.port} nach {timeout} s")
@@ -48,7 +58,12 @@ class SerialTransport:
 
     def _lost(self, error: Exception) -> TransportError:
         """Ein-/Ausgabefehler (z. B. Adapter abgezogen) als verständlicher TransportError."""
-        reason = (error.strerror if isinstance(error, OSError) else None) or str(error)
+        if isinstance(error, OSError):
+            reason = error.strerror or str(error)
+        elif isinstance(error, termios.error) and len(error.args) == 2:
+            reason = str(error.args[1])  # (errno, Text)
+        else:
+            reason = str(error)
         return TransportError(
             f"Verbindung zu {self.port} unterbrochen ({reason}). Adapter abgezogen?"
         )
