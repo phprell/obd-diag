@@ -246,7 +246,7 @@ class LiveViewModel(QObject):
         self._throttled = False
 
         # Vor der ersten Verbindung: alle bekannten Werte; danach die unterstützten
-        self._available: list[PidSpec] = sorted(PIDS.values(), key=lambda s: s.pid)
+        self._available: list[PidSpec] = list(PIDS.values())
         self._supported_known = False
         self._selected: list[str] = list(DEFAULT_KEYS)
         self._custom_selection = False  # False: die üblichen Werte, soweit unterstützt

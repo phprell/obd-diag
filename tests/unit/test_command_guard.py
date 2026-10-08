@@ -186,7 +186,7 @@ def test_any_text_is_either_allowed_or_never_sent(cmd: str) -> None:
         # PIDs 21-40); dessen Antwort ist unbrauchbar, also endet die Kette dort.
         ("read_supported_pids", pids.read_supported_pids, ["0100", "0120"]),
         ("read_value rpm", lambda e: pids.read_value(e, pids.pid_by_key("rpm")), ["010C"]),
-        ("read_value odometer", lambda e: pids.read_value(e, pids.PIDS[0xA6]), ["01A6"]),
+        ("read_value odometer", lambda e: pids.read_value(e, pids.PIDS["odometer"]), ["01A6"]),
         ("read_freeze_frame", obd.read_freeze_frame, FREEZE),
         ("read_readiness", readiness.read_readiness, ["0101"]),
         ("read_vin", vehicle.read_vin, ["0902"]),

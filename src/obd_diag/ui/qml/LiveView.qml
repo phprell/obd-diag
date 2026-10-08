@@ -44,7 +44,7 @@ Rectangle {
                     objectName: "liveStartButton"
                     text: !pane.running ? "Start" : pane.live.stopping ? "Stoppe …" : "Stopp"
                     enabled: pane.running ? !pane.live.stopping : pane.live.canStart
-                    palette.button: pane.running ? Theme.errorDot : Theme.accentButton
+                    palette.button: pane.running ? Theme.stopButton : Theme.accentButton
                     palette.buttonText: "white"
                     font.bold: true
                     opacity: enabled ? 1 : 0.5
@@ -257,6 +257,10 @@ Rectangle {
                                 objectName: "liveCheck_" + modelData.key
                                 width: 250
                                 text: modelData.name + (modelData.unit ? " (" + modelData.unit + ")" : "")
+                                // Lange Namen werden gekürzt; der volle Name steht im Tooltip
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                ToolTip.text: text
                                 checked: wanted
                                 onToggled: {
                                     pane.live.setSelected(modelData.key, checked)

@@ -1,6 +1,6 @@
 [project]
 name = "obd-diag"
-version = "0.0.1"
+version = "0.2.0"
 description = "OBD-II-Diagnose für Linux über ELM327-kompatible Adapter"
 readme = "README.md"
 requires-python = ">=3.12"

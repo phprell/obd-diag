@@ -22,9 +22,12 @@ Thread für Minuten.
   jeder Wert an einem Adapterfehler scheitert (`CAN ERROR`, `UNABLE TO CONNECT` ...:
   Zündung aus, Bus weg). Unter 11,8 V Bordspannung wird nur alle 5 s abgefragt, um die
   Batterie zu schonen; eine nicht lesbare Spannung hebt die Drosselung nicht auf.
-- Die PID-Tabelle (`protocol/pids.py`) hat einen Wert je PID. PIDs mit mehreren Werten
-  oder Statusbyte (Lambdasonden, Ladedruck `70`, Partikelfilter `7A`–`7C`) bleiben
-  draußen, bis `PidSpec` Teilwerte kennt.
+- Die PID-Tabelle (`protocol/pids.py`) hat einen Eintrag (`PidSpec`) je Wert; mehrere
+  Einträge können dieselbe PID haben (Lambdasonden, Nachkat-Trimm, Drehmomentstufen,
+  Statusbyte-PIDs `66`/`67`). `decode` bekommt die ersten `size` Datenbytes und darf
+  `None` liefern (Statusbit nicht gesetzt). Je Runde wird jede PID einmal abgefragt.
+  PIDs, deren Aufbau in den freien Quellen nicht eindeutig ist (`68`–`7F`, darunter
+  Ladedruck `70` und Partikelfilter `7A`–`7C`), bleiben draußen.
 - Kurven skalieren nach den gezeigten Werten mit Mindestspanne; der volle Bereich der
   Norm (z. B. Drehzahl bis 16384 1/min) ließe sie flach erscheinen.
 

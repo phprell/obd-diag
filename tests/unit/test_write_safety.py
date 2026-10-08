@@ -235,7 +235,8 @@ def _uses(name: str, *, attribute_only: bool = False) -> set[str]:
         # Live-Dienst fragt Werte ab.
         ("run_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
         ("prepare_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
-        ("read_value", {"services/live.py:_read_value"}),
+        ("read_values", {"services/live.py:_read_values", "protocol/pids.py:read_value"}),
+        ("read_value", set()),  # nur für Tests; der Live-Dienst fragt je PID einmal
         ("read_supported_pids", {"services/live.py:prepare_live"}),
         # Den Transport eines Elm327 (``elm.transport``) fasst nur Elm327 selbst an.
         (

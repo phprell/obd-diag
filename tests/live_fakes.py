@@ -6,6 +6,8 @@ senden dieselben Anfragen wie laut J1979 nötig: ``0100`` für die unterstützte
 ``01xx`` je Wert.
 """
 
+from collections.abc import Sequence
+
 import pytest
 
 from obd_diag.protocol import pids
@@ -26,7 +28,7 @@ LOAD = PidSpec(0x04, "engine_load", "Motorlast", "%", 1, lambda b: b[0] * 100 / 
 # Bekannt, aber vom Testfahrzeug nicht unterstützt (Bit für 0x10 in 0100 fehlt)
 MAF = PidSpec(0x10, "maf", "Luftmassenstrom", "g/s", 2, lambda b: _rpm(b) / 25, 0, 655.35)
 
-TABLE = {spec.pid: spec for spec in (RPM, SPEED, COOLANT, LOAD, MAF)}
+TABLE = {spec.key: spec for spec in sorted((RPM, SPEED, COOLANT, LOAD, MAF), key=lambda s: s.pid)}
 # Was das Testfahrzeug laut Fake unterstützt (zusätzlich 0x0B, das TABLE nicht kennt)
 SUPPORTED = {0x04, 0x05, 0x0B, 0x0C, 0x0D}
 
@@ -38,17 +40,20 @@ def fake_read_supported_pids(elm: Elm327) -> set[int]:
     return set() if elm.query("0100") is None else set(SUPPORTED)
 
 
-def fake_read_value(elm: Elm327, spec: PidSpec) -> float | None:
-    text = elm.query(f"01{spec.pid:02X}")
+def fake_read_values(elm: Elm327, specs: Sequence[PidSpec]) -> dict[str, float | None]:
+    (pid,) = {spec.pid for spec in specs}
+    text = elm.query(f"01{pid:02X}")
+    values: dict[str, float | None] = {spec.key: None for spec in specs}
     if text is None:
-        return None
+        return values
     try:
         data = bytes.fromhex(text.replace(" ", ""))
     except ValueError:
-        return None
-    if len(data) < 2 + spec.size or data[:2] != bytes([0x41, spec.pid]):
-        return None
-    return spec.decode(data[2 : 2 + spec.size])
+        return values
+    for spec in specs:
+        if len(data) >= 2 + spec.size and data[:2] == bytes([0x41, pid]):
+            values[spec.key] = spec.decode(data[2 : 2 + spec.size])
+    return values
 
 
 def fake_pid_by_key(key: str) -> PidSpec:
@@ -62,5 +67,5 @@ def use_fake_pids(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ersetzt Tabelle und Lesefunktionen in ``protocol.pids``."""
     monkeypatch.setattr(pids, "PIDS", TABLE)
     monkeypatch.setattr(pids, "read_supported_pids", fake_read_supported_pids)
-    monkeypatch.setattr(pids, "read_value", fake_read_value)
+    monkeypatch.setattr(pids, "read_values", fake_read_values)
     monkeypatch.setattr(pids, "pid_by_key", fake_pid_by_key)
