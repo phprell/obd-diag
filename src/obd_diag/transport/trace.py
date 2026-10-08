@@ -20,15 +20,20 @@ from obd_diag.transport.base import Transport, TransportError, TransportTimeout
 from obd_diag.transport.serial import SerialTransport
 
 
-def new_trace_path(directory: Path) -> Path:
-    """Freier Dateiname ``trace-YYYYmmdd-HHMMSS[-n].log``; legt den Ordner an."""
+def new_free_path(directory: Path, prefix: str, suffix: str) -> Path:
+    """Freier Dateiname ``<prefix>-YYYYmmdd-HHMMSS[-n]<suffix>``; legt den Ordner an."""
     directory.mkdir(parents=True, exist_ok=True)
-    stem = f"trace-{datetime.now():%Y%m%d-%H%M%S}"
+    stem = f"{prefix}-{datetime.now():%Y%m%d-%H%M%S}"
     for n in range(1, 1000):
-        path = directory / (f"{stem}.log" if n == 1 else f"{stem}-{n}.log")
+        path = directory / (f"{stem}{suffix}" if n == 1 else f"{stem}-{n}{suffix}")
         if not path.exists():
             return path
     raise FileExistsError(f"kein freier Dateiname für {stem} in {directory}")
+
+
+def new_trace_path(directory: Path) -> Path:
+    """Freier Dateiname ``trace-YYYYmmdd-HHMMSS[-n].log``; legt den Ordner an."""
+    return new_free_path(directory, "trace", ".log")
 
 
 def escape(data: bytes) -> str:

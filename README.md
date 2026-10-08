@@ -324,8 +324,10 @@ Zeit (s)  Motordrehzahl (1/min)  Geschwindigkeit (km/h)  Kühlmitteltemperatur (
   Lambdasonden, Ladedruck (`70`) und Partikelfilter (`7A`–`7C`); Liste im Docstring
   von `protocol/pids.py`.
 - **Ablauf:** Runde für Runde wird jeder Wert einmal gelesen; ist einer nicht lesbar,
-  steht „-“ (in der CSV eine leere Zelle), die Abfrage läuft weiter. Die Bordspannung
-  wird jede zehnte Runde gelesen; unter 11,8 V wird nur noch alle 5 s abgefragt.
+  steht „-“ (in der CSV eine leere Zelle), die Abfrage läuft weiter. Meldet der Adapter
+  drei Runden lang bei jedem Wert einen Busfehler (z. B. Zündung aus), endet sie mit
+  einer Fehlermeldung. Die Bordspannung wird jede zehnte Runde gelesen; unter 11,8 V
+  wird nur noch alle 5 s abgefragt.
 - **Aufzeichnung:** CSV unter `$XDG_DATA_HOME/obd-diag/recordings/`
   (`live-JJJJMMTT-HHMMSS.csv`) oder in der angegebenen Datei, die nicht überschrieben
   wird. Format wie beim Export: UTF-8 mit BOM, `;`, Dezimalkomma; erste Spalte

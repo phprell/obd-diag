@@ -18,8 +18,10 @@ Thread für Minuten.
   Thread. Live startet nicht, solange die Diagnose beschäftigt ist. Beim Beenden
   stoppt `app.py` Live vor dem Warten auf den Pool.
 - Gesendet werden nur `01xx` und `ATRV`. Ein nicht lesbarer Wert ergibt `None` für
-  diese Runde; nur Verbindungsfehler brechen ab. Unter 11,8 V Bordspannung wird nur
-  alle 5 s abgefragt, um die Batterie zu schonen.
+  diese Runde; Verbindungsfehler brechen ab, ebenso drei Runden nacheinander, in denen
+  jeder Wert an einem Adapterfehler scheitert (`CAN ERROR`, `UNABLE TO CONNECT` ...:
+  Zündung aus, Bus weg). Unter 11,8 V Bordspannung wird nur alle 5 s abgefragt, um die
+  Batterie zu schonen; eine nicht lesbare Spannung hebt die Drosselung nicht auf.
 - Die PID-Tabelle (`protocol/pids.py`) hat einen Wert je PID. PIDs mit mehreren Werten
   oder Statusbyte (Lambdasonden, Ladedruck `70`, Partikelfilter `7A`–`7C`) bleiben
   draußen, bis `PidSpec` Teilwerte kennt.

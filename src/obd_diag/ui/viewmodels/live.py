@@ -37,6 +37,7 @@ from obd_diag.services.live import (
     DEFAULT_KEYS,
     LiveSample,
     LiveSetup,
+    SelectionError,
     recording_dir,
 )
 from obd_diag.ui.backend import Backend, LiveResult
@@ -437,12 +438,9 @@ class LiveViewModel(QObject):
         relay = self._relay
         backend = self._backend
         interval, record = self._interval, self._recording
-        # Im Worker gesetzt: ab hier stammt ein ValueError nicht mehr aus der Auswahl
-        phase = {"started": False}
-
-        def on_start(pids: list[PidSpec], path: Path | None) -> None:
-            phase["started"] = True
-            relay.started.emit(run_id, pids, path)
+        # Vor der ersten Verbindung zeigt die Liste alle Werte; was das Fahrzeug davon
+        # nicht kann, wird dann weggelassen statt die Abfrage abzulehnen.
+        skip_unsupported = not self._supported_known
 
         def job() -> LiveResult:
             return backend.live(
@@ -452,15 +450,16 @@ class LiveViewModel(QObject):
                 interval,
                 record,
                 on_setup=lambda setup: relay.setup.emit(run_id, setup),
-                on_start=on_start,
+                on_start=lambda pids, path: relay.started.emit(run_id, pids, path),
                 on_sample=lambda sample: relay.sample.emit(run_id, sample),
                 should_stop=stop.is_set,
+                skip_unsupported=skip_unsupported,
             )
 
         self._runner.run(
             job,
             lambda result: self._done(run_id, result),
-            lambda error: self._failed(run_id, error, selection=not phase["started"]),
+            lambda error: self._failed(run_id, error),
         )
 
     @Slot()
@@ -537,11 +536,11 @@ class LiveViewModel(QObject):
         self.stateChanged.emit()
         self.liveFinished.emit(self._recording_path)
 
-    def _failed(self, run_id: int, error: Exception, *, selection: bool) -> None:
+    def _failed(self, run_id: int, error: Exception) -> None:
         if run_id != self._run_id:
             return
         self._finish()
-        if selection and isinstance(error, ValueError):
+        if isinstance(error, SelectionError):
             message = f"Auswahl nicht möglich: {error}"
         else:
             message = user_message(error)

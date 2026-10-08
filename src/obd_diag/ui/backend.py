@@ -10,9 +10,10 @@ Thread, der sie angelegt hat, und Jobs laufen nicht im GUI-Thread.
 """
 
 from collections.abc import Callable, Sequence
+from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from obd_diag.data.dtc_catalog import DtcCatalog
 from obd_diag.export.report import export_csv, export_pdf
@@ -56,7 +57,8 @@ class LiveFunction(Protocol):
 
     Die Rückrufe kommen aus dem Worker-Thread: ``on_setup`` nach der Initialisierung
     (unterstützte Werte), ``on_start`` mit den tatsächlich abgefragten Werten und dem
-    Pfad der Aufzeichnung, ``on_sample`` nach jeder Runde.
+    Pfad der Aufzeichnung, ``on_sample`` nach jeder Runde. ``skip_unsupported`` wie
+    bei ``select_pids``.
     """
 
     def __call__(
@@ -71,21 +73,11 @@ class LiveFunction(Protocol):
         on_start: Callable[[list[PidSpec], Path | None], None],
         on_sample: Callable[[LiveSample], None],
         should_stop: Callable[[], bool],
+        skip_unsupported: bool = False,
     ) -> LiveResult: ...
 
 
-def _no_live(
-    port: str,
-    baud: int,
-    keys: Sequence[str] | None,
-    interval: float,
-    record: bool,
-    *,
-    on_setup: Callable[[LiveSetup], None],
-    on_start: Callable[[list[PidSpec], Path | None], None],
-    on_sample: Callable[[LiveSample], None],
-    should_stop: Callable[[], bool],
-) -> LiveResult:
+def _no_live(*args: Any, **kwargs: Any) -> LiveResult:
     raise NotImplementedError("Live-Daten sind in diesem Backend nicht verfügbar")
 
 
@@ -153,30 +145,26 @@ def live_port(
     on_start: Callable[[list[PidSpec], Path | None], None],
     on_sample: Callable[[LiveSample], None],
     should_stop: Callable[[], bool],
+    skip_unsupported: bool = False,
     trace: bool = False,
 ) -> LiveResult:
     """Live-Werte (Mode 01) lesen, bis ``should_stop`` True liefert; nur lesend.
 
-    ``keys`` wie bei ``select_pids`` (``None``: die üblichen Werte, soweit unterstützt).
-    Mit ``record`` wird jede Runde sofort in eine neue CSV-Datei geschrieben.
+    ``keys`` und ``skip_unsupported`` wie bei ``select_pids`` (``None``: die üblichen
+    Werte, soweit unterstützt; keiner davon: ``SelectionError``). Mit ``record`` wird
+    jede Runde sofort in eine neue CSV-Datei geschrieben. Wird schon während der
+    Initialisierung gestoppt, endet der Job ohne Abfrage und ohne Aufzeichnung.
     """
     with open_serial(port, baud, _trace_path(trace)) as transport:
         elm = Elm327(transport)
         setup = prepare_live(elm)
         on_setup(setup)
-        pids = select_pids(setup, keys)
-        if not record:
-            on_start(pids, None)
-            count = run_live(
-                elm,
-                pids,
-                on_sample=on_sample,
-                should_stop=should_stop,
-                interval=interval,
-            )
-            return LiveResult(count, None)
-        path = new_recording_path(recording_dir())
-        with LiveRecorder(path, pids) as recorder:
+        pids = select_pids(setup, keys, skip_unsupported=skip_unsupported)
+        if should_stop():
+            return LiveResult(0, None)
+        with ExitStack() as stack:
+            path = new_recording_path(recording_dir()) if record else None
+            recorder = None if path is None else stack.enter_context(LiveRecorder(path, pids))
             on_start(pids, path)
             count = run_live(
                 elm,
@@ -200,30 +188,9 @@ def serial_backend() -> Backend:
     def set_tracing(enabled: bool) -> None:
         tracing["enabled"] = enabled
 
-    def live(
-        port: str,
-        baud: int,
-        keys: Sequence[str] | None,
-        interval: float,
-        record: bool,
-        *,
-        on_setup: Callable[[LiveSetup], None],
-        on_start: Callable[[list[PidSpec], Path | None], None],
-        on_sample: Callable[[LiveSample], None],
-        should_stop: Callable[[], bool],
-    ) -> LiveResult:
-        return live_port(
-            port,
-            baud,
-            keys,
-            interval,
-            record,
-            on_setup=on_setup,
-            on_start=on_start,
-            on_sample=on_sample,
-            should_stop=should_stop,
-            trace=tracing["enabled"],
-        )
+    def live(*args: Any, **kwargs: Any) -> LiveResult:
+        # Signatur wie ``LiveFunction``; nur der Mitschnitt kommt hinzu.
+        return live_port(*args, **kwargs, trace=tracing["enabled"])
 
     return Backend(
         diagnose=lambda port, baud, online: diagnose_port(

@@ -141,11 +141,18 @@ def test_clear_with_arbitrary_answers_sends_04_only_when_safe(
     # Die Prüfung der Drehzahl kam vor dem Löschen, danach nur noch Lesendes.
     index = sent.index(CLEAR_COMMAND)
     assert "010C" in sent[:index]
-    # Zwischen den Vorbedingungen und 04 nur Freeze-Frame-Abfragen (Mode 02, je nach
-    # Antwort mit oder ohne Frame-Nummer).
-    start = max(i for i in range(index) if sent[i : i + len(PRECONDITIONS)] == PRECONDITIONS)
-    between = sent[start + len(PRECONDITIONS) : index]
-    assert between and all(c.startswith("02") for c in between), between
+    # Unmittelbar vor 04: genau die Vorbedingungen, dann genau eine der drei möglichen
+    # Freeze-Frame-Folgen (J1979-Format; Rückfall auf 0202 gescheitert; Rückfall geglückt,
+    # dann alles ohne Frame-Nummer, siehe ``read_freeze_frame``).
+    freeze_variants = [
+        FREEZE,
+        [FREEZE[0], "0202", *FREEZE[1:]],
+        [FREEZE[0], *(c[:4] for c in FREEZE)],
+    ]
+    assert any(
+        sent[index - len(f) - len(PRECONDITIONS) : index] == [*PRECONDITIONS, *f]
+        for f in freeze_variants
+    ), sent
     assert all(is_read_only(c) for c in sent[index + 1 :])
     # Beim Senden lag genau eine vollständige Sicherung mit den Codes vor.
     ((backup,),) = transport.backups_at_clear

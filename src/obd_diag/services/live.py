@@ -13,26 +13,34 @@ import csv
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from types import TracebackType
 from typing import Self
 
 from obd_diag.protocol import pids as pid_table
-from obd_diag.protocol.elm327 import Elm327, ElmError
+from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
 from obd_diag.protocol.pids import PidSpec
 from obd_diag.services.diagnostics import LOW_VOLTAGE
 from obd_diag.services.storage import data_dir
+from obd_diag.transport.trace import new_free_path
 
 DEFAULT_INTERVAL = 1.0  # Sekunden zwischen zwei Abfragerunden
 LOW_VOLTAGE_INTERVAL = 5.0  # Sekunden zwischen Runden bei niedriger Bordspannung
 VOLTAGE_EVERY = 10  # Bordspannung jede n-te Runde lesen (ATRV)
+# So viele Runden nacheinander, in denen jeder Wert mit einem Adapterfehler (CAN ERROR,
+# UNABLE TO CONNECT ...) scheitert, beenden die Abfrage: das Fahrzeug ist weg.
+MAX_FAILED_ROUNDS = 3
 # Die üblichen Werte, wenn der Nutzer keine Auswahl trifft (sofern unterstützt).
 DEFAULT_KEYS = ("rpm", "speed", "coolant_temp", "engine_load", "intake_temp", "control_voltage")
 
 # Längster Schlaf am Stück beim Warten auf die nächste Runde, damit ``should_stop``
 # (Strg+C in der GUI, Ende von ``--duration``) schnell greift.
 _SLEEP_STEP = 0.1
+
+
+class SelectionError(ValueError):
+    """Die gewünschten Werte lassen sich nicht abfragen (unbekannt, nicht unterstützt
+    oder leere Auswahl). Andere ``ValueError`` stammen aus kaputten Antworten."""
 
 
 @dataclass(frozen=True)
@@ -63,22 +71,31 @@ def prepare_live(elm: Elm327) -> LiveSetup:
     return LiveSetup(adapter, protocol, available)
 
 
-def select_pids(setup: LiveSetup, keys: Sequence[str] | None) -> list[PidSpec]:
+def select_pids(
+    setup: LiveSetup, keys: Sequence[str] | None, *, skip_unsupported: bool = False
+) -> list[PidSpec]:
     """Die gewünschten Werte (``None``: ``DEFAULT_KEYS``), soweit unterstützt.
 
-    Unbekannte Schlüssel ergeben ``ValueError``; bekannte, aber nicht unterstützte
+    Unbekannte Schlüssel ergeben ``SelectionError``; bekannte, aber nicht unterstützte
     ebenfalls (Meldung nennt sie), damit der Nutzer nicht stumm leere Spalten bekommt.
-    Bei ``None`` werden nicht unterstützte Standardwerte stillschweigend weggelassen.
+    Bei ``None`` oder ``skip_unsupported`` (Auswahl getroffen, bevor bekannt war, was
+    das Fahrzeug kann) werden nicht unterstützte Werte stillschweigend weggelassen.
     Reihenfolge: wie in ``keys`` bzw. ``DEFAULT_KEYS``; doppelte Schlüssel einmal.
-    Eine leere Auswahl (``keys`` leer) ist ebenfalls ein ``ValueError``; bei ``None``
-    kann das Ergebnis leer sein, wenn das Fahrzeug keinen Standardwert unterstützt.
+    Bleibt kein Wert übrig, ist das ebenfalls ein ``SelectionError``: eine Abfrage
+    ohne Werte liest nichts.
     """
     by_key = {spec.key: spec for spec in setup.available}
+    offered = ", ".join(by_key) or "keine"
     if keys is None:
-        return [by_key[key] for key in DEFAULT_KEYS if key in by_key]
+        defaults = [by_key[key] for key in DEFAULT_KEYS if key in by_key]
+        if not defaults:
+            raise SelectionError(
+                f"Das Fahrzeug unterstützt keinen der Standardwerte (verfügbar: {offered})"
+            )
+        return defaults
     wanted = list(dict.fromkeys(keys))
     if not wanted:
-        raise ValueError("keine Werte gewählt")
+        raise SelectionError("keine Werte gewählt")
     unknown: list[str] = []
     unsupported: list[str] = []
     selected: list[PidSpec] = []
@@ -95,11 +112,14 @@ def select_pids(setup: LiveSetup, keys: Sequence[str] | None) -> list[PidSpec]:
     problems = []
     if unknown:
         problems.append(f"unbekannte Werte: {', '.join(unknown)}")
-    if unsupported:
+    if unsupported and not skip_unsupported:
         problems.append(f"vom Fahrzeug nicht unterstützt: {', '.join(unsupported)}")
     if problems:
-        offered = ", ".join(by_key) or "keine"
-        raise ValueError(f"{'; '.join(problems)} (verfügbar: {offered})")
+        raise SelectionError(f"{'; '.join(problems)} (verfügbar: {offered})")
+    if not selected:
+        raise SelectionError(
+            f"vom Fahrzeug nicht unterstützt: {', '.join(unsupported)} (verfügbar: {offered})"
+        )
     return selected
 
 
@@ -163,13 +183,7 @@ def recording_dir() -> Path:
 
 def new_recording_path(directory: Path) -> Path:
     """Freier Name ``live-YYYYmmdd-HHMMSS[-n].csv``; legt den Ordner an."""
-    directory.mkdir(parents=True, exist_ok=True)
-    stem = f"live-{datetime.now():%Y%m%d-%H%M%S}"
-    for n in range(1, 1000):
-        path = directory / (f"{stem}.csv" if n == 1 else f"{stem}-{n}.csv")
-        if not path.exists():
-            return path
-    raise FileExistsError(f"kein freier Dateiname für {stem} in {directory}")
+    return new_free_path(directory, "live", ".csv")
 
 
 def _read_voltage(elm: Elm327) -> float | None:
@@ -180,12 +194,18 @@ def _read_voltage(elm: Elm327) -> float | None:
         return None
 
 
-def _read_value(elm: Elm327, spec: PidSpec) -> float | None:
-    """Ein Wert; abgelehnt oder unlesbar ergibt ``None``, ``TransportError`` geht durch."""
+def _read_value(elm: Elm327, spec: PidSpec) -> tuple[float | None, ElmError | None]:
+    """Ein Wert und ggf. der Adapterfehler, an dem er scheiterte.
+
+    Abgelehnt, ``?`` oder unlesbar ergibt ``(None, None)``; Adapterfehler wie
+    ``CAN ERROR`` ``(None, Fehler)``. ``TransportError`` geht durch.
+    """
     try:
-        return pid_table.read_value(elm, spec)
-    except (ElmError, ValueError):
-        return None
+        return pid_table.read_value(elm, spec), None
+    except (UnknownCommandError, ValueError):
+        return None, None
+    except ElmError as e:
+        return None, e
 
 
 def run_live(
@@ -204,24 +224,41 @@ def run_live(
 
     Erwartet einen mit ``prepare_live`` vorbereiteten Adapter. Ein einzelner nicht
     lesbarer Wert (``ElmError`` oder ``ValueError``) ergibt ``None`` in der Runde
-    (kein Abbruch); ``TransportError`` bricht ab. ``should_stop`` wird vor jeder Runde
+    (kein Abbruch); ``TransportError`` bricht ab. Scheitert in ``MAX_FAILED_ROUNDS``
+    Runden nacheinander jeder Wert an einem Adapterfehler (Bus weg, Zündung aus), endet
+    die Abfrage mit ``ElmError``. ``should_stop`` wird vor jeder Runde
     und während des Wartens geprüft (in Schritten von höchstens 0,1 s).
 
     Die Bordspannung wird in Runde 0 und jeder ``VOLTAGE_EVERY``-ten Runde gelesen;
     liegt sie unter ``LOW_VOLTAGE``, beginnen Runden nur alle ``LOW_VOLTAGE_INTERVAL``
-    Sekunden (``throttled``). Runden beginnen im Abstand ``interval`` ab Rundenbeginn;
-    dauert eine Runde länger, folgt die nächste sofort. Liefert die Anzahl der Runden.
+    Sekunden (``throttled``). Ist sie einmal nicht lesbar, bleibt die Drosselung, wie
+    sie war (eine schwache Batterie wird davon nicht besser). Runden beginnen im Abstand
+    ``interval`` ab Rundenbeginn; dauert eine Runde länger, folgt die nächste sofort.
+    Liefert die Anzahl der Runden.
     """
     start = clock()
     count = 0
     voltage: float | None = None
     throttled = False
+    failed_rounds = 0
     while (max_samples is None or count < max_samples) and not should_stop():
         round_start = clock()
         if count % VOLTAGE_EVERY == 0:
             voltage = _read_voltage(elm)
-            throttled = voltage is not None and voltage < LOW_VOLTAGE
-        values = {spec.key: _read_value(elm, spec) for spec in pids}
+            if voltage is not None:
+                throttled = voltage < LOW_VOLTAGE
+        values: dict[str, float | None] = {}
+        errors: list[ElmError] = []
+        for spec in pids:
+            values[spec.key], error = _read_value(elm, spec)
+            if error is not None:
+                errors.append(error)
+        failed_rounds = failed_rounds + 1 if pids and len(errors) == len(pids) else 0
+        if failed_rounds >= MAX_FAILED_ROUNDS:
+            raise ElmError(
+                f"keine Antwort vom Fahrzeug in {failed_rounds} Runden nacheinander "
+                f"(Zündung aus?): {errors[-1]}"
+            )
         sample = LiveSample(round_start - start, values, voltage, throttled)
         if recorder is not None:
             recorder.add(sample)

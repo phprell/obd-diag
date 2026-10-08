@@ -140,6 +140,36 @@ def test_gui_backend_live_sends_only_reads(
         assert not (tmp_path / "obd-diag").exists()
 
 
+def test_gui_backend_stop_during_setup_reads_nothing_and_records_nothing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    opened: list[WireCheckingTransport] = []
+
+    def open_serial(port: str, baud: int, trace: Path | None) -> WireCheckingTransport:
+        opened.append(WireCheckingTransport(RUNNING))
+        return opened[-1]
+
+    monkeypatch.setattr(backend, "open_serial", open_serial)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    stopped: list[bool] = []
+    started: list[object] = []
+    result = backend.live_port(
+        "/dev/ttyUSB0",
+        38400,
+        ["rpm"],
+        0.1,
+        True,
+        on_setup=lambda setup: stopped.append(True),  # Stopp kommt während der Initialisierung
+        on_start=lambda pids, path: started.append(path),
+        on_sample=lambda sample: None,
+        should_stop=lambda: bool(stopped),
+    )
+    assert result == backend.LiveResult(0, None)
+    assert started == []
+    assert opened[0].sent == SETUP
+    assert not (tmp_path / "obd-diag").exists()
+
+
 # --- Fuzzing: beliebige Antworten, nur Lesendes, keine fremden Ausnahmen -------------
 
 _HEX = st.text(alphabet="0123456789ABCDEF ", max_size=24)

@@ -17,10 +17,12 @@ from obd_diag.protocol.elm327 import CLEAR_COMMAND, Elm327, ElmError, is_read_on
 from obd_diag.services.live import (
     DEFAULT_KEYS,
     LOW_VOLTAGE_INTERVAL,
+    MAX_FAILED_ROUNDS,
     VOLTAGE_EVERY,
     LiveRecorder,
     LiveSample,
     LiveSetup,
+    SelectionError,
     new_recording_path,
     prepare_live,
     recording_dir,
@@ -107,7 +109,21 @@ def test_select_defaults_in_default_order_and_skips_unsupported() -> None:
     assert DEFAULT_KEYS[:4] == ("rpm", "speed", "coolant_temp", "engine_load")
     assert select_pids(SETUP, None) == [RPM, SPEED, COOLANT, LOAD]
     assert select_pids(LiveSetup("", "", [SPEED]), None) == [SPEED]
-    assert select_pids(LiveSetup("", "", []), None) == []
+
+
+@pytest.mark.parametrize("available", [[], [pids.PidSpec(0x10, "maf", "", "", 2, float, 0, 1)]])
+def test_select_without_any_default_is_refused(available: list[pids.PidSpec]) -> None:
+    # Eine Abfrage ohne Werte liest nichts; das soll der Nutzer erfahren
+    with pytest.raises(SelectionError, match="keinen der Standardwerte"):
+        select_pids(LiveSetup("", "", available), None)
+
+
+def test_select_can_skip_unsupported() -> None:
+    assert select_pids(SETUP, ["maf", "speed"], skip_unsupported=True) == [SPEED]
+    with pytest.raises(SelectionError, match="nicht unterstützt: maf"):
+        select_pids(SETUP, ["maf"], skip_unsupported=True)
+    with pytest.raises(SelectionError, match="unbekannte Werte: foo"):
+        select_pids(SETUP, ["foo", "speed"], skip_unsupported=True)
 
 
 def test_select_keeps_user_order_without_duplicates() -> None:
@@ -124,7 +140,7 @@ def test_select_keeps_user_order_without_duplicates() -> None:
     ],
 )
 def test_select_refuses_unknown_and_unsupported(keys: list[str], message: str) -> None:
-    with pytest.raises(ValueError, match=re.escape(message)) as info:
+    with pytest.raises(SelectionError, match=re.escape(message)) as info:
         select_pids(SETUP, keys)
     if keys:
         assert "verfügbar: engine_load, coolant_temp, rpm, speed" in str(info.value)
@@ -223,6 +239,30 @@ def test_low_voltage_throttles_until_it_recovers() -> None:
     assert times[VOLTAGE_EVERY + 1] - times[VOLTAGE_EVERY] == pytest.approx(1.0)
 
 
+def test_unreadable_voltage_keeps_throttling() -> None:
+    responses = {**CAR, "ATRV": "11.2V"}
+    samples: list[LiveSample] = []
+
+    def unreadable(sample: LiveSample) -> None:
+        samples.append(sample)
+        responses["ATRV"] = "?"  # Batterie bleibt schwach, nur die Messung scheitert
+
+    clock = FakeClock()
+    run_live(
+        Elm327(FakeTransport(responses)),
+        [RPM],
+        on_sample=unreadable,
+        should_stop=lambda: False,
+        max_samples=VOLTAGE_EVERY + 2,
+        clock=clock,
+        sleep=clock.sleep,
+    )
+    assert all(s.throttled for s in samples)
+    assert samples[VOLTAGE_EVERY].voltage is None
+    last = samples[VOLTAGE_EVERY + 1].elapsed - samples[VOLTAGE_EVERY].elapsed
+    assert last == pytest.approx(LOW_VOLTAGE_INTERVAL)
+
+
 def test_throttling_never_speeds_up_a_slow_interval() -> None:
     clock = FakeClock()
     _, samples = _run(
@@ -253,6 +293,59 @@ def test_refused_values_are_none_in_that_round() -> None:
         "coolant_temp": None,
         "engine_load": None,
     }
+
+
+@pytest.mark.parametrize("error", ["CAN ERROR", "UNABLE TO CONNECT", "BUS ERROR", "STOPPED"])
+def test_bus_errors_on_every_value_abort_after_some_rounds(error: str) -> None:
+    responses = dict(CAR)
+    samples: list[LiveSample] = []
+
+    def ignition_off(sample: LiveSample) -> None:
+        samples.append(sample)
+        responses.update({"010C": error, "010D": error})
+
+    with pytest.raises(ElmError, match=f"{MAX_FAILED_ROUNDS} Runden nacheinander"):
+        run_live(
+            Elm327(FakeTransport(responses)),
+            [RPM, SPEED],
+            on_sample=ignition_off,
+            should_stop=lambda: False,
+            clock=(clock := FakeClock()),
+            sleep=clock.sleep,
+        )
+    # Runde 0 gültig, danach MAX_FAILED_ROUNDS - 1 gemeldete Runden ohne Werte
+    assert len(samples) == MAX_FAILED_ROUNDS
+    assert samples[-1].values == {"rpm": None, "speed": None}
+
+
+def test_bus_error_on_some_values_or_now_and_then_does_not_abort() -> None:
+    # Ein Wert scheitert dauernd, der andere kommt: kein Abbruch
+    count, _ = _run(
+        Elm327(FakeTransport({**CAR, "010D": "CAN ERROR"})),
+        [RPM, SPEED],
+        FakeClock(),
+        max_samples=2 * MAX_FAILED_ROUNDS,
+    )
+    assert count == 2 * MAX_FAILED_ROUNDS
+    # Alle scheitern, aber nie MAX_FAILED_ROUNDS Runden am Stück
+    responses = dict(CAR)
+    rounds: list[LiveSample] = []
+
+    def flaky(sample: LiveSample) -> None:
+        rounds.append(sample)
+        broken = len(rounds) % MAX_FAILED_ROUNDS != 0
+        responses["010C"] = "CAN ERROR" if broken else CAR["010C"]
+
+    run_live(
+        Elm327(FakeTransport(responses)),
+        [RPM],
+        on_sample=flaky,
+        should_stop=lambda: False,
+        max_samples=3 * MAX_FAILED_ROUNDS,
+        clock=(clock := FakeClock()),
+        sleep=clock.sleep,
+    )
+    assert len(rounds) == 3 * MAX_FAILED_ROUNDS
 
 
 def test_value_error_from_decoding_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -411,7 +504,10 @@ def _guarded_run(transport: WireCheckingTransport) -> None:
     with contextlib.suppress(ElmError, ValueError, TransportError):  # Abbruch ist in Ordnung
         elm = Elm327(transport)
         setup = prepare_live(elm)
-        specs = select_pids(setup, None) or list(setup.available)
+        try:
+            specs = select_pids(setup, None)
+        except SelectionError:
+            specs = list(setup.available)
         _run(elm, specs, clock, max_samples=VOLTAGE_EVERY + 1)
 
 

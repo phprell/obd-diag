@@ -125,7 +125,12 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   sonst stauten sie sich im einen Thread); Live startet nicht, solange die Diagnose
   `busy` ist. `app.py` stoppt Live vor `runner.wait()`.
 - **Live-Daten**: nur `01xx` und `ATRV`. Ein nicht lesbarer Wert ergibt `None` in der
-  Runde, `TransportError` bricht ab. Unter 11,8 V nur alle 5 s abfragen. Kurven
+  Runde, `TransportError` bricht ab, ebenso `MAX_FAILED_ROUNDS` (3) Runden, in denen
+  jeder Wert an einem Adapterfehler scheitert (`?`/`NO DATA`/`7F` zählen nicht). Unter
+  11,8 V nur alle 5 s abfragen; unlesbares `ATRV` hebt die Drosselung nicht auf.
+  Auswahlfehler sind `SelectionError` (ein `ValueError`), auch „kein Standardwert
+  unterstützt“; die GUI unterscheidet sie so von kaputten Antworten. Vor der ersten
+  Verbindung schickt die GUI `skip_unsupported=True` (Liste zeigt noch alle PIDs). Kurven
   skalieren nach den gezeigten Werten (der volle J1979-Bereich ließe sie flach).
   Die CSV-Methode heißt `LiveRecorder.add`, nicht `write`: der Architekturtest sucht
   `.write(`-Aufrufe, und er wird nicht umgangen, sondern ernst genommen.

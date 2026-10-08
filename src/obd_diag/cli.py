@@ -5,6 +5,7 @@ import dataclasses
 import json
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from obd_diag import __version__
@@ -26,6 +27,7 @@ from obd_diag.services.live import (
     LOW_VOLTAGE_INTERVAL,
     LiveRecorder,
     LiveSample,
+    SelectionError,
     new_recording_path,
     prepare_live,
     recording_dir,
@@ -350,24 +352,22 @@ MIN_INTERVAL = 0.1  # Sekunden; schneller kommt ein ELM327 ohnehin nicht hinterh
 _MISSING = "-"  # nicht lesbarer Wert in der Tabelle (kein Gedankenstrich)
 
 
-def _interval(text: str) -> float:
+def _number(text: str, valid: Callable[[float], bool], requirement: str) -> float:
     try:
         value = float(text)
     except ValueError:
         raise argparse.ArgumentTypeError(f"keine Zahl: {text!r}") from None
-    if not value >= MIN_INTERVAL:  # fängt auch nan ab
-        raise argparse.ArgumentTypeError(f"mindestens {MIN_INTERVAL:g} Sekunden")
+    if not valid(value):  # nan erfüllt keinen Vergleich
+        raise argparse.ArgumentTypeError(requirement)
     return value
+
+
+def _interval(text: str) -> float:
+    return _number(text, lambda v: v >= MIN_INTERVAL, f"mindestens {MIN_INTERVAL:g} Sekunden")
 
 
 def _duration(text: str) -> float:
-    try:
-        value = float(text)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"keine Zahl: {text!r}") from None
-    if not value > 0:
-        raise argparse.ArgumentTypeError("muss größer als 0 sein")
-    return value
+    return _number(text, lambda v: v > 0, "muss größer als 0 sein")
 
 
 def _keys(text: str) -> list[str]:
@@ -438,13 +438,12 @@ def _run_live(args: argparse.Namespace) -> int:
             if args.list:
                 _print_available(setup.available)
                 return 0
-            pids = select_pids(setup, keys)
-            if not pids:
-                print(
-                    "Fehler: Das Fahrzeug unterstützt keinen der Standardwerte; "
-                    "mit --list anzeigen, mit --pids wählen.",
-                    file=sys.stderr,
-                )
+            try:
+                pids = select_pids(setup, keys)
+            except SelectionError as e:
+                print(f"Fehler: {e}", file=sys.stderr)
+                if keys is None:
+                    print("Mit --list anzeigen, mit --pids wählen.", file=sys.stderr)
                 return 1
             if args.record is not None:
                 record = (
@@ -479,7 +478,7 @@ def _run_live(args: argparse.Namespace) -> int:
     except KeyboardInterrupt:
         print(file=sys.stderr)  # hinter dem ^C des Terminals
     except ValueError as e:
-        print(f"Fehler: {e}", file=sys.stderr)
+        print(f"Fehler: Unerwartete Antwort vom Fahrzeug: {e}", file=sys.stderr)
         return 1
     except OSError as e:
         print(f"Fehler: {e.filename or ''}: {e.strerror or e}", file=sys.stderr)

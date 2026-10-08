@@ -19,7 +19,7 @@ from PySide6.QtQuick import QQuickItem, QQuickWindow
 from pytestqt.qtbot import QtBot
 
 from obd_diag.protocol.pids import PidSpec
-from obd_diag.services.live import DEFAULT_KEYS, LiveSample, LiveSetup
+from obd_diag.services.live import DEFAULT_KEYS, LiveSample, LiveSetup, SelectionError
 from obd_diag.transport import TransportError
 from obd_diag.ui.backend import Backend, LiveResult
 from obd_diag.ui.jobs import ThreadPoolRunner
@@ -74,6 +74,7 @@ class FakeLive:
         self.select_error = select_error
         self.recording = recording
         self.calls: list[tuple[str, int, list[str] | None, float, bool]] = []
+        self.skip_unsupported: list[bool] = []
         self.threads: list[int] = []
         self.delivered = threading.Event()
 
@@ -89,8 +90,10 @@ class FakeLive:
         on_start: Callable[[list[PidSpec], Path | None], None],
         on_sample: Callable[[LiveSample], None],
         should_stop: Callable[[], bool],
+        skip_unsupported: bool = False,
     ) -> LiveResult:
         self.calls.append((port, baud, None if keys is None else list(keys), interval, record))
+        self.skip_unsupported.append(skip_unsupported)
         self.threads.append(threading.get_ident())
         on_setup(SETUP)
         if self.select_error is not None:
@@ -266,10 +269,35 @@ def test_transport_error_is_shown_and_unblocks(qtbot: QtBot, fake_backend: FakeB
 
 
 def test_selection_error_is_named(qtbot: QtBot, fake_backend: FakeBackend) -> None:
-    live = FakeLive(select_error=ValueError("nicht unterstützt: Luftmasse"))
+    live = FakeLive(select_error=SelectionError("nicht unterstützt: Luftmasse"))
     _, vm = _vms(fake_backend, live)
     vm.start("/dev/ttyUSB0", 38400)
     assert vm.property("errorMessage") == "Auswahl nicht möglich: nicht unterstützt: Luftmasse"
+
+
+def test_broken_answer_is_not_called_a_selection_error(
+    qtbot: QtBot, fake_backend: FakeBackend
+) -> None:
+    # Ein ValueError aus der Initialisierung (z. B. kaputte Frames) liegt nicht an der Auswahl
+    live = FakeLive(select_error=ValueError("Frame 2 fehlt"))
+    _, vm = _vms(fake_backend, live)
+    vm.start("/dev/ttyUSB0", 38400)
+    assert vm.property("errorMessage") == "Unerwartete Antwort vom Fahrzeug: Frame 2 fehlt"
+
+
+def test_selection_before_first_connection_skips_unsupported(
+    qtbot: QtBot, fake_backend: FakeBackend
+) -> None:
+    # Vor der ersten Verbindung zeigt die Liste auch Werte, die das Fahrzeug nicht kann
+    live = FakeLive([sample(0)])
+    _, vm = _vms(fake_backend, live)
+    vm.setSelected("speed", False)
+    vm.start("/dev/ttyUSB0", 38400)
+    qtbot.waitUntil(lambda: vm.property("supportedKnown") is True)
+    qtbot.waitUntil(lambda: vm.property("running") is False)
+    assert live.skip_unsupported == [True]
+    vm.start("/dev/ttyUSB0", 38400)
+    assert live.skip_unsupported == [True, False]
 
 
 def test_missing_port(fake_backend: FakeBackend) -> None:
