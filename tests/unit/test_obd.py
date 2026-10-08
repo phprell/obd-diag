@@ -27,6 +27,51 @@ def test_reads_multi_frame_from_several_ecus() -> None:
     assert codes == ["P0133", "P0300", "P0171", "U0100"]
 
 
+def test_response_pending_answered_in_the_same_reply() -> None:
+    # ELM327 ab v2.1 wartet selbst auf die Antwort nach 7F 03 78 (Datenblatt S. 45)
+    transport = FakeTransport({"03": "7F0378\r43010133"})
+    assert read_dtcs(Elm327(transport), 0x03, can=True) == ["P0133"]
+    assert transport.sent == ["03"]
+
+
+def test_response_pending_reads_on_without_sending_again() -> None:
+    transport = FakeTransport({"03": "7F0378"}, later={"03": ["43010133"]})
+    assert read_dtcs(Elm327(transport), 0x03, can=True) == ["P0133"]
+    assert transport.sent == ["03"]
+
+
+def test_response_pending_of_a_second_ecu() -> None:
+    transport = FakeTransport({"03": "43010133\r7F0378"}, later={"03": ["43010300"]})
+    assert read_dtcs(Elm327(transport), 0x03, can=True) == ["P0133", "P0300"]
+
+
+@pytest.mark.parametrize("later", [[], ["NO DATA"], ["7F0378"]])
+def test_response_pending_without_answer_is_no_empty_list(later: list[str]) -> None:
+    transport = FakeTransport({"03": "43010133\r7F0378"}, later={"03": later})
+    with pytest.raises(NegativeResponseError, match="Antwort angekündigt") as error:
+        read_dtcs(Elm327(transport), 0x03, can=True, pending_timeout=0.5)
+    assert error.value.nrc == 0x78
+    assert transport.sent == ["03"]  # nicht erneut angefragt
+
+
+def test_response_pending_gives_up_after_the_timeout() -> None:
+    transport = FakeTransport({"03": "7F0378"}, later={"03": ["43010133"]})
+    with pytest.raises(NegativeResponseError):
+        read_dtcs(Elm327(transport), 0x03, can=True, pending_timeout=0)
+    assert transport.reads == 1
+
+
+@pytest.mark.parametrize(("nrc", "text"), [(0x21, "beschäftigt"), (0x22, "Bedingungen")])
+def test_refused_dtc_request_is_no_empty_list(nrc: int, text: str) -> None:
+    transport = FakeTransport({"07": f"7F07{nrc:02X}"})
+    with pytest.raises(NegativeResponseError, match=text):
+        read_dtcs(Elm327(transport), 0x07, can=True)
+
+
+def test_unsupported_mode_still_means_no_codes() -> None:
+    assert read_dtcs(Elm327(FakeTransport({"0A": "7F0A11"})), 0x0A, can=True) == []
+
+
 def test_legacy_protocol_with_bus_init() -> None:
     transport = FakeTransport({"03": "BUS INIT: ...OK\r43 01 33 00 00 00 00"})
     assert read_dtcs(Elm327(transport), 0x03, can=False) == ["P0133"]

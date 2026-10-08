@@ -249,3 +249,49 @@ def test_failed_header_restore_aborts_instead_of_misreading() -> None:
     elm.initialize()
     with pytest.raises(TransportError, match="ATH0"):
         elm.protocol()
+
+
+class _TimeoutRecorder(FakeTransport):
+    """Merkt sich je Befehl die Wartezeit, mit der auf den Prompt gelesen wird."""
+
+    def __init__(self, responses: dict[str, str]) -> None:
+        super().__init__(responses)
+        self.timeouts: list[tuple[str, float]] = []
+
+    def read_until(self, terminator: bytes, timeout: float) -> bytes:
+        self.timeouts.append((self.sent[-1], timeout))
+        return super().read_until(terminator, timeout)
+
+
+def test_default_timeout_outlasts_the_adapters_response_pending_wait() -> None:
+    # Der ELM327 wartet nach 7F xx 78 selbst bis zu 5 s (Datenblatt S. 45)
+    assert Elm327(FakeTransport({})).timeout > 5.0
+
+
+def test_protocol_search_gets_the_longer_timeout() -> None:
+    transport = _TimeoutRecorder(
+        {"0100": "SEARCHING...\r4100BE3FA813", "ATDPN": "A6", "ATDP": "AUTO, CAN"}
+    )
+    elm = Elm327(transport, timeout=2.0, search_timeout=30.0)
+    elm.protocol()
+    assert transport.timeouts == [("0100", 30.0), ("ATDPN", 2.0), ("ATDP", 2.0)]
+    assert elm.timeout == 2.0
+
+
+def test_repeated_search_also_gets_the_longer_timeout() -> None:
+    transport = _TimeoutRecorder({"0100": "NO DATA", "ATDPN": "0", "ATDP": "AUTO"})
+    Elm327(transport, timeout=2.0, search_timeout=30.0).protocol()
+    assert [t for c, t in transport.timeouts if c == "0100"] == [30.0, 30.0]
+
+
+def test_search_timeout_never_shortens_the_normal_one() -> None:
+    transport = _TimeoutRecorder({"0100": "4100BE3FA813", "ATDPN": "6", "ATDP": "CAN"})
+    Elm327(transport, timeout=40.0, search_timeout=30.0).protocol()
+    assert transport.timeouts[0] == ("0100", 40.0)
+
+
+def test_search_timeout_is_restored_after_an_error() -> None:
+    elm = Elm327(_TimeoutRecorder({"0100": "CAN ERROR"}), timeout=2.0)
+    with pytest.raises(ElmError):
+        elm.protocol()
+    assert elm.timeout == 2.0

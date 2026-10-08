@@ -102,10 +102,26 @@ class ObdProtocol:
         return self.inferred is not None and self.inferred.is_can
 
 
+# Wartezeit auf den Prompt je Befehl (Sekunden). Der ELM327 wartet selbst bis zu 5 s,
+# wenn ein Steuergerät ``7F xx 78`` (Antwort folgt) meldet, und beginnt bei jedem weiteren
+# ``78`` neu (Datenblatt ELM327DSJ S. 45); 10 s lassen dafür Luft.
+DEFAULT_TIMEOUT = 10.0
+# Die erste OBD-Anfrage nach ``ATSP0`` startet die Protokollsuche (S. 36); bei K-Line
+# dauert schon ein Verbindungsaufbau 2 bis 3 s (S. 33), und die Suche probiert mehrere
+# Protokolle nacheinander.
+SEARCH_TIMEOUT = 30.0
+
+
 class Elm327:
-    def __init__(self, transport: Transport, timeout: float = 5.0) -> None:
+    def __init__(
+        self,
+        transport: Transport,
+        timeout: float = DEFAULT_TIMEOUT,
+        search_timeout: float = SEARCH_TIMEOUT,
+    ) -> None:
         self.transport = transport
         self.timeout = timeout
+        self.search_timeout = search_timeout
         self._clear_allowed = False
 
     @contextmanager
@@ -116,6 +132,16 @@ class Elm327:
             yield
         finally:
             self._clear_allowed = False
+
+    @contextmanager
+    def _searching(self) -> Iterator[None]:
+        """Längere Wartezeit für Anfragen, die eine Protokollsuche auslösen können."""
+        saved = self.timeout
+        self.timeout = max(saved, self.search_timeout)
+        try:
+            yield
+        finally:
+            self.timeout = saved
 
     def _check(self, cmd: str) -> None:
         if is_read_only(cmd):
@@ -238,6 +264,7 @@ class Elm327:
 
         Nach ``ATSP0`` sucht der ELM327 das Protokoll erst bei der ersten OBD-Anfrage;
         dafür dient ``0100`` (unterstützte PIDs), das jedes OBD-II-Fahrzeug beantwortet.
+        Weil die Suche dauern kann, gilt dafür ``search_timeout`` statt ``timeout``.
 
         Meldet ``ATDPN`` danach keine bekannte Nummer (``0``, ``A0``, ``?`` oder Unsinn),
         wird nachgefasst: hatte ``0100`` keine Daten, einmal wiederholen; dann ``ATDPN``
@@ -247,12 +274,14 @@ class Elm327:
         älteres Protokoll vorliegt (``ObdProtocol.inferred``). Ohne Antwort bleibt es
         bei „kein CAN“.
         """
-        answer = self.query("0100")
+        with self._searching():
+            answer = self.query("0100")
         number = self._protocol_number()
         inferred: HeaderFormat | None = None
         if number not in _KNOWN_PROTOCOLS:
             if answer is None:
-                answer = self.query("0100")
+                with self._searching():
+                    answer = self.query("0100")
             number = self._protocol_number()
             if number not in _KNOWN_PROTOCOLS and answer is not None:
                 inferred = self._header_shape()
