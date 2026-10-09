@@ -5,12 +5,16 @@ Freeze Frame, Readiness, FIN, Live-Daten mit Aufzeichnung, als Kommandozeile und
 Desktop-Oberfläche (PySide6/QML). Standardmäßig nur lesend: der einzige schreibende
 Befehl ist das Löschen der Fehlercodes, und das nur nach Prüfung und Sicherung.
 
-> **Löschen ist vorerst deaktiviert.** Erst wenn das Lesen an einem echten Fahrzeug
-> geprüft ist, wird es freigegeben (`CLEAR_ENABLED` in `services/clear.py`). Bis dahin
-> bricht `obd-diag clear` ab, ohne den Port zu öffnen, und die Schaltfläche in der
-> Oberfläche bleibt grau. Der Ablauf unten beschreibt, wie es nach der Freigabe läuft.
+> **Löschen ist vorerst deaktiviert** (`CLEAR_ENABLED` in `services/clear.py`). Das
+> Lesen ist seit dem 2026-10-09 an einem echten Fahrzeug geprüft; freigegeben wird
+> Löschen erst nach einer bewussten Entscheidung. Bis dahin bricht `obd-diag clear` ab,
+> ohne den Port zu öffnen, und die Schaltfläche in der Oberfläche bleibt grau. Der
+> Ablauf unten beschreibt, wie es nach der Freigabe läuft.
 
 Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/artifact/de949a8a-4f58-41b4-a629-6b9d238bdac7)
+
+Ausführliche Dokumentation (Benutzen, Wie es funktioniert, Entwickeln) liegt als
+Sphinx-Website unter `docs/`, siehe [Dokumentation](#dokumentation).
 
 ## Stand
 
@@ -21,11 +25,40 @@ Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/ar
 - **v0.2** (in `main`, Version 0.2.0, noch ohne Release-Tag): Live-Daten nach SAE
   J1979 (116 Werte aus 82 PIDs, darunter alle Lambdasonden), Aufzeichnung als CSV,
   Reiter „Live-Daten“ und `obd-diag live`.
-- **Noch nicht am echten Auto getestet.** Die Antwortverarbeitung ist ohne Hardware
-  gegen Datenblatt, echte Mitschnitte und python-OBD geprüft (siehe „Entwicklung“).
-  Ablauf für den ersten Test: „Erster Test am Auto“ unten.
+- **Am echten Auto getestet** (2026-10-09, Mercedes A 180 d W177, Adapter FORScan
+  ELMconfig, CAN 29 Bit/500 kBit/s, vier Steuergeräte): `info`, `diagnose` und `live`
+  lesen richtig. Vier Befunde aus dem Test sind behoben (erstes `ATZ` mit `?`, Freeze
+  Frame vom richtigen Steuergerät, Spannung per PID 42 gegengeprüft, kein Modelljahr bei
+  Mercedes), dazu ein klarer Hinweis bei `UNABLE TO CONNECT` (Zündung aus). Die
+  Mitschnitte laufen als Regressionstest (`tests/verification/test_real_car.py`, FIN
+  geschwärzt). Details: „Erster Test am Auto“ unten.
+- Ohne Hardware ist die Antwortverarbeitung zusätzlich gegen Datenblatt, fremde
+  Mitschnitte und python-OBD geprüft (siehe „Entwicklung“).
 - Geplant (v0.3+): Bluetooth LE, Community-Profile, Fehlerspeicher aller
   Steuergeräte über UDS (nur lesend), siehe Designdokument.
+
+## Dokumentation
+
+Die Website (Sphinx mit MyST, Furo und Mermaid, Deutsch) liegt unter `docs/`:
+Installation, Adapter, erster Test am Auto, Oberfläche, CLI-Referenz, Fehlercodes,
+Live-Daten, häufige Probleme; dazu, wie das Tool mit dem ELM327 spricht (Antwortformate
+mit Byte-Beispielen, Befehlsreferenz mit Datenblatt-Zitaten, PID-Formeln,
+Sicherheitskonzept, der Mitschnitt vom W177 Zeile für Zeile) und die API-Referenz.
+
+```sh
+uv run --group docs sphinx-build -W docs docs/_build    # danach docs/_build/index.html
+```
+
+Befehls- und PID-Tabellen erzeugt `tools/docs_tables.py` beim Bauen aus
+`tests/fixtures/command_spec.yaml` bzw. `PIDS`, die CLI-Optionen kommen aus
+`cli.build_parser`, die Byte-Beispiele prüft `tests/unit/test_docs_examples.py`. Die
+Bilder der Oberfläche erzeugt `uv run python tools/docs_screenshots.py` (Emulator,
+ohne Bildschirm); sie sind eingecheckt.
+
+Die CI baut die Website bei jedem PR und Push auf `main` und hängt das HTML als
+Artefakt „dokumentation“ an den Lauf. Auf GitHub Pages veröffentlicht wird nur bei
+manuellem Start des Workflows „Dokumentation“ (`.github/workflows/docs.yml`); dafür
+muss in den Repo-Einstellungen unter Pages die Quelle „GitHub Actions“ gewählt sein.
 
 ## Entwicklung
 
@@ -39,7 +72,8 @@ uv run mypy
 Ohne uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytest-qt pypdf ruff mypy types-pyserial types-reportlab ELM327-emulator hypothesis pyyaml`.
 
 `tests/verification` prüft die Antwortverarbeitung ohne Adapter gegen echte Mitschnitte
-(ELM327-Datenblatt, Nutzer-Logs aus python-OBD/ELMduino/AndrOBD, Quellen in
+(eigene vom Mercedes W177 in `tests/fixtures/traces/mercedes_w177/`, dazu
+ELM327-Datenblatt und Nutzer-Logs aus python-OBD/ELMduino/AndrOBD, Quellen in
 `tests/fixtures/traces/`), gegen den DTC-Decoder von python-OBD und mit
 Hypothesis-Round-Trip- und Fuzz-Tests. Die Formeln der Live-Daten werden für jeden
 Bytewert mit python-OBD verglichen (`test_pid_differential.py`); die zwei
@@ -115,9 +149,18 @@ Rechte: unter Arch heißt die Gruppe `uucp` (Debian/Ubuntu: `dialout`):
 3. `obd-diag diagnose --port … --save --trace`: liest alles, nur lesend, und schneidet
    die Kommunikation mit.
 4. Optional mit laufendem Motor: `obd-diag live --port … --duration 30 --record --trace`.
-5. `clear` ist bis dahin gesperrt. Erst wenn Ausgabe und Mitschnitt geprüft sind, wird
-   Löschen freigegeben. Aus dem Mitschnitt wird mit `ReplayTransport` ein
-   Regressionstest.
+5. `clear` bleibt gesperrt. Aus dem Mitschnitt wird mit `ReplayTransport` ein
+   Regressionstest (FIN vorher schwärzen, siehe „Mitschnitt“).
+
+Am 2026-10-09 lief dieser Ablauf an einem Mercedes A 180 d (W177): CAN 29/500, vier
+Steuergeräte, ein gespeicherter Code (U1218, herstellerspezifisch), Readiness, Freeze
+Frame, FIN und Live-Daten im Stand. Der erste Versuch endete mit `UNABLE TO CONNECT`,
+weil die Zündung noch aus war; das Tool sagt dann „Kein Steuergerät antwortet. Zündung
+einschalten (der Motor darf aus bleiben), bei Adaptern mit MS-/HS-CAN-Schalter HS-CAN
+wählen und erneut versuchen.“ Die Bordspannung laut Adapter sank in wenigen Minuten
+auf 11,2 V: den Test kurz halten oder ein Ladegerät anschließen. Der ganze Ablauf und
+der Mitschnitt Zeile für Zeile stehen in der Dokumentation („Erster Test am Auto“,
+„Mitschnitt vom W177“).
 
 Vorsicht, unabhängig von der Software:
 
@@ -502,7 +545,7 @@ uv run obd-diag diagnose --port /dev/ttyUSB0 --trace auto.log   # eigene Datei
 ```
 
 ```
-# obd-diag 0.0.1 Mitschnitt 2026-10-07T16:09:33+02:00 /dev/ttyUSB0 38400 Baud
+# obd-diag 0.2.0 Mitschnitt 2026-10-07T16:09:33+02:00 /dev/ttyUSB0 38400 Baud
     0.000 >> ATZ\r
     0.508 << ATZ\r\r\rELM327 v1.5\r\r>
     3.013 >> 03\r
@@ -512,7 +555,8 @@ uv run obd-diag diagnose --port /dev/ttyUSB0 --trace auto.log   # eigene Datei
 Steuerzeichen stehen als `\r`, `\xNN`; `>>` ist gesendet, `<<` empfangen, `!!` ein
 Fehler. In der Oberfläche schaltet „Optionen → Adapter-Mitschnitt aufzeichnen“ das
 für jede Aktion ein (eine Datei je Aktion). Der Mitschnitt enthält ggf. die FIN und
-bleibt lokal. `ReplayTransport` in `transport/trace.py` spielt ihn ohne Adapter wieder
+bleibt lokal; vor dem Weitergeben oder Einchecken die FIN in der Antwort auf `0902`
+schwärzen (Anleitung in der Dokumentation unter „Erster Test am Auto“, „Mitschnitte weitergeben“). `ReplayTransport` in `transport/trace.py` spielt ihn ohne Adapter wieder
 ab, z. B. als Test-Fixture.
 
 ### Protokoll-Details
