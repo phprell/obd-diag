@@ -69,9 +69,9 @@ class RecordingBackend:
         self.errors: list[Exception] = []
         self._real = serial_backend()
 
-    def diagnose(self, port: str, baud: int, online: bool) -> Session:
+    def diagnose(self, port: str, baud: int, online: bool, online_codes: bool) -> Session:
         try:
-            return self._real.diagnose(port, baud, online)
+            return self._real.diagnose(port, baud, online, online_codes)
         except Exception as e:
             self.errors.append(e)
             raise

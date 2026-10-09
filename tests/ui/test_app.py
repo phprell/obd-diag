@@ -171,7 +171,7 @@ def test_runner_wraps_non_exception_errors(qtbot: QtBot) -> None:
 def test_backend_default_save_session(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
     backend = Backend(
-        diagnose=lambda port, baud, online: minimal_session(),
+        diagnose=lambda port, baud, online, online_codes: minimal_session(),
         clear=lambda port, baud: pytest.fail("nicht gebraucht"),
         list_ports=list,
         catalog_available=lambda: True,
@@ -189,7 +189,9 @@ def test_serial_backend_forwards_tracing(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(
         backend_module,
         "diagnose_port",
-        lambda port, baud, online, trace: calls.append(("diagnose", (port, baud, online, trace))),
+        lambda port, baud, online, online_codes, trace: calls.append(
+            ("diagnose", (port, baud, online, online_codes, trace))
+        ),
     )
     monkeypatch.setattr(
         backend_module,
@@ -197,12 +199,12 @@ def test_serial_backend_forwards_tracing(monkeypatch: pytest.MonkeyPatch) -> Non
         lambda port, baud, trace: calls.append(("clear", (port, baud, trace))),
     )
     backend = serial_backend()
-    backend.diagnose("/dev/ttyUSB0", 38400, True)
+    backend.diagnose("/dev/ttyUSB0", 38400, True, True)
     backend.set_tracing(True)
     backend.clear("/dev/ttyUSB0", 9600)
-    backend.diagnose("/dev/ttyUSB1", 38400, False)
+    backend.diagnose("/dev/ttyUSB1", 38400, False, False)
     assert calls == [
-        ("diagnose", ("/dev/ttyUSB0", 38400, True, False)),
+        ("diagnose", ("/dev/ttyUSB0", 38400, True, True, False)),
         ("clear", ("/dev/ttyUSB0", 9600, True)),
-        ("diagnose", ("/dev/ttyUSB1", 38400, False, True)),
+        ("diagnose", ("/dev/ttyUSB1", 38400, False, False, True)),
     ]

@@ -27,9 +27,9 @@ def test_scan_runs_off_the_gui_thread(qtbot: QtBot, fake_backend: FakeBackend) -
     threads: list[int] = []
     original = fake_backend.diagnose
 
-    def diagnose(port: str, baud: int, online_vin_lookup: bool) -> Session:
+    def diagnose(port: str, baud: int, online_vin_lookup: bool, online_dtc_lookup: bool) -> Session:
         threads.append(threading.get_ident())
-        return original(port, baud, online_vin_lookup)
+        return original(port, baud, online_vin_lookup, online_dtc_lookup)
 
     fake_backend.diagnose = diagnose  # type: ignore[method-assign]
     runner = ThreadPoolRunner()
@@ -56,9 +56,11 @@ def test_second_scan_is_ignored_while_busy(qtbot: QtBot, fake_backend: FakeBacke
     release = threading.Event()
     original = fake_backend.diagnose
 
-    def slow_diagnose(port: str, baud: int, online_vin_lookup: bool) -> Session:
+    def slow_diagnose(
+        port: str, baud: int, online_vin_lookup: bool, online_dtc_lookup: bool
+    ) -> Session:
         release.wait(5)
-        return original(port, baud, online_vin_lookup)
+        return original(port, baud, online_vin_lookup, online_dtc_lookup)
 
     fake_backend.diagnose = slow_diagnose  # type: ignore[method-assign]
     runner = ThreadPoolRunner()
@@ -272,3 +274,23 @@ def test_only_permanent_codes_cannot_be_cleared() -> None:
     assert not vm.property("canClear")
     vm.clearCodes()
     assert [c[0] for c in backend.calls] == ["diagnose"]
+
+
+def test_model_online_and_search_roles() -> None:
+    from tests.samples import ONLINE_P1234
+
+    model = CodeListModel()
+    model.set_codes(
+        [
+            DiagnosticCode("P0420", DtcKind.PENDING, P0420),
+            DiagnosticCode("P1234", DtcKind.PENDING, None, ONLINE_P1234),
+        ],
+        "Volkswagen (SUV)",
+    )
+    known, unknown = model.entry(0), model.entry(1)
+    assert known is not None and unknown is not None
+    assert known["onlineText"] == "" and known["onlineUrl"] == ""
+    assert unknown["onlineText"] == "Camshaft Position Actuator Circuit"
+    assert unknown["onlineSource"].endswith("volkswagen_codes.txt")
+    assert unknown["onlineUrl"] == ONLINE_P1234.url
+    assert unknown["searchUrl"] == "https://duckduckgo.com/?q=P1234+Volkswagen"

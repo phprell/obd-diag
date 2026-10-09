@@ -7,6 +7,7 @@ obd-diag diagnose --port /dev/ttyUSB0                   # Tabelle
 obd-diag diagnose --port /dev/ttyUSB0 --save            # Sitzung speichern, Pfad auf stderr
 obd-diag diagnose --port /dev/ttyUSB0 --pdf bericht.pdf --csv codes.csv
 obd-diag diagnose --port /dev/ttyUSB0 --online-vin      # FIN zusätzlich bei NHTSA vPIC
+obd-diag diagnose --port /dev/ttyUSB0 --online-codes    # Codes ohne Katalogtext online erklären
 ```
 
 `diagnose` liest in einem Durchgang, nur lesend:

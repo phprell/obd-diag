@@ -231,3 +231,24 @@ def test_ttf_fallback_replaces_missing_glyphs() -> None:
 )
 def test_german_number(value: float, decimals: int, expected: str) -> None:
     assert report._number(value, decimals) == expected
+
+
+def test_pdf_shows_online_explanation(tmp_path: Path, font: str) -> None:
+    from tests.samples import ONLINE_P1234, with_online
+
+    path = tmp_path / "bericht.pdf"
+    export_pdf(with_online(full_session()), path)
+    text = _pdf_text(path)
+    assert "Online-Erklärung (ungeprüft): Camshaft Position Actuator Circuit" in text
+    assert "Quelle: Wal33D/dtc-database (MIT), volkswagen_codes.txt" in text
+    without = tmp_path / "ohne.pdf"
+    export_pdf(full_session(), without)
+    assert ONLINE_P1234.text not in _pdf_text(without)
+
+
+def test_session_round_trip_with_online(tmp_path: Path) -> None:
+    from obd_diag.services.session import load_session, save_session
+    from tests.samples import with_online
+
+    session = with_online(full_session())
+    assert load_session(save_session(session, tmp_path)) == session

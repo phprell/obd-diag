@@ -1,6 +1,7 @@
 """Diagnose-Abläufe: Fehlercodes lesen und mit Klartext anreichern."""
 
 import dataclasses
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Protocol
@@ -9,6 +10,7 @@ from obd_diag.data.dtc_catalog import DtcInfo
 from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
 from obd_diag.protocol.obd import read_dtcs
 from obd_diag.protocol.pids import PIDS, read_values
+from obd_diag.services.dtc_online import OnlineExplanation, lookup_online
 
 LOW_VOLTAGE = 11.8  # Volt; darunter warnen (Motor aus, Zündung an)
 # Steuergerätespannung (PID 42) nur in diesem Bereich als Bordspannung übernehmen
@@ -48,6 +50,7 @@ class DiagnosticCode:
     code: str
     kind: DtcKind
     info: DtcInfo | None = None
+    online: OnlineExplanation | None = None  # nur nach Opt-in, nur ohne Katalogtext
 
 
 @dataclass
@@ -97,6 +100,31 @@ def scan(elm: Elm327, catalog: DtcLookup | None, lang: str = "de") -> ScanResult
                 infos[code] = catalog.lookup(code, lang) if catalog is not None else None
             result.codes.append(DiagnosticCode(code, kind, infos[code]))
     return result
+
+
+def add_online_explanations(
+    result: ScanResult,
+    manufacturer: str | None,
+    lookup: Callable[[list[str], str | None], dict[str, OnlineExplanation]] | None = None,
+) -> ScanResult:
+    """Ergänzt Codes ohne Katalogtext um eine Online-Erklärung (nur nach Opt-in).
+
+    Codes mit Katalogtext werden nicht nachgeschlagen; ohne solche Codes geht nichts
+    ins Netz. ``manufacturer`` kommt aus der FIN, sonst ``None``.
+    """
+    missing = sorted({c.code for c in result.codes if c.info is None})
+    if not missing:
+        return result
+    found = (lookup or lookup_online)(missing, manufacturer)
+    return dataclasses.replace(
+        result,
+        codes=[
+            dataclasses.replace(c, online=found[c.code])
+            if c.info is None and c.code in found
+            else c
+            for c in result.codes
+        ],
+    )
 
 
 def scan_to_dict(result: ScanResult) -> dict[str, Any]:

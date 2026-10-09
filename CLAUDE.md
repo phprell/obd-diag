@@ -21,7 +21,9 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   bis das Lesen am echten Auto geprüft ist; nur nach ausdrücklicher Freigabe durch den
   Nutzer einschalten. Keine Codierung, kein Flashen, keine
   Herstellerbefehle.
-- Fehlercode-Texte offline (SQLite). Online nur NHTSA vPIC, nur nach Opt-in.
+- Fehlercode-Texte offline (SQLite). Online nur nach Opt-in: NHTSA vPIC (FIN) und
+  Kurzerklärungen für Codes ohne Katalogtext (`services/dtc_online.py`, ADR 0004; lädt
+  ganze Dateien von Wal33D/dtc-database, nie Code oder FIN senden).
 - Parser halten sich strikt an SAE J1979 / ISO 15765 / ELM327-Datenblatt; Abweichungen
   des Emulators werden in den Tests korrigiert, nicht im Produktcode.
 - Sprache in UI, Doku, Kommentaren, Commit-Messages: Deutsch. ruff meldet Gedanken-
@@ -89,7 +91,8 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   `decode` darf `None` liefern; `read_supported_pids` über alle Steuergeräte,
   `read_values` je PID mit einer Anfrage, `read_value` nur für Tests).
 - `services/` – `diagnostics.py` (`scan`), `clear.py` (Löschen), `readiness.py`,
-  `vehicle.py` (`read_vin`, `decode_vin`, `lookup_vpic`), `session.py`
+  `vehicle.py` (`read_vin`, `decode_vin`, `lookup_vpic`), `dtc_online.py`
+  (`lookup_online`, `search_url`; Herstellerdatei nur laut FIN, Cache je Commit), `session.py`
   (`run_diagnosis`, JSON speichern/laden), `storage.py` (XDG-Pfade, atomares
   Schreiben ohne Überschreiben), `live.py` (`prepare_live`, `select_pids`, `run_live`
   mit injizierbarer Uhr, `LiveRecorder` CSV unter `recordings/`).

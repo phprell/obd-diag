@@ -9,4 +9,5 @@ Entscheidung, Folgen.
 ../adr/0001-schichtenarchitektur
 ../adr/0002-nur-lesend
 ../adr/0003-live-daten
+../adr/0004-online-erklaerungen
 ```

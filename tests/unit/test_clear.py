@@ -167,6 +167,7 @@ def test_clear_codes_backs_up_then_clears(monkeypatch: pytest.MonkeyPatch, tmp_p
             "repair_difficulty": None,
             "cost_eur": None,
         },
+        "online": None,
     }
     assert data["freeze_frame"] == {
         "dtc": "P0133",

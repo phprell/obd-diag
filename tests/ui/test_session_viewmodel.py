@@ -341,3 +341,17 @@ def test_local_path() -> None:
     assert local_path("file:///tmp/a%20b.pdf") == Path("/tmp/a b.pdf")
     assert local_path("/tmp/x.pdf") == Path("/tmp/x.pdf")
     assert local_path("~/x.pdf") == Path.home() / "x.pdf"
+
+
+def test_online_code_lookup_setting_is_passed_and_persisted() -> None:
+    backend = FakeBackend(full_session())
+    vm = _vm(backend)
+    assert vm.property("onlineCodeLookup") is False  # Standard: aus
+    vm.connectAndScan("/dev/ttyUSB0", 38400)
+    vm.setProperty("onlineCodeLookup", True)
+    vm.connectAndScan("/dev/ttyUSB0", 38400)
+    assert backend.online_code_flags == [False, True]
+    assert backend.online_flags == [False, False]  # FIN-Abfrage bleibt getrennt
+    assert _vm(FakeBackend()).property("onlineCodeLookup") is True
+    vm.setProperty("onlineCodeLookup", False)
+    assert _vm(FakeBackend()).property("onlineCodeLookup") is False

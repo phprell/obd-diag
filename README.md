@@ -244,6 +244,13 @@ Fehlercodes mit Klartext aus dem Offline-Katalog. Fehlt der Katalog, erscheinen 
 Codes ohne Beschreibung (bauen mit `uv run python tools/build_dtc_db.py`). Es wird
 nur gelesen, nichts gelöscht.
 
+Mit `--online-codes` (auch bei `diagnose`; in der Oberfläche *Optionen* → „Fehlercodes
+online erklären“, standardmäßig aus) bekommen Codes ohne Katalogtext eine kurze,
+ungeprüfte Erklärung aus [Wal33D/dtc-database](https://github.com/Wal33D/dtc-database)
+(MIT) mit Quelle und Link, dazu einen Link für die Websuche. Geladen werden ganze
+Dateien je Hersteller, Fehlercode und FIN verlassen den Rechner nicht; Einzelheiten in
+der Doku unter „Fehlercodes online erklären“.
+
 Misst der Adapter (`ATRV`) unter 11,8 V, gilt die Steuergerätespannung (PID 42), sofern
 plausibel: viele Adapter messen hinter einer Schutzdiode einige Zehntel Volt zu wenig
 (am Mercedes W177: Adapter 11,2 V, Steuergerät 12,0 V). Das gilt auch für Löschen und

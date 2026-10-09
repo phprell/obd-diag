@@ -42,6 +42,7 @@ LOW_VOLTAGE_WARNING = (
 SETTINGS_ORG = "obd-diag"
 SETTINGS_APP = "obd-diag"
 ONLINE_VIN_KEY = "fin/onlineNachschlagen"
+ONLINE_CODES_KEY = "fehlercodes/onlineNachschlagen"
 TRACE_KEY = "adapter/mitschnitt"
 
 _EXPORT_KINDS = {"pdf": "PDF-Bericht", "csv": "CSV-Datei"}
@@ -128,6 +129,7 @@ class DiagnosisViewModel(QObject):
         self._port = DEFAULT_PORT
         self._baud = DEFAULT_BAUD
         self._online_vin = self._settings.value(ONLINE_VIN_KEY, False, type=bool) is True
+        self._online_codes = self._settings.value(ONLINE_CODES_KEY, False, type=bool) is True
         self._trace = self._settings.value(TRACE_KEY, False, type=bool) is True
         backend.set_tracing(self._trace)
         try:
@@ -372,6 +374,19 @@ class DiagnosisViewModel(QObject):
     # Opt-in: die FIN geht nur dann an NHTSA vPIC, wenn hier eingeschaltet
     onlineVinLookup = Property(bool, _get_online_vin, _set_online_vin, notify=settingsChanged)
 
+    def _get_online_codes(self) -> bool:
+        return self._online_codes
+
+    def _set_online_codes(self, enabled: bool) -> None:
+        if enabled != self._online_codes:
+            self._online_codes = enabled
+            self._settings.setValue(ONLINE_CODES_KEY, enabled)
+            self._settings.sync()
+            self.settingsChanged.emit()
+
+    # Opt-in: Codes ohne Katalogtext online nachschlagen (services/dtc_online.py)
+    onlineCodeLookup = Property(bool, _get_online_codes, _set_online_codes, notify=settingsChanged)
+
     def _get_trace(self) -> bool:
         return self._trace
 
@@ -419,9 +434,12 @@ class DiagnosisViewModel(QObject):
     def _run_diagnosis(
         self, on_success: Callable[[Any], None], on_error: Callable[[Exception], None]
     ) -> None:
-        port, baud, online = self._port, self._baud, self._online_vin
+        port, baud = self._port, self._baud
+        online_vin, online_codes = self._online_vin, self._online_codes
         backend = self._backend
-        self._runner.run(lambda: backend.diagnose(port, baud, online), on_success, on_error)
+        self._runner.run(
+            lambda: backend.diagnose(port, baud, online_vin, online_codes), on_success, on_error
+        )
 
     @Slot()
     def clearCodes(self) -> None:
@@ -534,7 +552,8 @@ class DiagnosisViewModel(QObject):
         self._view_only = view_only
         self._saved_path = path
         codes = session.scan.codes
-        self._codes.set_codes(codes)
+        vehicle = session.vehicle
+        self._codes.set_codes(codes, vehicle.manufacturer if vehicle is not None else None)
         self._monitors.set_monitors(
             session.readiness.monitors if session.readiness is not None else ()
         )
