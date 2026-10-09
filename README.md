@@ -119,6 +119,19 @@ Rechte: unter Arch heißt die Gruppe `uucp` (Debian/Ubuntu: `dialout`):
    Löschen freigegeben. Aus dem Mitschnitt wird mit `ReplayTransport` ein
    Regressionstest.
 
+Vorsicht, unabhängig von der Software:
+
+- Adapterschalter **vor** dem Einstecken auf HS-CAN stellen und bei Zündung aus
+  einstecken bzw. abziehen. Findet das Tool nichts („UNABLE TO CONNECT“), nicht mit
+  dem Schalter experimentieren, sondern aufhören und den Mitschnitt ansehen.
+- Zündung an ohne Motor zieht Strom aus der Batterie: Test kurz halten (eine Diagnose
+  dauert Sekunden), danach Zündung aus. Liegt die Bordspannung unter 12 V, lieber mit
+  laufendem Motor oder Ladegerät testen.
+- Adapter nach dem Test abziehen: er hängt an Dauerplus (Pin 16) und kann über Nacht
+  die Batterie leeren oder Steuergeräte wachhalten.
+- Kabel so legen, dass es nicht an Pedalen hängt; Live-Daten im Stand, Motor nur im
+  Freien laufen lassen.
+
 Wird die Verbindung mitten in der Abfrage unterbrochen (Adapter abgezogen, Stecker vom
 Auto ab, Bluetooth weg), bricht das Tool mit einer Meldung ab („Verbindung zu …
 unterbrochen“ bzw. „keine Antwort von …“). Danach wird nichts mehr gesendet, eine
@@ -145,6 +158,13 @@ Code und Tests, die sie prüfen:
   über den Ablauf unter „Fehlercodes löschen“.
 - **Keine Codierung, kein Flashen, keine Servicefunktionen** (Routinen, Aktoren,
   Anlernwerte). Das ist eine bewusste Entscheidung (`docs/adr/0002-nur-lesend.md`).
+- **Tempo:** Es ist immer nur eine Anfrage unterwegs; die nächste geht erst hinaus,
+  wenn der Adapter mit dem Prompt `>` fertig gemeldet hat (bei 7F-78-Antworten wird
+  ohne erneutes Senden weitergelesen). Dahinter steht eine harte Mindestpause von
+  50 ms zwischen Antwort und nächster Anfrage ans Fahrzeug (`MIN_REQUEST_GAP`), also
+  höchstens 20 Anfragen je Sekunde, auch wenn ein Adapter den Prompt zu früh schickt.
+  Live-Daten fragen zusätzlich höchstens alle 0,1 s eine Runde ab. Nach einem
+  Verbindungsfehler oder einer ausbleibenden Antwort wird nichts mehr gesendet.
 
 Geprüft wird das so:
 
@@ -160,8 +180,12 @@ Geprüft wird das so:
   `os.write`, kein `eval`/`getattr`.
 - Jeder gesendete Befehl hat auf der Leitung genau das ELM327-Format (Großbuchstaben,
   Ziffern, ein CR), auch in den Emulator-Tests über den echten seriellen Transport.
+- Mindestpause mit simulierter Uhr: nie eine Anfrage vor der vorigen Antwort, nie
+  zwei Anfragen ans Fahrzeug näher als 50 ms, auch nach Fehlern und Timeouts, für eine
+  vollständige Diagnose und beliebige Befehlsfolgen (Hypothesis).
 
-Siehe `tests/unit/test_command_guard.py`, `test_write_safety.py`, `test_live_safety.py`.
+Siehe `tests/unit/test_command_guard.py`, `test_write_safety.py`, `test_live_safety.py`,
+`test_request_gap.py`.
 
 ### Fehlercodes lesen
 

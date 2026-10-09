@@ -130,6 +130,11 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   nie eine leere Liste. Bei `7F <Mode> 78` wird ohne erneutes Senden bis
   `DTC_PENDING_TIMEOUT` (5 s) weitergelesen; ohne Header zählt jede spätere positive
   Antwort als die angekündigte.
+- **Mindestpause**: `Elm327.command` sendet erst nach dem Prompt der vorigen Antwort und
+  hält vor jeder Anfrage ans Fahrzeug (nicht `AT…`) `MIN_REQUEST_GAP` (50 ms) seit der
+  letzten Antwort ein, auch nach Fehlern. `tests/conftest.py` setzt sie auf 0 (sonst
+  Minuten länger); `@pytest.mark.request_gap` sieht den ausgelieferten Wert,
+  `tests/unit/test_request_gap.py` prüft sie mit simulierter Uhr.
 - **Wartezeiten**: `Elm327` wartet 10 s je Befehl (der ELM327 wartet nach `78` selbst
   bis 5 s, Datenblatt S. 45), das erste `0100` nach `ATSP0` 30 s (Protokollsuche).
 - **Header-Rückfall**: Vermischen sich mehrteilige Antworten mehrerer Steuergeräte

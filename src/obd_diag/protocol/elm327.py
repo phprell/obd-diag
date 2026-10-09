@@ -1,7 +1,8 @@
 """Minimaler ELM327-Treiber: Befehl senden, Antwort bis zum Prompt lesen."""
 
 import re
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
@@ -111,6 +112,15 @@ DEFAULT_TIMEOUT = 10.0
 # Protokolle nacheinander.
 SEARCH_TIMEOUT = 30.0
 
+# Mindestabstand (Sekunden) zwischen dem Ende einer Antwort und der nächsten Anfrage, die
+# den Adapter ans Fahrzeug senden lässt (alles außer ``AT…``). Es ist ohnehin immer nur
+# eine Anfrage unterwegs: gesendet wird erst, wenn der Adapter mit dem Prompt ``>`` fertig
+# gemeldet hat. Diese Pause ist eine zweite, harte Grenze dahinter (höchstens 20 Anfragen
+# je Sekunde), falls ein Adapter den Prompt zu früh schickt. Normgerecht reicht null: nach
+# ISO 15765-4 darf die nächste Anfrage sofort nach der Antwort folgen, bei K-Line hält der
+# ELM327 die Mindestpause P3 selbst ein.
+MIN_REQUEST_GAP = 0.05
+
 
 class Elm327:
     def __init__(
@@ -118,10 +128,18 @@ class Elm327:
         transport: Transport,
         timeout: float = DEFAULT_TIMEOUT,
         search_timeout: float = SEARCH_TIMEOUT,
+        min_request_gap: float | None = None,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.transport = transport
         self.timeout = timeout
         self.search_timeout = search_timeout
+        # None: der Modulwert, damit Tests ihn zentral abschalten können
+        self.min_request_gap = MIN_REQUEST_GAP if min_request_gap is None else min_request_gap
+        self._clock = clock
+        self._sleep = sleep
+        self._last_reply: float | None = None  # Ende der letzten Antwort (``clock``)
         self._clear_allowed = False
 
     @contextmanager
@@ -172,8 +190,21 @@ class Elm327:
         Zeichenmüll (manche Klone senden nach ``ATZ`` z. B. ein Byte ``FC``).
         """
         self._check(cmd)
-        self.transport.write(cmd.encode("ascii") + b"\r")
-        return self._read(cmd, self.timeout)
+        if not cmd.startswith("AT"):
+            self._wait_for_gap()
+        try:
+            self.transport.write(cmd.encode("ascii") + b"\r")
+            return self._read(cmd, self.timeout)
+        finally:
+            self._last_reply = self._clock()
+
+    def _wait_for_gap(self) -> None:
+        """Wartet, bis seit der letzten Antwort ``min_request_gap`` vergangen ist."""
+        if self._last_reply is None:
+            return
+        remaining = self._last_reply + self.min_request_gap - self._clock()
+        if remaining > 0:
+            self._sleep(remaining)
 
     def read_more(self, cmd: str, timeout: float) -> str:
         """Liest eine weitere Antwort bis zum Prompt, ohne etwas zu senden.
@@ -183,7 +214,10 @@ class Elm327:
         Entfernen eines Echos. Bereinigung und Fehler wie bei ``command``; nach
         ``timeout`` Sekunden ohne Prompt ``TransportTimeout``.
         """
-        return self._read(cmd, timeout)
+        try:
+            return self._read(cmd, timeout)
+        finally:
+            self._last_reply = self._clock()
 
     def _read(self, cmd: str, timeout: float) -> str:
         raw = self.transport.read_until(PROMPT, timeout)
