@@ -13,8 +13,9 @@ Befehl ist das Löschen der Fehlercodes, und das nur nach Prüfung und Sicherung
 
 Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/artifact/de949a8a-4f58-41b4-a629-6b9d238bdac7)
 
-Ausführliche Dokumentation (Benutzen, Wie es funktioniert, Entwickeln) liegt als
-Sphinx-Website unter `docs/`, siehe [Dokumentation](#dokumentation).
+Ausführliche Dokumentation (Benutzen, Wie es funktioniert, Entwickeln):
+<https://phprell.github.io/obd-diag/> (Quelltext unter `docs/`, siehe
+[Dokumentation](#dokumentation)).
 
 ## Stand
 
@@ -55,10 +56,9 @@ Befehls- und PID-Tabellen erzeugt `tools/docs_tables.py` beim Bauen aus
 Bilder der Oberfläche erzeugt `uv run python tools/docs_screenshots.py` (Emulator,
 ohne Bildschirm); sie sind eingecheckt.
 
-Die CI baut die Website bei jedem PR und Push auf `main` und hängt das HTML als
-Artefakt „dokumentation“ an den Lauf. Auf GitHub Pages veröffentlicht wird nur bei
-manuellem Start des Workflows „Dokumentation“ (`.github/workflows/docs.yml`); dafür
-muss in den Repo-Einstellungen unter Pages die Quelle „GitHub Actions“ gewählt sein.
+Die CI baut die Website bei jedem PR (HTML als Artefakt „dokumentation“ am Lauf) und
+veröffentlicht sie bei jedem Push auf `main` unter <https://phprell.github.io/obd-diag/>
+(`.github/workflows/docs.yml`, GitHub Pages mit Quelle „GitHub Actions“).
 
 ## Entwicklung
 
