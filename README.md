@@ -23,7 +23,7 @@ Ausführliche Dokumentation (Benutzen, Wie es funktioniert, Entwickeln):
   Klartext, Readiness, Freeze Frame, FIN mit Offline-Dekodierung, sicheres Löschen,
   Diagnosesitzungen als JSON, PDF-Bericht und CSV, Adapter-Mitschnitt, Oberfläche
   mit hellem und dunklem Design.
-- **v0.2** (in `main`, Version 0.2.0, noch ohne Release-Tag): Live-Daten nach SAE
+- **v0.2** (Version 0.2.0, Änderungen in [CHANGELOG.md](CHANGELOG.md)): Live-Daten nach SAE
   J1979 (116 Werte aus 82 PIDs, darunter alle Lambdasonden), Aufzeichnung als CSV,
   Reiter „Live-Daten“ und `obd-diag live`.
 - **Am echten Auto getestet** (2026-10-09, Mercedes A 180 d W177, Adapter FORScan
@@ -92,6 +92,11 @@ laufen unter mutmut nicht. Der Ordner `mutants/` ist nur Arbeitskopie.
 
 Die GUI-Tests (`tests/ui`) laufen ohne Bildschirm (`QT_QPA_PLATFORM=offscreen`, setzt
 `tests/ui/conftest.py`) und werden übersprungen, wenn PySide6 fehlt.
+
+Release: Version in `pyproject.toml` und `src/obd_diag/__init__.py` setzen, Abschnitt
+`## X.Y.Z – Datum` in `CHANGELOG.md` schreiben, nach dem Merge den Tag `vX.Y.Z` auf
+`main` pushen. `.github/workflows/release.yml` prüft dann Tag und Versionen, baut
+Katalog, sdist und Wheel und legt das GitHub-Release mit dem Changelog-Abschnitt an.
 
 ### Fehlercode-Katalog
 

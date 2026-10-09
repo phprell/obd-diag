@@ -1,0 +1,50 @@
+name: Release
+
+# Baut bei einem Versions-Tag (v0.2.0 …) sdist und Wheel samt Fehlercode-Katalog und legt
+# daraus ein GitHub-Release an. Die Notizen kommen aus dem passenden Abschnitt von
+# CHANGELOG.md. Bricht ab, wenn Tag, pyproject.toml und obd_diag.__version__ nicht
+# übereinstimmen oder der Abschnitt fehlt.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Version prüfen
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          project=$(uv run --no-project python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          module=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/obd_diag/__init__.py)
+          echo "Tag $tag, pyproject.toml $project, __version__ $module"
+          test "$tag" = "$project" && test "$tag" = "$module"
+      - name: Release-Notizen aus CHANGELOG.md
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          awk -v v="$tag" '
+            /^## / { if (found) exit; if (index($0, "## " v " ") == 1) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          test -s notes.md
+      - run: uv sync --locked
+      - run: uv run python tools/build_dtc_db.py
+      - run: uv build
+      - name: Wheel prüfen
+        run: |
+          uv venv /tmp/wheel
+          uv pip install -p /tmp/wheel dist/*.whl
+          cd /tmp && /tmp/wheel/bin/obd-diag --version
+          /tmp/wheel/bin/python -I -c "from obd_diag.data.dtc_catalog import DtcCatalog; assert DtcCatalog.default().lookup('P0420')"
+      - name: GitHub-Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "obd-diag ${GITHUB_REF_NAME#v}" --notes-file notes.md --verify-tag
