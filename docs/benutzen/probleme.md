@@ -6,7 +6,7 @@
 | „Permission denied“ beim Öffnen des Ports | Nutzer nicht in `uucp`/`dialout` | {doc}`installation`, Abschnitt Rechte |
 | `info` hängt oder „keine Antwort von …“ | falsche Baudrate | `--baud 115200` bzw. `--baud 38400` versuchen |
 | `UNABLE TO CONNECT`, keine Codes, kein Protokoll | Zündung aus, oder Schalter am FORScan-Adapter auf MS-CAN | Zündung an, Schalter auf HS-CAN ({doc}`adapter`) |
-| „Bordspannung zu niedrig“ | Batterie unter 11,8 V | Batterie laden; Live-Daten fragen dann nur alle 5 s ab |
+| „Bordspannung zu niedrig“ | Batterie unter 11,8 V (Adapter und Steuergerät messen beide zu wenig) | Batterie laden; Live-Daten fragen dann nur alle 5 s ab |
 | „Verbindung zu … unterbrochen“ | Adapter abgezogen, Wackelkontakt, Bluetooth weg | neu verbinden; es wurde danach nichts gesendet |
 | „Steuergerät lehnt Mode … ab (Antwort 7F …)“ | Steuergerät beschäftigt oder Bedingungen nicht erfüllt | später erneut; der Fehlerspeicher ist dann unbekannt, nicht leer |
 | Codes ohne Beschreibung, „Fehlercode-Katalog fehlt“ | Katalog nicht gebaut | `uv run python tools/build_dtc_db.py` |

@@ -1,0 +1,20 @@
+# obd-diag 0.2.0 Mitschnitt 2026-10-09 /dev/ttyUSB0 38400 Baud
+# Erster Start direkt nach dem Einstecken: der Adapter lehnt das erste ATZ mit ? ab.
+# Ab hier wie beim zweiten Start (Mitschnitt 093139 derselben Sitzung).
+    0.024 >> ATZ\r
+    0.033 << ATZ\r?\r\r>
+    0.016 >> ATZ\r
+    0.817 << ATZ\r\r\rELM327 v1.5\r\r>
+    0.817 >> ATE0\r
+    0.825 << ATE0\rOK\r\r>
+    0.826 >> ATL0\r
+    0.834 << OK\r\r>
+    0.834 >> ATS0\r
+    0.843 << OK\r\r>
+    0.843 >> ATH0\r
+    0.852 << OK\r\r>
+    0.852 >> ATSP0\r
+    0.861 << OK\r\r>
+    0.861 >> ATRV\r
+    0.875 << 11.5V\r\r>
+    0.875 -- geschlossen

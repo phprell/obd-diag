@@ -272,6 +272,15 @@ def test_throttling_never_speeds_up_a_slow_interval() -> None:
     assert samples[1].elapsed == pytest.approx(8.0)
 
 
+def test_low_adapter_voltage_confirmed_by_ecu_is_not_throttled() -> None:
+    # Mercedes W177: Adapter 11,2 V, Motorsteuergerät 12,0 V (PID 42).
+    transport = FakeTransport({**CAR, "ATRV": "11.2V", "0142": "41422EDC"})
+    _, samples = _run(Elm327(transport), [RPM], FakeClock(), max_samples=2)
+    assert [s.throttled for s in samples] == [False, False]
+    assert samples[0].voltage == pytest.approx(11.996)
+    assert transport.sent[:2] == ["ATRV", "0142"]
+
+
 @pytest.mark.parametrize("answer", ["?", "NO DATA", "CAN ERROR", "abc", "V"])
 def test_unreadable_voltage_is_none_and_not_throttled(answer: str) -> None:
     _, samples = _run(

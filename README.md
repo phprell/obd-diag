@@ -201,6 +201,11 @@ Fehlercodes mit Klartext aus dem Offline-Katalog. Fehlt der Katalog, erscheinen 
 Codes ohne Beschreibung (bauen mit `uv run python tools/build_dtc_db.py`). Es wird
 nur gelesen, nichts gelöscht.
 
+Misst der Adapter (`ATRV`) unter 11,8 V, gilt die Steuergerätespannung (PID 42), sofern
+plausibel: viele Adapter messen hinter einer Schutzdiode einige Zehntel Volt zu wenig
+(am Mercedes W177: Adapter 11,2 V, Steuergerät 12,0 V). Das gilt auch für Löschen und
+Live-Daten.
+
 Im Emulator sind standardmäßig keine Codes gesetzt; die Tests geben sie über die
 Listen `DTC_STORED`, `DTC_PENDING` und `DTC_PERMANENT` in `elm.obd_message` vor
 (siehe `tests/integration/test_scan_emulator.py`).
@@ -236,7 +241,7 @@ obd-diag clear --port /dev/ttyUSB0 --yes    # ohne Rückfrage
    Codes, wird nichts gesendet. Permanente Codes (Mode 0A) löscht Mode 04 nicht, sie
    verschwinden erst, wenn das Steuergerät den Fehler in Fahrzyklen als behoben sieht.
 2. Vorbedingungen: das Steuergerät antwortet (Zündung an), die Bordspannung liegt
-   nicht unter 11,8 V und die Drehzahl ist 0 (Motor aus). Antworten mehrere
+   nicht unter 11,8 V (bei niedrigem `ATRV` gegengeprüft mit PID 42) und die Drehzahl ist 0 (Motor aus). Antworten mehrere
    Steuergeräte (z. B. Motor und Getriebe), muss jedes gültig 0 melden. Ist eine
    Drehzahl nicht lesbar, wird ebenfalls abgelehnt.
 3. Rückfrage: die Codes werden aufgelistet, gelöscht wird nur nach Eingabe von `ja`
@@ -325,7 +330,8 @@ Die Dekodierung ist offline:
   die FIN aus dem Fahrzeug, fallen ältere Jahre weg, die zum OBD-Protokoll nicht
   passen (OBD-II-Protokolle: nicht vor 1994; CAN nach ISO 15765-4: nicht vor 2000).
   Europäische Hersteller nutzen Stelle 10 nicht alle als Modelljahr, die Angabe ist
-  dort ohne Gewähr. In JSON steht das zweite Jahr in `model_year_alternatives`.
+  dort ohne Gewähr. Bei Mercedes-Benz (WMI WDB, WDC, WDD, WDF, W1K, W1N, W1V) steht
+  dort die Lenkung, ein Modelljahr wird dann nicht angezeigt. In JSON steht das zweite Jahr in `model_year_alternatives`.
 
 **Datenschutz:** Die FIN bleibt auf dem Rechner. Nur mit `--online-vin` wird sie an die
 NHTSA-Datenbank [vPIC](https://vpic.nhtsa.dot.gov/api/) (USA) geschickt; übernommen
@@ -372,7 +378,7 @@ Zeit (s)  Motordrehzahl (1/min)  Geschwindigkeit (km/h)  Kühlmitteltemperatur (
   steht „-“ (in der CSV eine leere Zelle), die Abfrage läuft weiter. Meldet der Adapter
   drei Runden lang bei jedem Wert einen Busfehler (z. B. Zündung aus), endet sie mit
   einer Fehlermeldung. Die Bordspannung wird jede zehnte Runde gelesen; unter 11,8 V
-  wird nur noch alle 5 s abgefragt.
+  (nach Gegenprobe mit dem Steuergerät) wird nur noch alle 5 s abgefragt.
 - **Aufzeichnung:** CSV unter `$XDG_DATA_HOME/obd-diag/recordings/`
   (`live-JJJJMMTT-HHMMSS.csv`) oder in der angegebenen Datei, die nicht überschrieben
   wird. Format wie beim Export: UTF-8 mit BOM, `;`, Dezimalkomma; erste Spalte

@@ -12,6 +12,7 @@ htmlcov/
 *.sqlite
 *.db
 *.log
+!tests/fixtures/traces/**/*.log
 .claude/
 mutants/
 docs/_build/

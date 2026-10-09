@@ -20,7 +20,13 @@ Regeln der Dekodierung (``decode_vin``):
   Kalenderjahr); das 30 Jahre ältere Jahr steht dann in ``model_year_alternatives``,
   sofern es nicht vor 1980 liegt (Beginn der Codes) und zum Protokoll passt (unten).
   Außerhalb Nordamerikas ist Stelle 10 nicht überall als Modelljahr genutzt, die
-  Angabe ist dort ein Hinweis, keine Gewissheit.
+  Angabe ist dort ein Hinweis, keine Gewissheit. Bekannt anders belegt ist sie bei
+  Mercedes-Benz (``MODEL_YEAR_NOT_ENCODED``): Stelle 10 ist die Lenkung (``1``
+  Linkslenker), Stelle 11 das Werk; Beispiel WDD 169 007-1J-236589 in Wikipedia
+  „Fahrzeug-Identifizierungsnummer“
+  (https://de.wikipedia.org/wiki/Fahrzeug-Identifizierungsnummer, abgerufen
+  2026-10-09). Am A 180 d (W177, Baujahr nach 2018) ergab sie sonst „2001“. Für diese
+  WMI gibt es kein Modelljahr.
 - Plausibilität über das OBD-Protokoll (``decode_vin(vin, protocol=...)``, nur wenn die
   FIN aus dem Fahrzeug gelesen wurde): Spricht das Fahrzeug ein OBD-II-Protokoll
   (SAE J1850, ISO 9141-2, ISO 14230-4, ISO 15765-4), sind Modelljahre vor 1994
@@ -220,6 +226,10 @@ def _checksum(vin: str) -> bool | None:
     return True if matches else None
 
 
+# WMI, deren Stelle 10 kein Modelljahr ist (Mercedes-Benz, siehe Moduldoku); die
+# nordamerikanischen Mercedes-WMI (z. B. 4JG) folgen 49 CFR 565.15 und fehlen hier.
+MODEL_YEAR_NOT_ENCODED = frozenset({"WDB", "WDC", "WDD", "WDF", "W1K", "W1N", "W1V"})
+
 _FIRST_CODE_YEAR = 1980  # erster Zyklus der Modelljahr-Codes
 _OBD2_EARLIEST = 1994  # OBD-II-Spezifikation (CARB) um 1994, Pflicht ab Modelljahr 1996
 _CAN_EARLIEST = 2000  # CAN (ISO 15765-4) für OBD-II in den USA erst ab Modelljahr 2003
@@ -280,7 +290,9 @@ def decode_vin(vin: str, *, protocol: str | None = None, today: date | None = No
     wmi = vin[:3]
     valid = bool(_VALID.match(vin))
     years = (
-        model_years(vin, today=today, earliest=earliest_plausible_year(protocol)) if valid else ()
+        model_years(vin, today=today, earliest=earliest_plausible_year(protocol))
+        if valid and wmi not in MODEL_YEAR_NOT_ENCODED
+        else ()
     )
     return VinInfo(
         vin=vin,

@@ -8,8 +8,33 @@ from typing import Any, Protocol
 from obd_diag.data.dtc_catalog import DtcInfo
 from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
 from obd_diag.protocol.obd import read_dtcs
+from obd_diag.protocol.pids import PIDS, read_values
 
 LOW_VOLTAGE = 11.8  # Volt; darunter warnen (Motor aus, Zündung an)
+# Steuergerätespannung (PID 42) nur in diesem Bereich als Bordspannung übernehmen
+_ECU_VOLTAGE_RANGE = (5.0, 30.0)
+
+
+def check_low_voltage(elm: Elm327, voltage: float | None) -> float | None:
+    """Bestätigt eine niedrige Adapter-Messung (``ATRV``) mit der Steuergerätespannung.
+
+    Der Adapter misst an Pin 16 der Diagnosebuchse, oft hinter einer Schutzdiode: Am
+    Mercedes A 180 d (W177) zeigte er 11,2 V, das Motorsteuergerät meldete 12,0 V.
+    Liegt ``voltage`` unter ``LOW_VOLTAGE``, wird daher PID 42 gelesen und, wenn
+    plausibel, statt ``voltage`` geliefert (auch wenn er niedriger ist). Sonst, auch
+    bei ``None``, bleibt es bei ``voltage``. Nur nach ausgehandeltem Protokoll
+    aufrufen (sonst liefe die Protokollsuche mit der kurzen Wartezeit).
+    """
+    if voltage is None or voltage >= LOW_VOLTAGE:
+        return voltage
+    try:
+        ecu = read_values(elm, [PIDS["control_voltage"]])["control_voltage"]
+    except ElmError:
+        return voltage
+    low, high = _ECU_VOLTAGE_RANGE
+    if ecu is None or not low <= ecu <= high:
+        return voltage
+    return ecu
 
 
 class DtcKind(StrEnum):
@@ -57,6 +82,7 @@ def scan(elm: Elm327, catalog: DtcLookup | None, lang: str = "de") -> ScanResult
     except (ElmError, ValueError):
         voltage = None  # manche Adapter kennen ATRV nicht; kein Grund abzubrechen
     protocol = elm.protocol()
+    voltage = check_low_voltage(elm, voltage)
     result = ScanResult(adapter=adapter, protocol=protocol.name, voltage=voltage)
     infos: dict[str, DtcInfo | None] = {}
     for kind, mode in _MODES:

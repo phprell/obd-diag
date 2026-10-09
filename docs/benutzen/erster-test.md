@@ -1,7 +1,8 @@
 # Erster Test am Auto
 
-obd-diag ist noch nicht an einem echten Fahrzeug getestet. Der erste Test liest nur
-und schneidet alles mit, damit Ausgabe und Mitschnitt danach geprüft werden können.
+Der erste Test liest nur und schneidet alles mit, damit Ausgabe und Mitschnitt danach
+geprüft werden können. Am 2026-10-09 lief er an einem Mercedes A 180 d (W177); was
+dabei auffiel, steht unten unter „Ergebnis am W177“.
 
 :::{note}
 Ziel des ersten Tests ist ein Mercedes A 180 d (W177) mit dem Adapter FORScan
@@ -75,3 +76,18 @@ gespeichert. Weitere Fälle: {doc}`probleme`.
 Die genormte Diagnose sieht nur abgasrelevante Steuergeräte (Motor, Getriebe).
 Airbag, ABS und Komfortelektronik brauchen herstellerspezifische Diagnose; die ist
 noch nicht eingebaut.
+
+## Ergebnis am W177
+
+Protokoll ISO 15765-4 (CAN 29/500), vier Steuergeräte antworten. Gelesen wurden ein
+gespeicherter Code (U1218, herstellerspezifisch, daher ohne Text im Katalog),
+Readiness (Diesel, nur der Abgassensor offen), Freeze Frame und FIN; Live-Daten liefen
+im Stand. Behoben wurden danach:
+
+- Das erste `ATZ` nach dem Einstecken beantwortete der Adapter mit `?`; es wird jetzt
+  einmal wiederholt.
+- Drei Steuergeräte melden im Freeze Frame `00 00` (kein Freeze Frame), eines U1218;
+  angezeigt wird jetzt der Code, nicht „unbekannt“.
+- Der Adapter maß 11,2 V, das Motorsteuergerät 12,0 V; bei niedrigem `ATRV` zählt
+  jetzt die Steuergerätespannung (PID 42).
+- Stelle 10 der FIN ist bei Mercedes die Lenkung, kein Modelljahr („2001“ war falsch).

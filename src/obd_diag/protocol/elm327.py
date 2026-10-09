@@ -175,8 +175,17 @@ class Elm327:
 
         Liefert die Kennung aus der letzten Zeile der ``ATZ``-Antwort (z. B.
         ``ELM327 v1.5``); davor stehen bei manchen Adaptern Leerzeilen oder Müll.
+
+        Antwortet der Adapter auf ``ATZ`` mit ``?``, wird es einmal wiederholt: Direkt
+        nach dem Einstecken hat ein FORScan-ELMconfig-Adapter (CH340) das erste ``ATZ``
+        so abgelehnt, das zweite beantwortet; vermutlich lag noch ein Störbyte im Puffer
+        des Adapters.
         """
-        lines = self.command("ATZ").splitlines()
+        try:
+            reply = self.command("ATZ")
+        except UnknownCommandError:
+            reply = self.command("ATZ")
+        lines = reply.splitlines()
         for cmd in ("ATE0", "ATL0", "ATS0", "ATH0", "ATSP0"):
             self.command(cmd)
         return lines[-1] if lines else ""

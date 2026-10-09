@@ -74,6 +74,9 @@ _PID00_OTHER = ["NO DATA", "UNABLE TO CONNECT", "7F0100", "4101", "?", "OK", "BU
 _VOLTAGE_OK = ["12.4V", "11.8V", "14.1V"]
 _VOLTAGE_UNREADABLE = ["?", "ZZ", "OK", ""]  # ohne ATRV ist Löschen bewusst erlaubt
 _VOLTAGE_LOW = ["11.7V", "9.0V", "0.0V"]
+# PID 42 (Steuergerätespannung), gelesen nur bei niedrigem ATRV
+_ECU_VOLTAGE_OK = ["41422EDC", "41423138\r41422EDC"]  # 12,0 V; 12,6 V
+_ECU_VOLTAGE_OTHER = ["41422AF8", "41420000", "4142FFFF", "414200", "7F014212", "NO DATA", "?"]
 _CLEAR_ANSWERS = ["44", "7F0478", "7F0422", "7F0411", "NO DATA", "?", "STOPPED", "OK", "4300", ""]
 _GARBAGE = ["NO DATA", "?", "CAN ERROR", "STOPPED", "7F0112", "ZZ", "", "OK", "41", "43"]
 
@@ -84,6 +87,7 @@ def _car(draw: st.DrawFn) -> tuple[dict[str, str], dict[str, list[str]]]:
     responses["010C"] = draw(st.sampled_from(_RPM_ZERO + _RPM_OTHER))
     responses["0100"] = draw(st.sampled_from(_PID00_OK + _PID00_OTHER))
     responses["ATRV"] = draw(st.sampled_from(_VOLTAGE_OK + _VOLTAGE_UNREADABLE + _VOLTAGE_LOW))
+    responses["0142"] = draw(st.sampled_from(_ECU_VOLTAGE_OK + _ECU_VOLTAGE_OTHER))
     responses["04"] = draw(st.sampled_from(_CLEAR_ANSWERS))
     # Übrige Befehle des Ablaufs zufällig kaputt
     others = [*SCAN, *FREEZE]
@@ -135,7 +139,10 @@ def test_clear_with_arbitrary_answers_sends_04_only_when_safe(
     # Wurde gelöscht, müssen alle Vorbedingungen nachweislich erfüllt gewesen sein.
     assert responses["010C"] in _RPM_ZERO, responses["010C"]
     assert responses["0100"] in _PID00_OK, responses["0100"]
-    assert responses["ATRV"] not in _VOLTAGE_LOW, responses["ATRV"]
+    low = responses["ATRV"] in _VOLTAGE_LOW
+    # Niedriges ATRV nur, wenn das Steuergerät plausibel mindestens 11,8 V meldet.
+    assert not low or responses["0142"] in _ECU_VOLTAGE_OK, responses
+    preconditions = ["0100", "ATRV", "0142", "010C"] if low else PRECONDITIONS
     assert _has_clearable_codes(responses)
     assert not backup_broken
     # Die Prüfung der Drehzahl kam vor dem Löschen, danach nur noch Lesendes.
@@ -150,7 +157,7 @@ def test_clear_with_arbitrary_answers_sends_04_only_when_safe(
         [FREEZE[0], *(c[:4] for c in FREEZE)],
     ]
     assert any(
-        sent[index - len(f) - len(PRECONDITIONS) : index] == [*PRECONDITIONS, *f]
+        sent[index - len(f) - len(preconditions) : index] == [*preconditions, *f]
         for f in freeze_variants
     ), sent
     assert all(is_read_only(c) for c in sent[index + 1 :])
@@ -235,7 +242,14 @@ def _uses(name: str, *, attribute_only: bool = False) -> set[str]:
         # Live-Dienst fragt Werte ab.
         ("run_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
         ("prepare_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
-        ("read_values", {"services/live.py:_read_values", "protocol/pids.py:read_value"}),
+        (
+            "read_values",
+            {
+                "services/live.py:_read_values",
+                "services/diagnostics.py:check_low_voltage",  # PID 42 bei niedrigem ATRV
+                "protocol/pids.py:read_value",
+            },
+        ),
         ("read_value", set()),  # nur für Tests; der Live-Dienst fragt je PID einmal
         ("read_supported_pids", {"services/live.py:prepare_live"}),
         # Den Transport eines Elm327 (``elm.transport``) fasst nur Elm327 selbst an.

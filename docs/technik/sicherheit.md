@@ -47,7 +47,8 @@ flowchart TD
 
 - **Sperre:** `CLEAR_ENABLED = False` in `services/clear.py`, bis das Lesen am echten
   Auto geprüft ist. Freigegeben wird nur nach ausdrücklicher Entscheidung.
-- **Vorbedingungen:** `0100` antwortet (Zündung an), Spannung nicht unter 11,8 V,
+- **Vorbedingungen:** `0100` antwortet (Zündung an), Spannung nicht unter 11,8 V
+  (zeigt `ATRV` weniger, entscheidet die Steuergerätespannung PID 42, sofern plausibel),
   Drehzahl jedes Steuergeräts gültig 0. Eine unlesbare Drehzahl ist ein Abbruch.
 - **Sicherung zuerst:** Mode 04 geht erst hinaus, wenn die Sicherung vollständig auf der
   Platte liegt; vorhandene Sicherungen werden nie überschrieben.
