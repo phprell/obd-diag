@@ -33,8 +33,8 @@ Den Exit-Code von `pytest` selbst prüfen, nicht durch `| tail` verdecken.
 
 Die Dokumentation liegt unter `docs/` (Markdown mit MyST, Sphinx, Furo-Theme). Die CI
 baut sie bei jedem PR und Push auf `main` und legt das HTML als Artefakt
-„dokumentation“ am Lauf ab (`.github/workflows/docs.yml`). Nach GitHub Pages
-veröffentlicht wird nur, wenn der Workflow von Hand gestartet wird. Lokal bauen:
+„dokumentation“ am Lauf ab (`.github/workflows/docs.yml`). Jeder Push auf `main`
+veröffentlicht sie unter <https://phprell.github.io/obd-diag/>. Lokal bauen:
 
 ```sh
 uv run --group docs sphinx-build -W docs docs/_build

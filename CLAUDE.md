@@ -1,7 +1,7 @@
 # obd-diag
 
 Linux-OBD-II-Diagnose-Tool für ELM327-kompatible Adapter: Kommandozeile und
-PySide6/QML-Oberfläche, Python 3.12+. Repo: github.com/phprell/obd-diag (privat).
+PySide6/QML-Oberfläche, Python 3.12+. Repo: github.com/phprell/obd-diag (öffentlich seit 2026-10-09).
 
 Entscheidungen: `docs/adr/` (0001 Schichten, 0002 nur lesend/Freigabeliste, 0003
 Live-Daten). Nutzer-Doku: README.md (u. a. „Sicherheit: was das Tool senden kann“,
@@ -47,8 +47,9 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   `command_spec.yaml` bzw. `PIDS`, CLI-Optionen kommen aus `cli.build_parser`. GUI-Bilder:
   `uv run python tools/docs_screenshots.py` (Emulator, offscreen), danach einchecken.
   Byte-Beispiele der Technik-Seiten prüft `tests/unit/test_docs_examples.py`. CI baut sie bei
-  jedem PR (Artefakt „dokumentation“); GitHub Pages nur per manuellem Start von
-  `.github/workflows/docs.yml` (Repo privat, Pages bewusst aus, Stand 2026-10-09).
+  jedem PR (Artefakt „dokumentation“); jeder Push auf main veröffentlicht sie über GitHub
+  Pages (https://phprell.github.io/obd-diag/, `.github/workflows/docs.yml`). Das Repo ist
+  öffentlich: Mitschnitte, Sitzungen und Berichte vom echten Auto nie mit FIN einchecken.
 - Mutationstests: `uv run --with mutmut mutmut run` (Ziele in `[tool.mutmut]`),
   danach `mutants/` löschen. Die Testsuite legt `elm.log` an (gitignored), löschen.
 
