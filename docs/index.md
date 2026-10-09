@@ -84,5 +84,6 @@ entwickeln/regeln
 entwickeln/testen
 entwickeln/entscheidungen
 entwickeln/roadmap
+entwickeln/aenderungen
 api/index
 ```

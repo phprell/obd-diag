@@ -50,6 +50,10 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   jedem PR (Artefakt „dokumentation“); jeder Push auf main veröffentlicht sie über GitHub
   Pages (https://phprell.github.io/obd-diag/, `.github/workflows/docs.yml`). Das Repo ist
   öffentlich: Mitschnitte, Sitzungen und Berichte vom echten Auto nie mit FIN einchecken.
+- Release: Abschnitt `## X.Y.Z – Datum` in `CHANGELOG.md` (auch Doku-Seite
+  „Änderungen“), Version in `pyproject.toml` und `__init__.py`; Tag `vX.Y.Z` auf main
+  (nur nach Absprache) startet `.github/workflows/release.yml` (prüft Versionen, baut
+  Katalog, sdist, Wheel, legt das GitHub-Release mit dem Changelog-Abschnitt an).
 - Mutationstests: `uv run --with mutmut mutmut run` (Ziele in `[tool.mutmut]`),
   danach `mutants/` löschen. Die Testsuite legt `elm.log` an (gitignored), löschen.
 
