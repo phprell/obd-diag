@@ -7,7 +7,7 @@ pytest.importorskip("PySide6.QtCore")
 
 from pytestqt.qtbot import QtBot
 
-from obd_diag.protocol.elm327 import ElmError
+from obd_diag.protocol.elm327 import ElmError, NoConnectionError
 from obd_diag.services.clear import ClearRefused, ClearResult
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
 from obd_diag.services.session import Session
@@ -157,7 +157,8 @@ def test_unknown_voltage() -> None:
             TransportError("/dev/ttyUSB0 lässt sich nicht öffnen (No such file)"),
             "Verbindung fehlgeschlagen: /dev/ttyUSB0 lässt sich nicht öffnen (No such file)",
         ),
-        (ElmError("0100: UNABLE TO CONNECT"), "Der Adapter meldet einen Fehler: 0100: UNABLE"),
+        (NoConnectionError("0100: UNABLE TO CONNECT"), "Kein Steuergerät antwortet. Zündung"),
+        (ElmError("0100: CAN ERROR"), "Der Adapter meldet einen Fehler: 0100: CAN ERROR"),
         (RuntimeError("kaputt"), "Unerwarteter Fehler (RuntimeError): kaputt"),
     ],
 )

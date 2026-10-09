@@ -86,7 +86,8 @@ def test_scan_adapter_error(
     _use_catalog(monkeypatch, None)
     car["0100"] = "SEARCHING...\rUNABLE TO CONNECT"
     assert main(["scan"]) == 1
-    assert capsys.readouterr().err.endswith("Fehler: 0100: UNABLE TO CONNECT\n")
+    err = capsys.readouterr().err
+    assert "Fehler: 0100: UNABLE TO CONNECT\nHinweis: Kein Steuergerät antwortet. Zündung" in err
 
 
 Car = tuple[dict[str, str], list[FakeTransport]]
@@ -404,7 +405,8 @@ def test_diagnose_scan_error(
     broken = dict(CAN_CAR_FULL, **{"0100": "SEARCHING...\rUNABLE TO CONNECT"})
     monkeypatch.setattr(cli, "SerialTransport", lambda port, baud: FakeTransport(broken))
     assert main(["diagnose", "--save"]) == 1
-    assert capsys.readouterr().err.endswith("Fehler: 0100: UNABLE TO CONNECT\n")
+    err = capsys.readouterr().err
+    assert "Fehler: 0100: UNABLE TO CONNECT\nHinweis: Kein Steuergerät antwortet. Zündung" in err
     assert not (tmp_path / "data").exists()
 
 

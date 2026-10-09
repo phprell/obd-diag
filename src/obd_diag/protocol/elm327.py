@@ -87,6 +87,20 @@ class UnknownCommandError(ElmError):
     """``?``: der Adapter kennt den Befehl nicht oder unterstützt ihn nicht."""
 
 
+class NoConnectionError(ElmError):
+    """``UNABLE TO CONNECT``: der Adapter findet kein Steuergerät, mit dem er sprechen kann.
+
+    Laut Datenblatt (ELM327DSJ, „Error Messages and Alerts“) hat er dann alle Protokolle
+    durchprobiert; meist ist die Zündung aus. Am ersten echten Auto (W177) war genau das
+    die Ursache, ``HINT`` sagt dem Nutzer daher, was zu tun ist.
+    """
+
+    HINT = (
+        "Kein Steuergerät antwortet. Zündung einschalten (der Motor darf aus bleiben), "
+        "bei Adaptern mit MS-/HS-CAN-Schalter HS-CAN wählen und erneut versuchen."
+    )
+
+
 @dataclass(frozen=True)
 class ObdProtocol:
     """Fahrzeugprotokoll laut ``ATDPN``/``ATDP``."""
@@ -248,6 +262,10 @@ class Elm327:
             raise NoDataError(f"{cmd}: {text}")
         if text == "?":
             raise UnknownCommandError(f"{cmd}: {text}")
+        for line in lines:
+            # auch "BUS INIT: ...UNABLE TO CONNECT" bei K-Line
+            if line.endswith("UNABLE TO CONNECT"):
+                raise NoConnectionError(f"{cmd}: {text}")
         for line in lines:
             # Fehler auch nach Teildaten (z. B. ``STOPPED``): die Antwort ist unvollständig.
             if line in _ERRORS or line.startswith("BUS INIT:") or _ERROR_LINE.search(line):

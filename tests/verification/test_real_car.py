@@ -10,18 +10,20 @@ gesendete Befehl muss in Reihenfolge und Wortlaut dem Mitschnitt entsprechen.
 Belegt sind hier die Befunde dieses Tests: vier Steuergeräte antworten, von denen nur
 eines einen Freeze Frame hat; der Adapter misst 0,8 V weniger als das Motorsteuergerät;
 das erste ``ATZ`` nach dem Einstecken ergibt ``?``; Stelle 10 der FIN ist bei Mercedes
-kein Modelljahr.
+kein Modelljahr. ``live.log`` (``obd-diag live --record``) enthält keine FIN. Der erste
+Versuch mit Zündung aus endete mit ``UNABLE TO CONNECT``.
 """
 
 from pathlib import Path
 
 import pytest
 
-from obd_diag.protocol.elm327 import Elm327
+from obd_diag.protocol.elm327 import Elm327, NoConnectionError
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind
+from obd_diag.services.live import LiveSample, prepare_live, run_live, select_pids
 from obd_diag.services.readiness import MonitorState
 from obd_diag.services.session import run_diagnosis
-from obd_diag.transport.trace import ReplayTransport
+from obd_diag.transport.trace import ReplayTransport, read_trace
 
 TRACES = Path(__file__).parent.parent / "fixtures" / "traces" / "mercedes_w177"
 
@@ -68,3 +70,60 @@ def test_first_atz_after_plugging_in_is_repeated() -> None:
     elm = Elm327(ReplayTransport.from_file(TRACES / "atz_rejected.log"))
     assert elm.initialize() == "ELM327 v1.5"
     assert elm.voltage() == 11.5
+
+
+def test_live_data_not_throttled_by_low_adapter_voltage() -> None:
+    """``live --record``, 20 s im Stand: vorher Runden nur alle 5 s, weil ATRV 11,2 V
+    zeigte; mit der Spannung des Motorsteuergeräts (12,0 V) jetzt jede Sekunde."""
+    elm = Elm327(ReplayTransport.from_file(TRACES / "live.log"))
+    setup = prepare_live(elm)
+    pids = select_pids(setup, None)
+    # Ansauglufttemperatur (010F) meldet keins der vier Steuergeräte
+    assert [p.key for p in pids] == [
+        "rpm",
+        "speed",
+        "coolant_temp",
+        "engine_load",
+        "control_voltage",
+    ]
+    now = [0.0]
+
+    def sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    samples: list[LiveSample] = []
+    rounds = run_live(
+        elm,
+        pids,
+        on_sample=samples.append,
+        should_stop=lambda: False,
+        max_samples=4,
+        clock=lambda: now[0],
+        sleep=sleep,
+    )
+    assert rounds == 4
+    assert [s.elapsed for s in samples] == pytest.approx([0.0, 1.0, 2.0, 3.0])
+    assert not any(s.throttled for s in samples)
+    assert samples[0].voltage == pytest.approx(11.996)
+    assert samples[0].values == {
+        "rpm": 0.0,
+        "speed": 0,
+        "coolant_temp": 19,
+        "engine_load": 0.0,
+        "control_voltage": pytest.approx(11.996),
+    }
+    assert [s.values["control_voltage"] for s in samples] == pytest.approx(
+        [11.996, 12.001, 12.006, 12.007]
+    )
+
+
+def test_ignition_off_reports_no_connection_with_hint() -> None:
+    """Erster Versuch mit Zündung aus: Protokollsuche endet mit ``UNABLE TO CONNECT``."""
+    entries = read_trace(TRACES / "diagnose.log")
+    first_query = entries.index((">>", b"0100\r"))
+    unable = ("<<", b"SEARCHING...\rUNABLE TO CONNECT\r\r>")
+    replay = ReplayTransport([*entries[: first_query + 1], unable])
+    with pytest.raises(NoConnectionError) as error:
+        run_diagnosis(Elm327(replay), None)
+    assert str(error.value) == "0100: UNABLE TO CONNECT"
+    assert "Zündung einschalten" in NoConnectionError.HINT
