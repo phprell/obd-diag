@@ -1,7 +1,7 @@
 # Testen ohne Auto
 
-Bis zum ersten Test am echten Fahrzeug ist alles ohne Hardware geprüft. Die Tests
-liegen in vier Ordnern:
+Fast alles ist ohne Hardware geprüft; dazu kommt ein Regressionstest aus dem ersten
+Test am echten Auto (unten). Die Tests liegen in vier Ordnern:
 
 | Ordner | Inhalt |
 | --- | --- |
@@ -34,7 +34,24 @@ Drehzahl 0, damit sich der Löschablauf ausprobieren lässt.
 - `tests/samples.py`: `full_session`, `minimal_session`.
 - `tests/fixtures/traces/`: echte Mitschnitte anderer Programme mit Quellenangabe.
 - `ReplayTransport` (`transport/trace.py`) spielt einen eigenen Mitschnitt ohne Adapter
-  ab. Aus dem Mitschnitt des ersten Tests am Auto wird so ein Regressionstest.
+  ab. Jeder gesendete Befehl muss in Reihenfolge und Wortlaut dem Mitschnitt
+  entsprechen.
+
+## Regressionstest vom echten Auto
+
+`tests/verification/test_real_car.py` spielt die Mitschnitte des ersten Tests am
+Mercedes A 180 d (W177) ab (`tests/fixtures/traces/mercedes_w177/`, erklärt unter
+{doc}`../technik/mitschnitt-w177`) und prüft das Ergebnis: vier Steuergeräte, U1218,
+Readiness, Freeze Frame vom richtigen Steuergerät, Spannung per PID 42, erstes `ATZ`
+mit `?`, kein Modelljahr bei Mercedes. Ohne die Korrekturen nach dem Test schlägt er
+fehl.
+
+Ändert sich die Befehlsfolge (etwa eine zusätzliche Abfrage), passt der Mitschnitt
+nicht mehr. Dann die neue Zeile mit einer echten Antwort aus einem Mitschnitt
+derselben Sitzung einfügen und das im Kopf der Datei vermerken, wie bei `0142`.
+Eigene Mitschnitte gehören nur geschwärzt ins Repository: die Seriennummer der FIN
+(Stellen 12 bis 17) im Frame `2:` der Antwort auf `0902` durch `000000` ersetzen
+({doc}`../benutzen/erster-test`).
 
 ## Verifikation ohne Hardware
 

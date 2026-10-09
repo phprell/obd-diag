@@ -82,7 +82,34 @@ noch nicht eingebaut.
 Protokoll ISO 15765-4 (CAN 29/500), vier Steuergeräte antworten. Gelesen wurden ein
 gespeicherter Code (U1218, herstellerspezifisch, daher ohne Text im Katalog),
 Readiness (Diesel, nur der Abgassensor offen), Freeze Frame und FIN; Live-Daten liefen
-im Stand. Behoben wurden danach:
+im Stand. Was jede Zeile des Mitschnitts bedeutet, steht unter
+{doc}`../technik/mitschnitt-w177`.
+
+### Ablauf am 2026-10-09
+
+| Schritt | Ergebnis |
+| --- | --- |
+| `obd-diag ports` | `/dev/ttyUSB0` gefunden, Zugriff über die Gruppe `uucp` klappt |
+| `obd-diag info` | erster Start direkt nach dem Einstecken: Abbruch, weil der Adapter das erste `ATZ` mit `?` ablehnte; zweiter Start: ELM327 v1.5, 11,5 V |
+| `obd-diag diagnose --save --trace` | **fehlgeschlagen:** Protokollsuche endet mit `UNABLE TO CONNECT`, weil die Zündung noch aus war. Abgebrochen, gesendet waren nur AT-Befehle und ein `0100` |
+| Zündung an, `diagnose` erneut | vollständig: CAN 29/500, vier Steuergeräte, U1218, Readiness, Freeze Frame, FIN; 11,2 V laut Adapter |
+| `obd-diag live --duration 20 --record --trace` | vier Runden im Abstand von 5 s (Drosselung wegen 11,2 V), Drehzahl 0, Kühlmittel 19 °C, Steuergerät 12,0 V |
+| Ende | Zündung aus, Adapter abgezogen; nichts gelöscht |
+
+Die Bordspannung laut Adapter fiel in den wenigen Minuten mit Zündung an von 11,5 V
+(`info`) auf 11,2 V (`diagnose`); ein PDF-Bericht kurz davor zeigt 11,0 V. Der Test
+sollte also wirklich kurz bleiben oder mit Ladegerät laufen.
+
+`UNABLE TO CONNECT` ist mit Zündung aus der Normalfall, kein Fehler von Adapter oder
+Tool: Der Adapter selbst antwortet (Dauerplus an Pin 16), die Steuergeräte schlafen.
+obd-diag meldet dann „Kein Steuergerät antwortet. Zündung einschalten (der Motor darf
+aus bleiben), bei Adaptern mit MS-/HS-CAN-Schalter HS-CAN wählen und erneut
+versuchen.“ (seit PR #8). Also Zündung an und neu starten; steht der Schalter schon auf
+HS-CAN, nicht weiter daran probieren.
+
+### Behoben
+
+Behoben wurden danach (PR #7):
 
 - Das erste `ATZ` nach dem Einstecken beantwortete der Adapter mit `?`; es wird jetzt
   einmal wiederholt.
@@ -91,3 +118,62 @@ im Stand. Behoben wurden danach:
 - Der Adapter maß 11,2 V, das Motorsteuergerät 12,0 V; bei niedrigem `ATRV` zählt
   jetzt die Steuergerätespannung (PID 42).
 - Stelle 10 der FIN ist bei Mercedes die Lenkung, kein Modelljahr („2001“ war falsch).
+
+So sieht `obd-diag diagnose` mit diesem Stand für den Mitschnitt des W177 aus
+(abgespielt über `ReplayTransport`, FIN-Seriennummer geschwärzt, ohne gebauten
+Fehlercode-Katalog):
+
+```text
+Fahrzeug:
+  FIN:        WDD1770031J000000
+  Prüfziffer: nicht vorgeschrieben (weicht ab)
+  Hersteller: Mercedes-Benz
+  Land:       Deutschland
+
+Adapter:      ELM327 v1.5
+Protokoll:    ISO 15765-4 (CAN 29/500)
+Bordspannung: 12.0 V
+
+Gespeichert:
+  U1218  (keine Beschreibung im Katalog)
+
+Readiness (Diesel-Motor):
+  Kontrollleuchte (MIL): aus
+  Gemeldete Fehlercodes: 1
+  Verbrennungsaussetzer:    nicht unterstützt
+  Kraftstoffsystem:         abgeschlossen
+  Komponenten:              abgeschlossen
+  NMHC-Katalysator:         abgeschlossen
+  NOx-Nachbehandlung (SCR): abgeschlossen
+  Ladedruck:                abgeschlossen
+  Abgassensor:              nicht abgeschlossen
+  Partikelfilter:           abgeschlossen
+  Abgasrückführung:         abgeschlossen
+  Alle Tests abgeschlossen: nein
+
+Freeze Frame (ausgelöst durch U1218):
+  Motorlast:             0 %
+  Kühlmitteltemperatur:  37 °C
+  Drehzahl:              0 1/min
+  Geschwindigkeit:       0 km/h
+```
+
+Am Auto selbst stand noch „Bordspannung 11.2 V“ mit Warnung, Modelljahr „2001“ und ein
+Freeze Frame ohne auslösenden Code. Der AU-Hinweis unter der Readiness ist hier
+gekürzt.
+
+### Mitschnitte weitergeben
+
+Sitzung, PDF-Bericht und Mitschnitt enthalten die vollständige FIN. Bevor sie in ein
+Ticket, einen Chat oder ins Repository gehen:
+
+- im Mitschnitt die Antwort auf `0902` schwärzen: Bei CAN stehen die Stellen 11 bis 17
+  der FIN als ASCII-Hex im Frame `2:`; dessen letzte sechs Bytes durch `30` (Zeichen
+  `0`) ersetzen, wie in `tests/fixtures/traces/mercedes_w177/diagnose.log`,
+- in der Sitzungsdatei das Feld `vin` (Klartext) ebenso und, falls die Online-Abfrage
+  an war, den Abschnitt `online` leeren,
+- den PDF-Bericht nicht weitergeben, sondern aus der geschwärzten Sitzung neu erzeugen
+  (`obd-diag export`, {doc}`sitzungen`).
+
+Zeitstempel, Port und Adapter-Kennung im Kopf des Mitschnitts sind unkritisch.
+
