@@ -1,8 +1,10 @@
 name: Dokumentation
 
-# Baut die Dokumentation bei jedem PR (Warnungen sind Fehler) und veröffentlicht sie
-# bei jedem Push auf main über GitHub Pages. Voraussetzung: in den Repo-Einstellungen
-# unter Pages als Quelle „GitHub Actions“ gewählt.
+# Baut die Dokumentation bei jedem PR und Push auf main (Warnungen sind Fehler) und
+# legt sie als Artefakt „dokumentation“ ab (HTML, zum Herunterladen am Lauf).
+# Veröffentlicht über GitHub Pages wird nur beim manuellen Start (Actions → Dokumentation
+# → Run workflow): das Repo ist privat, Pages ist dafür nicht eingeschaltet. Voraussetzung
+# fürs Veröffentlichen: Settings → Pages → Source „GitHub Actions“.
 
 on:
   push:
@@ -29,12 +31,17 @@ jobs:
           python-version: "3.12"
       - run: uv sync --locked --group docs
       - run: uv run --group docs sphinx-build -W --keep-going docs docs/_build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dokumentation
+          path: docs/_build
+      - if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: docs/_build
 
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:

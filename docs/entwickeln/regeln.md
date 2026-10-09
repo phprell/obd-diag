@@ -30,9 +30,10 @@ Den Exit-Code von `pytest` selbst prüfen, nicht durch `| tail` verdecken.
 
 ## Dokumentation
 
-Die Dokumentation liegt unter `docs/` (Markdown mit MyST, Sphinx, Furo-Theme) und wird
-bei jedem Push auf `main` nach GitHub Pages veröffentlicht
-(`.github/workflows/docs.yml`). Lokal bauen:
+Die Dokumentation liegt unter `docs/` (Markdown mit MyST, Sphinx, Furo-Theme). Die CI
+baut sie bei jedem PR und Push auf `main` und legt das HTML als Artefakt
+„dokumentation“ am Lauf ab (`.github/workflows/docs.yml`). Nach GitHub Pages
+veröffentlicht wird nur, wenn der Workflow von Hand gestartet wird. Lokal bauen:
 
 ```sh
 uv run --group docs sphinx-build -W docs docs/_build
