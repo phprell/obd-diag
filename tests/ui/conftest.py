@@ -112,12 +112,16 @@ class FakeBackend:
         self.clear_result: ClearResult | None = None
         self.calls: list[tuple[str, str, int]] = []
         self.online_flags: list[bool] = []
+        self.online_code_flags: list[bool] = []
         self.tracing: list[bool] = []
         self.exports: list[tuple[str, Path]] = []
 
-    def diagnose(self, port: str, baud: int, online_vin_lookup: bool) -> Session:
+    def diagnose(
+        self, port: str, baud: int, online_vin_lookup: bool, online_dtc_lookup: bool
+    ) -> Session:
         self.calls.append(("diagnose", port, baud))
         self.online_flags.append(online_vin_lookup)
+        self.online_code_flags.append(online_dtc_lookup)
         if self.diagnose_error is not None:
             raise self.diagnose_error
         return self.session

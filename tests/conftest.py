@@ -35,6 +35,18 @@ def _no_request_gap(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPa
 
 
 @pytest.fixture(autouse=True)
+def _no_online_dtc_downloads(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Kein Test lädt Online-Erklärungen wirklich aus dem Netz; wer sie prüft, setzt
+    ``dtc_online.urlopen`` selbst (``tests/unit/test_dtc_online.py``)."""
+    from obd_diag.services import dtc_online
+
+    def refuse(*args: object, **kwargs: object) -> None:
+        raise AssertionError("Online-Erklärungen in einem Test aus dem Netz geladen")
+
+    monkeypatch.setattr(dtc_online, "urlopen", refuse)
+
+
+@pytest.fixture(autouse=True)
 def _emulator_dtc_count_byte(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Fehlercode-Antworten des ELM327-emulator standardgemäß (siehe emulator_patches)."""
     try:

@@ -12,6 +12,7 @@ from PySide6.QtCore import (
 )
 
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind
+from obd_diag.services.dtc_online import search_url
 
 KIND_LABELS = {
     DtcKind.STORED: "Gespeichert",
@@ -35,9 +36,13 @@ def cost_text(cost: tuple[int, int] | None) -> str:
     return f"ca. {low}–{high} €"  # noqa: RUF001
 
 
-def code_entry(c: DiagnosticCode) -> dict[str, Any]:
-    """Alle Angaben zu einem Code als einfache Werte, wie QML sie lesen kann."""
+def code_entry(c: DiagnosticCode, manufacturer: str | None = None) -> dict[str, Any]:
+    """Alle Angaben zu einem Code als einfache Werte, wie QML sie lesen kann.
+
+    ``manufacturer`` (aus der FIN) fließt nur in den Link für die Websuche ein.
+    """
     info = c.info
+    online = c.online
     return {
         "code": c.code,
         "kind": c.kind.value,
@@ -63,6 +68,12 @@ def code_entry(c: DiagnosticCode) -> dict[str, Any]:
             else ""
         ),
         "costText": cost_text(info.cost_eur if info is not None else None),
+        # ungeprüfte Online-Erklärung (nur nach Opt-in), sonst leer
+        "onlineText": online.text if online is not None else "",
+        "onlineSource": online.source if online is not None else "",
+        "onlineUrl": online.url if online is not None else "",
+        # Websuche im Browser; obd-diag ruft den Link nie selbst ab
+        "searchUrl": search_url(c.code, manufacturer),
     }
 
 
@@ -79,6 +90,10 @@ _ROLE_NAMES = (
     "emissionsRelevant",
     "difficultyLabel",
     "costText",
+    "onlineText",
+    "onlineSource",
+    "onlineUrl",
+    "searchUrl",
 )
 _ROLES = {Qt.ItemDataRole.UserRole + 1 + i: name for i, name in enumerate(_ROLE_NAMES)}
 
@@ -93,11 +108,11 @@ class CodeListModel(QAbstractListModel):
         self._entries: list[dict[str, Any]] = []
         self._codes: list[DiagnosticCode] = []
 
-    def set_codes(self, codes: list[DiagnosticCode]) -> None:
+    def set_codes(self, codes: list[DiagnosticCode], manufacturer: str | None = None) -> None:
         order = list(KIND_LABELS)
         self.beginResetModel()
         self._codes = sorted(codes, key=lambda c: order.index(c.kind))  # stabil
-        self._entries = [code_entry(c) for c in self._codes]
+        self._entries = [code_entry(c, manufacturer) for c in self._codes]
         self.endResetModel()
         self.countChanged.emit()
 

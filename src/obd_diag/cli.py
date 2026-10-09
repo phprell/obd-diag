@@ -26,9 +26,11 @@ from obd_diag.services.diagnostics import (
     DiagnosticCode,
     DtcKind,
     ScanResult,
+    add_online_explanations,
     scan,
     scan_to_dict,
 )
+from obd_diag.services.dtc_online import search_url
 from obd_diag.services.live import (
     DEFAULT_INTERVAL,
     LOW_VOLTAGE_INTERVAL,
@@ -67,13 +69,27 @@ _SECTIONS = (
 )
 
 
-def _print_codes(codes: list[DiagnosticCode]) -> None:
+def _print_codes(
+    codes: list[DiagnosticCode], manufacturer: str | None = None, *, web_search: bool = False
+) -> None:
+    """Code und Titel; mit ``web_search`` (``--online-codes``) zu Codes ohne Katalogtext
+    die Online-Erklärung und einen Link für die Websuche."""
     for c in codes:
-        title = c.info.title if c.info is not None else "(keine Beschreibung im Katalog)"
-        print(f"  {c.code}  {title}")
+        if c.info is not None:
+            print(f"  {c.code}  {c.info.title}")
+            continue
+        print(f"  {c.code}  (keine Beschreibung im Katalog)")
+        if not web_search:
+            continue
+        if c.online is not None:
+            print(f"         Online, ungeprüft: {c.online.text}")
+            print(f"         Quelle: {c.online.source}, {c.online.url}")
+        print(f"         Im Web suchen: {search_url(c.code, manufacturer)}")
 
 
-def _print_scan(result: ScanResult) -> None:
+def _print_scan(
+    result: ScanResult, manufacturer: str | None = None, *, web_search: bool = False
+) -> None:
     voltage = "unbekannt" if result.voltage is None else f"{result.voltage:.1f} V"
     print(f"Adapter:      {result.adapter}")
     print(f"Protokoll:    {result.protocol}")
@@ -89,7 +105,7 @@ def _print_scan(result: ScanResult) -> None:
         if not codes:
             continue
         print(f"{heading}:")
-        _print_codes(codes)
+        _print_codes(codes, manufacturer, web_search=web_search)
 
 
 def _scan_json(result: ScanResult) -> str:
@@ -129,10 +145,12 @@ def _run_scan(args: argparse.Namespace) -> None:
     finally:
         if catalog is not None:
             catalog.close()
+    if args.online_codes:  # ohne FIN: nur genormte Codes
+        result = add_online_explanations(result, None)
     if args.json:
         print(_scan_json(result))
     else:
-        _print_scan(result)
+        _print_scan(result, web_search=args.online_codes)
 
 
 def _run_ports() -> None:
@@ -262,10 +280,12 @@ def _print_freeze_frame(freeze: FreezeFrame | None) -> None:
             print(f"  {label + ':':<22} {freeze.values[key]:g} {unit}")
 
 
-def _print_session(session: Session) -> None:
+def _print_session(session: Session, *, web_search: bool = False) -> None:
     _print_vehicle(session.vehicle)
     print()
-    _print_scan(session.scan)
+    vehicle = session.vehicle
+    manufacturer = vehicle.manufacturer if vehicle is not None else None
+    _print_scan(session.scan, manufacturer, web_search=web_search)
     print()
     _print_readiness(session.readiness)
     print()
@@ -289,7 +309,11 @@ def _run_diagnose(args: argparse.Namespace) -> int:
     try:
         with _transport(args) as transport:
             session = run_diagnosis(
-                Elm327(transport), catalog, args.lang, online_vin_lookup=args.online_vin
+                Elm327(transport),
+                catalog,
+                args.lang,
+                online_vin_lookup=args.online_vin,
+                online_dtc_lookup=args.online_codes,
             )
     finally:
         if catalog is not None:
@@ -297,7 +321,7 @@ def _run_diagnose(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(session_to_dict(session), ensure_ascii=False, indent=2))
     else:
-        _print_session(session)
+        _print_session(session, web_search=args.online_codes)
     # Pfade auf stderr, damit stdout bei --json reines JSON bleibt
     try:
         if args.save:
@@ -524,6 +548,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scan_parser.add_argument("--lang", choices=("de", "en"), default="de")
     scan_parser.add_argument("--json", action="store_true", help="Ergebnis als JSON ausgeben")
+    online_codes_help = (
+        "Codes ohne Katalogtext online nachschlagen (ungeprüfte Kurzbeschreibung, "
+        "englisch); lädt eine Datei der Quelle, sendet weder Code noch FIN"
+    )
+    scan_parser.add_argument("--online-codes", action="store_true", help=online_codes_help)
 
     clear_parser = sub.add_parser(
         "clear",
@@ -544,6 +573,7 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose_parser.add_argument("--lang", choices=("de", "en"), default="de")
     diagnose_parser.add_argument("--json", action="store_true", help="Sitzung als JSON ausgeben")
     diagnose_parser.add_argument("--online-vin", action="store_true", help=online_help)
+    diagnose_parser.add_argument("--online-codes", action="store_true", help=online_codes_help)
     diagnose_parser.add_argument(
         "--save", action="store_true", help="Sitzung unter $XDG_DATA_HOME/obd-diag/sessions sichern"
     )

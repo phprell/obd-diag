@@ -18,9 +18,11 @@ from obd_diag.services.diagnostics import (
     DtcKind,
     DtcLookup,
     ScanResult,
+    add_online_explanations,
     scan,
     scan_to_dict,
 )
+from obd_diag.services.dtc_online import OnlineExplanation
 from obd_diag.services.readiness import Monitor, MonitorState, ReadinessStatus, read_readiness
 from obd_diag.services.storage import data_dir, write_new_json
 from obd_diag.services.vehicle import VinInfo, decode_vin, lookup_vpic, read_vin
@@ -43,6 +45,7 @@ def run_diagnosis(
     lang: str = "de",
     *,
     online_vin_lookup: bool = False,
+    online_dtc_lookup: bool = False,
 ) -> Session:
     """Scan, Readiness, Freeze Frame und FIN in einem Durchgang; nur lesend.
 
@@ -55,7 +58,9 @@ def run_diagnosis(
     (``TransportError``) brechen ab. Der Freeze Frame wird immer gelesen, bleibt aber
     ``None``, wenn er weder einen auslösenden Code noch Werte enthält (ohne
     gespeicherten Code ist er leer). Die FIN geht nur mit ``online_vin_lookup`` an
-    NHTSA vPIC.
+    NHTSA vPIC. Mit ``online_dtc_lookup`` bekommen Codes ohne Katalogtext eine
+    Online-Erklärung (``services/dtc_online``; die FIN verlässt dabei nie den Rechner,
+    nur der Hersteller entscheidet, welche Datei geladen wird).
     """
     created = datetime.now().astimezone()
     result = scan(elm, catalog, lang)
@@ -67,6 +72,9 @@ def run_diagnosis(
     vehicle = None if vin is None else decode_vin(vin, protocol=result.protocol)
     if vehicle is not None and online_vin_lookup and vehicle.valid:
         vehicle = dataclasses.replace(vehicle, online=lookup_vpic(vehicle.vin))
+    if online_dtc_lookup:
+        manufacturer = vehicle.manufacturer if vehicle is not None and vehicle.valid else None
+        result = add_online_explanations(result, manufacturer)
     return Session(
         created=created, scan=result, readiness=readiness, freeze_frame=freeze, vehicle=vehicle
     )
@@ -130,6 +138,17 @@ def _dtc_info(data: dict[str, Any]) -> DtcInfo:
     )
 
 
+def _online(data: dict[str, Any] | None) -> OnlineExplanation | None:
+    if data is None:  # fehlt auch in Sitzungen älterer Versionen
+        return None
+    return OnlineExplanation(
+        text=str(data["text"]),
+        source=str(data["source"]),
+        url=str(data["url"]),
+        manufacturer=data.get("manufacturer"),
+    )
+
+
 def _scan(data: dict[str, Any]) -> ScanResult:
     voltage = data.get("voltage")
     return ScanResult(
@@ -141,6 +160,7 @@ def _scan(data: dict[str, Any]) -> ScanResult:
                 code=c["code"],
                 kind=DtcKind(c["kind"]),
                 info=None if c.get("info") is None else _dtc_info(c["info"]),
+                online=_online(c.get("online")),
             )
             for c in data.get("codes", ())
         ],

@@ -136,6 +136,13 @@ ApplicationWindow {
                 checked: window.vm.onlineVinLookup
                 onToggled: window.vm.onlineVinLookup = checked
             }
+            MenuItem {
+                objectName: "onlineCodesMenuItem"
+                text: "Fehlercodes online erklären"
+                checkable: true
+                checked: window.vm.onlineCodeLookup
+                onToggled: window.vm.onlineCodeLookup = checked
+            }
             MenuSeparator {}
             MenuItem {
                 objectName: "traceMenuItem"

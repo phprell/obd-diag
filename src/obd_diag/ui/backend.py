@@ -85,13 +85,13 @@ def _no_live(*args: Any, **kwargs: Any) -> LiveResult:
 class Backend:
     """Die Aktionen, die das View-Model braucht; Tests setzen eigene Funktionen ein.
 
-    ``diagnose`` (Port, Baudrate, FIN online nachschlagen) und ``clear`` blockieren und
-    laufen im Worker-Thread, ebenso ``export_pdf``/``export_csv`` (ReportLab braucht
-    etwas). ``list_ports``, ``catalog_available``, ``save_session`` und
+    ``diagnose`` (Port, Baudrate, FIN bzw. Fehlercodes online nachschlagen) und
+    ``clear`` blockieren und laufen im Worker-Thread, ebenso ``export_pdf``/``export_csv``
+    (ReportLab braucht etwas). ``list_ports``, ``catalog_available``, ``save_session`` und
     ``load_session`` sind schnell und laufen im GUI-Thread.
     """
 
-    diagnose: Callable[[str, int, bool], Session]
+    diagnose: Callable[[str, int, bool, bool], Session]
     clear: Callable[[str, int], ClearResult]
     list_ports: Callable[[], list[PortInfo]]
     catalog_available: Callable[[], bool]
@@ -110,14 +110,23 @@ def _trace_path(trace: bool) -> Path | None:
 
 
 def diagnose_port(
-    port: str, baud: int, online_vin_lookup: bool = False, lang: str = "de", trace: bool = False
+    port: str,
+    baud: int,
+    online_vin_lookup: bool = False,
+    online_dtc_lookup: bool = False,
+    lang: str = "de",
+    trace: bool = False,
 ) -> Session:
     """Scan, Readiness, Freeze Frame und FIN; nur lesend."""
     catalog = DtcCatalog.default()
     try:
         with open_serial(port, baud, _trace_path(trace)) as transport:
             return run_diagnosis(
-                Elm327(transport), catalog, lang, online_vin_lookup=online_vin_lookup
+                Elm327(transport),
+                catalog,
+                lang,
+                online_vin_lookup=online_vin_lookup,
+                online_dtc_lookup=online_dtc_lookup,
             )
     finally:
         if catalog is not None:
@@ -193,8 +202,8 @@ def serial_backend() -> Backend:
         return live_port(*args, **kwargs, trace=tracing["enabled"])
 
     return Backend(
-        diagnose=lambda port, baud, online: diagnose_port(
-            port, baud, online, trace=tracing["enabled"]
+        diagnose=lambda port, baud, online_vin, online_codes: diagnose_port(
+            port, baud, online_vin, online_codes, trace=tracing["enabled"]
         ),
         clear=lambda port, baud: clear_port(port, baud, trace=tracing["enabled"]),
         list_ports=list_ports,

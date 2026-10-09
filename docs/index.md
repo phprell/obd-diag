@@ -19,6 +19,7 @@ python-OBD geprüft ({doc}`entwickeln/testen`).
 | Funktion | OBD-Dienst | Seite |
 | --- | --- | --- |
 | Fehlercodes lesen (gespeichert, ausstehend, permanent) mit Klartext | Mode 03, 07, 0A | {doc}`benutzen/fehlercodes` |
+| Codes ohne Katalogtext online erklären (optional, ungeprüft) | – | {doc}`benutzen/fehlercodes-online` |
 | Readiness (Monitore, Motorkontrollleuchte) | Mode 01 PID 01 | {doc}`benutzen/oberflaeche` |
 | Freeze Frame zum auslösenden Fehlercode | Mode 02 | {doc}`technik/dienste` |
 | FIN lesen und offline dekodieren | Mode 09 PID 02 | {doc}`technik/fin` |
@@ -51,6 +52,7 @@ benutzen/erster-test
 benutzen/oberflaeche
 benutzen/cli
 benutzen/fehlercodes
+benutzen/fehlercodes-online
 benutzen/live-daten
 benutzen/sitzungen
 benutzen/probleme

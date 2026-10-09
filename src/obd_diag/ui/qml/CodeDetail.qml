@@ -10,6 +10,7 @@ Rectangle {
     readonly property var entry: vm.selected
     readonly property bool hasEntry: entry.code !== undefined
     readonly property bool hasInfo: hasEntry && entry.hasInfo
+    readonly property bool hasOnline: hasEntry && (entry.onlineText ?? "") !== ""
 
     color: Theme.background
 
@@ -82,10 +83,44 @@ Rectangle {
                         kind: "info"
                         text: !pane.hasInfo
                               ? "Für diesen Code gibt es keinen Eintrag im Offline-Katalog. "
-                                + "Herstellerspezifische Codes (z. B. P1xxx, U3xxx) sind dort oft "
+                                + "Herstellerspezifische Codes (z. B. P1xxx, U1xxx) sind dort oft "
                                 + "nicht enthalten; die Bedeutung steht in den Unterlagen des "
                                 + "Herstellers."
                               : ""
+                    }
+
+                    // Ungeprüfte Online-Erklärung (nur nach Opt-in) und Websuche
+                    SectionTitle {
+                        visible: pane.hasOnline
+                        text: "Online-Erklärung (ungeprüft)"
+                        Layout.topMargin: 8
+                    }
+                    Label {
+                        objectName: "detailOnline"
+                        Layout.fillWidth: true
+                        visible: pane.hasOnline
+                        text: pane.entry.onlineText ?? ""
+                        wrapMode: Text.Wrap
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        visible: pane.hasOnline
+                        text: "Englisch, aus einer frei verfügbaren Sammlung ohne belegte "
+                              + "Herkunft. Quelle: <a href=\"" + (pane.entry.onlineUrl ?? "")
+                              + "\">" + (pane.entry.onlineSource ?? "") + "</a>"
+                        textFormat: Text.StyledText
+                        color: Theme.muted
+                        font.pixelSize: 12
+                        wrapMode: Text.Wrap
+                        onLinkActivated: link => Qt.openUrlExternally(link)
+                    }
+                    Button {
+                        objectName: "searchWebButton"
+                        visible: pane.hasEntry && !pane.hasInfo
+                        text: "Im Web suchen"
+                        ToolTip.visible: hovered
+                        ToolTip.text: "Öffnet eine Websuche nach dem Code im Browser"
+                        onClicked: Qt.openUrlExternally(pane.entry.searchUrl)
                     }
 
                     Label {

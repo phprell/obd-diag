@@ -28,7 +28,9 @@ folgen dem hellen oder dunklen Design dieser Website.
 
 Links die Codes, gruppiert nach gespeichert, ausstehend und permanent; rechts die
 Erklärung des gewählten Codes mit Ursachen und ihrer Wahrscheinlichkeit, Symptomen und
-Kostenrahmen aus dem Offline-Katalog ({doc}`fehlercodes`).
+Kostenrahmen aus dem Offline-Katalog ({doc}`fehlercodes`). Fehlt ein Code im Katalog,
+öffnet „Im Web suchen“ eine Websuche im Browser; mit „Fehlercodes online erklären“ steht
+dort zusätzlich eine ungeprüfte Kurzerklärung ({doc}`fehlercodes-online`).
 
 ## Readiness
 
@@ -108,6 +110,7 @@ denn am Adapter läuft immer nur eine Aktion ({doc}`live-daten`).
 | Sitzung öffnen … | Strg+O | gespeicherte Sitzung nur ansehen; Löschen geht dann nicht |
 | Bericht als PDF … | Strg+P | PDF-Bericht im Hintergrund schreiben |
 | CSV exportieren … | – | eine Zeile pro Fehlercode |
+| Optionen → Fehlercodes online erklären | – | Codes ohne Katalogtext bekommen eine ungeprüfte Kurzerklärung ({doc}`fehlercodes-online`) |
 | Optionen → Adapter-Mitschnitt aufzeichnen | – | jede Aktion schreibt einen Mitschnitt ({doc}`sitzungen`) |
 | Optionen → Design | – | wie das System, hell oder dunkel |
 | Fehlercodes löschen … | – | derzeit gesperrt (grau, der Tooltip nennt den Grund) |

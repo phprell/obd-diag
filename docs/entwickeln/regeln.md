@@ -24,7 +24,8 @@ Den Exit-Code von `pytest` selbst prüfen, nicht durch `| tail` verdecken.
 - **Standardtreue:** Parser halten sich an SAE J1979, ISO 15765 und das
   ELM327-Datenblatt. Abweichungen des Emulators werden in den Tests korrigiert, nicht im
   Produktcode.
-- **Offline:** Fehlercode-Texte aus SQLite; online nur NHTSA vPIC nach Opt-in.
+- **Offline:** Fehlercode-Texte aus SQLite. Online nur nach Opt-in: NHTSA vPIC (FIN)
+  und Kurzerklärungen für Codes ohne Katalogtext ({doc}`../adr/0004-online-erklaerungen`).
 - **Sprache:** Deutsch in Oberfläche, Doku, Kommentaren und Commit-Messages. ruff meldet
   Gedankenstriche in Python-Strings; dort `:` oder `-` nehmen.
 

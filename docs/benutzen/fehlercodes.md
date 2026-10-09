@@ -16,7 +16,9 @@ Bordspannung (Warnung unter 11,8 V) und liest drei Arten von Fehlercodes:
 | permanent | Mode 0A | löscht nur das Steuergerät selbst, wenn es den Fehler in Fahrzyklen als behoben sieht |
 
 Zu jedem Code kommt der Klartext aus dem Offline-Katalog: Titel, Erklärung, mögliche
-Ursachen mit Wahrscheinlichkeit, Symptome und ein Kostenrahmen. Wie ein Code aus zwei
+Ursachen mit Wahrscheinlichkeit, Symptome und ein Kostenrahmen. Für Codes ohne
+Katalogtext gibt es auf Wunsch eine kurze, ungeprüfte Online-Erklärung
+({doc}`fehlercodes-online`). Wie ein Code aus zwei
 Bytes entsteht, steht unter {doc}`../technik/dienste`.
 
 Antwortet ein Steuergerät mit „Mode nicht unterstützt“ (`7F 0A 11`), hat es keine Codes

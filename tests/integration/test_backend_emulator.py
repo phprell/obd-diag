@@ -145,13 +145,13 @@ def test_without_catalog(emulator: Any, monkeypatch: pytest.MonkeyPatch, tmp_pat
 
 def test_serial_backend_passes_tracing(emulator: Any, data_home: Path) -> None:
     backend = backend_module.serial_backend()
-    backend.diagnose(emulator.port_name, 38400, False)
+    backend.diagnose(emulator.port_name, 38400, False, False)
     assert not (data_home / "traces").exists()
     backend.set_tracing(True)
-    backend.diagnose(emulator.port_name, 38400, False)
+    backend.diagnose(emulator.port_name, 38400, False, False)
     emulator.answer["RPM"] = rpm_zero(obd_message)
     backend.clear(emulator.port_name, 38400)
     assert len(list((data_home / "traces").glob("trace-*.log"))) == 2
     backend.set_tracing(False)
-    backend.diagnose(emulator.port_name, 38400, False)
+    backend.diagnose(emulator.port_name, 38400, False, False)
     assert len(list((data_home / "traces").glob("trace-*.log"))) == 2

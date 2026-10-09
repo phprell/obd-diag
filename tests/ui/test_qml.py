@@ -250,3 +250,24 @@ def test_export_dialog_suggests_name_and_writes_pdf(
     assert (tmp_path / name).read_bytes().startswith(b"%PDF")
     assert ui.prop("noticeBanner", "text") == f"PDF-Bericht gespeichert: {tmp_path / name}"
     assert ui.warnings == []
+
+
+def test_detail_shows_online_explanation_and_search(
+    qtbot: QtBot, ui: Ui, fake_backend: FakeBackend
+) -> None:
+    from tests.samples import with_online
+
+    fake_backend.session = with_online(full_session())
+    ui.vm.connectAndScan("/dev/ttyUSB0", 38400)
+    qtbot.waitUntil(lambda: ui.prop("codeList", "count") == 5)
+    assert ui.prop("searchWebButton", "visible") is False  # Code mit Katalogtext
+    assert ui.prop("detailOnline", "visible") is False
+    ui.vm.setProperty("selectedIndex", 3)  # gespeichert (2), dann ausstehend: P0133, P1234
+    qtbot.waitUntil(lambda: ui.prop("detailCode", "text") == "P1234")
+    assert ui.prop("detailOnline", "visible") is True
+    assert ui.prop("detailOnline", "text") == "Camshaft Position Actuator Circuit"
+    assert ui.prop("searchWebButton", "visible") is True
+    ui.find("onlineCodesMenuItem").setProperty("checked", True)
+    QMetaObject.invokeMethod(ui.find("onlineCodesMenuItem"), "toggled")
+    assert ui.vm.property("onlineCodeLookup") is True
+    assert ui.warnings == []

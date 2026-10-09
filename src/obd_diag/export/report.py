@@ -611,6 +611,14 @@ class _Builder:
         elif info is not None:
             body += self._details(info)
         else:
+            if code.online is not None and earlier is None:
+                body.append(
+                    self._p(
+                        code.online.text,
+                        markup=f"<b>{escape('Online-Erklärung (ungeprüft):')}</b> ",
+                    )
+                )
+                body.append(self._p(f"Quelle: {code.online.source}, {code.online.url}", "note"))
             body.append(
                 self._p(
                     "Vermutlich herstellerspezifischer Code; Bedeutung in den "

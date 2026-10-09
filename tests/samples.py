@@ -5,11 +5,13 @@ Katalogtexte stammen aus OBDex (CC0) und sind hier eingefroren, damit die Tests 
 gebauten Katalog laufen; mit ``catalog`` werden sie stattdessen nachgeschlagen.
 """
 
+import dataclasses
 from datetime import UTC, datetime, timedelta, timezone
 
 from obd_diag.data.dtc_catalog import Cause, DtcInfo
 from obd_diag.protocol.obd import FreezeFrame
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, DtcLookup, ScanResult
+from obd_diag.services.dtc_online import OnlineExplanation
 from obd_diag.services.readiness import Monitor, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session
 from obd_diag.services.vehicle import VinInfo
@@ -146,3 +148,20 @@ def minimal_session() -> Session:
         created=datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC),
         scan=ScanResult(adapter="ELM327 v2.1", protocol="ISO 9141-2", voltage=None),
     )
+
+
+ONLINE_P1234 = OnlineExplanation(
+    text="Camshaft Position Actuator Circuit",
+    source="Wal33D/dtc-database (MIT), volkswagen_codes.txt",
+    url="https://github.com/Wal33D/dtc-database/blob/abc/data/source-data/volkswagen_codes.txt#L7",
+    manufacturer="Volkswagen",
+)
+
+
+def with_online(session: Session) -> Session:
+    """``session`` mit Online-Erklärung zu P1234 (wie nach ``--online-codes``)."""
+    codes = [
+        dataclasses.replace(c, online=ONLINE_P1234) if c.code == "P1234" else c
+        for c in session.scan.codes
+    ]
+    return dataclasses.replace(session, scan=dataclasses.replace(session.scan, codes=codes))

@@ -183,3 +183,49 @@ def test_missing_parts_are_logged(caplog: pytest.LogCaptureFixture) -> None:
         "FIN nicht lesbar",
     ]
     assert all(m.endswith("CAN ERROR") for m in messages), messages
+
+
+def test_no_online_codes_without_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    from obd_diag.services import diagnostics
+
+    def refuse(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("Fehlercodes ohne Zustimmung online nachgeschlagen")
+
+    monkeypatch.setattr(diagnostics, "lookup_online", refuse)
+    session, _ = _run(FULL_CAR)
+    assert all(c.online is None for c in session.scan.codes)
+
+
+def test_online_codes_with_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    from obd_diag.services import diagnostics
+    from obd_diag.services.dtc_online import OnlineExplanation
+
+    explanation = OnlineExplanation("Misfire", "Quelle", "https://example.invalid/#L1")
+    calls: list[tuple[list[str], str | None]] = []
+
+    def fake_lookup(codes: list[str], manufacturer: str | None) -> dict[str, Any]:
+        calls.append((codes, manufacturer))
+        return {"P0300": explanation}
+
+    monkeypatch.setattr(diagnostics, "lookup_online", fake_lookup)
+    session, _ = _run(FULL_CAR, online_dtc_lookup=True)
+    # P0133 hat Katalogtext und wird nicht nachgeschlagen; FIN nur als Hersteller
+    assert calls == [(["P0171", "P0300"], "Volkswagen")]
+    online = {c.code: c.online for c in session.scan.codes}
+    assert online["P0300"] == explanation
+    assert online["P0133"] is None and online["P0171"] is None
+    assert session_from_dict(json.loads(json.dumps(session_to_dict(session)))) == session
+
+
+def test_online_codes_without_vin_have_no_manufacturer(monkeypatch: pytest.MonkeyPatch) -> None:
+    from obd_diag.services import diagnostics
+
+    calls: list[str | None] = []
+
+    def fake_lookup(codes: list[str], manufacturer: str | None) -> dict[str, Any]:
+        calls.append(manufacturer)
+        return {}
+
+    monkeypatch.setattr(diagnostics, "lookup_online", fake_lookup)
+    _run({**FULL_CAR, "0902": "NO DATA"}, online_dtc_lookup=True)
+    assert calls == [None]

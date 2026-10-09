@@ -9,6 +9,7 @@
 | ISO 14229-1 | UDS, negative Antworten (`7F`, Gründe `11`, `12`, `21`, `22`, `78`) | Ablehnungen |
 | ISO 3779, ISO 3780, 49 CFR 565 | FIN, WMI, Prüfziffer, Modelljahr | {doc}`fin` |
 | OBDex | [foerbsnavi/OBDex](https://github.com/foerbsnavi/OBDex), Daten CC0-1.0 | Klartexte der Fehlercodes |
+| dtc-database | [Wal33D/dtc-database](https://github.com/Wal33D/dtc-database), MIT, Commit `04c43d7`; Herkunft der Texte nicht belegt | optionale, ungeprüfte Online-Erklärungen ({doc}`../benutzen/fehlercodes-online`) |
 | python-OBD | [brendan-w/python-OBD](https://github.com/brendan-w/python-OBD), GPL-2.0, nur in Tests | Vergleich der DTC- und PID-Dekodierung |
 | Mitschnitte | Nutzer-Logs aus python-OBD, ELMduino, AndrOBD, Quellen je Datei in `tests/fixtures/traces/` | Regressionstests ohne Hardware |
 

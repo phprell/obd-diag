@@ -77,7 +77,7 @@ def test_scan_json(
     assert data["low_voltage"] is False
     assert data["codes"][0]["kind"] == "stored"
     assert data["codes"][0]["info"]["title"] == "Lambdasonde reagiert zu langsam"
-    assert data["codes"][1] == {"code": "P0300", "kind": "stored", "info": None}
+    assert data["codes"][1] == {"code": "P0300", "kind": "stored", "info": None, "online": None}
 
 
 def test_scan_adapter_error(
@@ -496,3 +496,76 @@ def test_vin_not_supported(
     monkeypatch.setattr(cli, "SerialTransport", lambda port, baud: FakeTransport(old))
     assert main(["vin"]) == 1
     assert "keine FIN" in capsys.readouterr().err
+
+
+def test_scan_online_codes(
+    car: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from obd_diag.services import dtc_online
+
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+    urls: list[str] = []
+
+    def fake_urlopen(url: str, timeout: float) -> io.BytesIO:
+        urls.append(url)
+        return io.BytesIO(b"P0300 - Random/Multiple Cylinder Misfire Detected\n")
+
+    monkeypatch.setattr(dtc_online, "urlopen", fake_urlopen)
+    _use_catalog(monkeypatch, FakeCatalog({"P0133": "Lambdasonde reagiert zu langsam"}))
+    assert main(["scan", "--online-codes"]) == 0
+    out = capsys.readouterr().out
+    assert [u.rsplit("/", 1)[1] for u in urls] == ["p_codes.txt"]  # ohne FIN kein Hersteller
+    assert (
+        "  P0300  (keine Beschreibung im Katalog)\n"
+        "         Online, ungeprüft: Random/Multiple Cylinder Misfire Detected\n"
+        "         Quelle: Wal33D/dtc-database (MIT), p_codes.txt, https://github.com/" in out
+    )
+    assert "         Im Web suchen: https://duckduckgo.com/?q=OBD+P0300\n" in out
+    assert "P0133  Lambdasonde reagiert zu langsam\n  P0300" in out  # Katalogtext ohne Link
+
+
+def test_scan_online_codes_without_network(
+    car: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from urllib.error import URLError
+
+    from obd_diag.services import dtc_online
+
+    def offline(url: str, timeout: float) -> None:
+        raise URLError("kein Netz")
+
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+    monkeypatch.setattr(dtc_online, "urlopen", offline)
+    _use_catalog(monkeypatch, None)
+    assert main(["scan", "--online-codes", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [c["online"] for c in data["codes"]] == [None] * len(data["codes"])
+
+
+def test_diagnose_online_codes_uses_manufacturer(
+    full_car: list[FakeTransport],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from obd_diag.services import dtc_online
+
+    urls: list[str] = []
+
+    def fake_urlopen(url: str, timeout: float) -> io.BytesIO:
+        urls.append(url)
+        return io.BytesIO(b"P0171 - System Too Lean Bank 1\n")
+
+    monkeypatch.setattr(dtc_online, "urlopen", fake_urlopen)
+    assert main(["diagnose", "--online-codes"]) == 0
+    out = capsys.readouterr().out
+    # FIN-Hersteller Volkswagen: erst dessen Datei, dann die allgemeine; FIN nie in der URL
+    assert [u.rsplit("/", 1)[1] for u in urls] == ["volkswagen_codes.txt", "p_codes.txt"]
+    assert not any("WVWZZZ" in u for u in urls)
+    assert "Online, ungeprüft: System Too Lean Bank 1" in out
+    assert "Im Web suchen: https://duckduckgo.com/?q=P0300+Volkswagen" in out
