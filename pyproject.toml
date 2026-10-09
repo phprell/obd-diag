@@ -76,6 +76,7 @@ testpaths = ["tests"]
 markers = [
     "integration: braucht den ELM327-Emulator",
     "clear_disabled: Löschen bleibt wie ausgeliefert gesperrt (tests/conftest.py)",
+    "request_gap: echte Mindestpause zwischen Anfragen (MIN_REQUEST_GAP); sonst in Tests 0 (tests/conftest.py)",
     "foreign_commands: spielt Mitschnitte anderer Programme nach; Befehle nicht gegen command_spec.yaml geprüft (tests/conftest.py)",
 ]
 # GUI-Tests (tests/ui) setzen QT_QPA_PLATFORM=offscreen selbst, siehe tests/ui/conftest.py

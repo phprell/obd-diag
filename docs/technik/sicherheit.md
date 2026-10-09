@@ -19,6 +19,20 @@ Kleinschreibung, Leerzeichen oder ein angehängter zweiter Befehl. Die Ausnahme 
 bewusst kein `ElmError`, damit sie kein Aufrufer als „Angabe nicht verfügbar“
 abfängt. Jeder Eintrag ist in der {doc}`befehle` mit Datenblatt-Seite belegt.
 
+## Tempo
+
+Es ist immer nur eine Anfrage unterwegs: `Elm327.command` sendet und liest dann bis zum
+Prompt `>`, erst danach kann die nächste hinaus. Meldet ein Steuergerät `7F xx 78`
+(Antwort folgt), wird ohne erneutes Senden weitergelesen. Dahinter steht eine harte
+Mindestpause: zwischen dem Ende einer Antwort und der nächsten Anfrage ans Fahrzeug
+(alles außer `AT…`) liegen mindestens `MIN_REQUEST_GAP` = 50 ms, also höchstens 20
+Anfragen je Sekunde, auch nach Fehlern und Timeouts und auch, wenn ein Adapter den
+Prompt zu früh schickt. Normgerecht wäre auch keine Pause nötig: nach ISO 15765-4 darf
+die nächste Anfrage sofort folgen, bei K-Line hält der ELM327 die Mindestpause P3
+selbst ein. Live-Daten fragen zusätzlich höchstens alle 0,1 s eine Runde ab, unter
+11,8 V nur alle 5 s. Nach einem Verbindungsfehler oder einer ausbleibenden Antwort
+bricht der Ablauf ab und sendet nichts mehr.
+
 ## Löschen
 
 ```{mermaid}
@@ -51,6 +65,7 @@ flowchart TD
 | Live-Daten mit beliebigen Antworten: nur `01xx` und `ATRV`, nie `04` | `tests/unit/test_live_safety.py` |
 | Aufrufgraph (AST): nur vorgesehene Stellen erreichen `allow_clear`, `clear_dtcs`, `clear_codes`, `.transport` und pyserial; keine Sockets, kein `os.write`, kein `eval` | `tests/unit/test_write_safety.py` |
 | ausgelieferte Sperre wirkt in CLI und Oberfläche | `tests/unit/test_clear_disabled.py` |
+| nie eine Anfrage vor der vorigen Antwort, mindestens 50 ms zwischen Anfragen ans Fahrzeug, auch nach Fehlern, für eine ganze Diagnose und beliebige Befehlsfolgen | `tests/unit/test_request_gap.py` |
 | Leitungsformat: Großbuchstaben, Ziffern, genau ein CR, auch über den echten seriellen Transport | `FakeTransport` und Fixture in `tests/conftest.py` |
 
 Mutationstests auf `services/clear.py` erkennen alle Mutanten; in `elm327.py` und

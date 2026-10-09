@@ -24,6 +24,17 @@ def _clear_enabled(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPat
 
 
 @pytest.fixture(autouse=True)
+def _no_request_gap(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Die Mindestpause zwischen zwei Anfragen ans Fahrzeug (``MIN_REQUEST_GAP``) kostete
+    bei rund 1600 Tests Minuten. Sie wird in ``tests/unit/test_request_gap.py`` geprüft;
+    Tests mit ``@pytest.mark.request_gap`` sehen den ausgelieferten Wert."""
+    from obd_diag.protocol import elm327
+
+    if request.node.get_closest_marker("request_gap") is None:
+        monkeypatch.setattr(elm327, "MIN_REQUEST_GAP", 0.0)
+
+
+@pytest.fixture(autouse=True)
 def _emulator_dtc_count_byte(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Fehlercode-Antworten des ELM327-emulator standardgemäß (siehe emulator_patches)."""
     try:
