@@ -1,0 +1,55 @@
+name: Dokumentation
+
+# Baut die Dokumentation bei jedem PR und Push auf main (Warnungen sind Fehler) und
+# legt sie als Artefakt „dokumentation“ ab (HTML, zum Herunterladen am Lauf).
+# Veröffentlicht über GitHub Pages wird nur beim manuellen Start (Actions → Dokumentation
+# → Run workflow): das Repo ist privat, Pages ist dafür nicht eingeschaltet. Voraussetzung
+# fürs Veröffentlichen: Settings → Pages → Source „GitHub Actions“.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # PySide6 für die API-Referenz der Oberfläche (Import der Module)
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked --group docs
+      - run: uv run --group docs sphinx-build -W --keep-going docs docs/_build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dokumentation
+          path: docs/_build
+      - if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

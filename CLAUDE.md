@@ -40,6 +40,13 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
 - `uv run obd-diag {info,scan,diagnose,vin,clear,live,ports,export} --port … [--trace]`
   (`live --list`, `--pids rpm,speed`, `--interval`, `--duration`, `--record [DATEI.csv]`)
 - `uv run obd-diag-gui`
+- Doku (Sphinx, MyST, Furo; `docs/`): `uv run --group docs sphinx-build -W docs docs/_build`.
+  Befehls- und PID-Tabellen erzeugt `tools/docs_tables.py` beim Bauen aus
+  `command_spec.yaml` bzw. `PIDS`, CLI-Optionen kommen aus `cli.build_parser`. GUI-Bilder:
+  `uv run python tools/docs_screenshots.py` (Emulator, offscreen), danach einchecken.
+  Byte-Beispiele der Technik-Seiten prüft `tests/unit/test_docs_examples.py`. CI baut sie bei
+  jedem PR (Artefakt „dokumentation“); GitHub Pages nur per manuellem Start von
+  `.github/workflows/docs.yml` (Repo privat, Pages bewusst aus, Stand 2026-10-09).
 - Mutationstests: `uv run --with mutmut mutmut run` (Ziele in `[tool.mutmut]`),
   danach `mutants/` löschen. Die Testsuite legt `elm.log` an (gitignored), löschen.
 
