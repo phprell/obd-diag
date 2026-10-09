@@ -30,6 +30,7 @@ from obd_diag.services.diagnostics import (
     DtcKind,
     DtcLookup,
     ScanResult,
+    check_low_voltage,
     scan,
     scan_to_dict,
 )
@@ -97,6 +98,7 @@ def check_preconditions(elm: Elm327) -> None:
         voltage: float | None = elm.voltage()
     except (ElmError, ValueError):
         voltage = None  # manche Adapter kennen ATRV nicht; wie beim Scan kein Abbruch
+    voltage = check_low_voltage(elm, voltage)
     if voltage is not None and voltage < LOW_VOLTAGE:
         raise ClearRefused(
             f"Bordspannung zu niedrig ({voltage:.1f} V, mindestens {LOW_VOLTAGE:.1f} V). "

@@ -50,10 +50,16 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
 - Mutationstests: `uv run --with mutmut mutmut run` (Ziele in `[tool.mutmut]`),
   danach `mutants/` löschen. Die Testsuite legt `elm.log` an (gitignored), löschen.
 
-## Stand (2026-10-08)
+## Stand (2026-10-09)
 Roadmap-Schritte 1–4 sind fertig = Funktionsumfang v0.1. v0.2 (Live-Daten) ist in
 main (PR #1). Version 0.2.0, noch kein Release-Tag (Tag erst nach Absprache, am
-besten nach dem Test am Auto). **Nichts ist an einem echten Adapter/Auto getestet.**
+besten nach dem Test am Auto). **Erster Test am echten Auto am 2026-10-09** (Mercedes
+A 180 d W177, FORScan ELMconfig, CAN 29/500, vier Steuergeräte): `info`, `diagnose`,
+`live` lesen richtig, nach vier Korrekturen (Freeze-Frame-Code vom richtigen
+Steuergerät, erstes `ATZ` mit `?` wiederholen, Spannung per PID 42 gegenprüfen, kein
+Modelljahr bei Mercedes). Regressionstest: `tests/verification/test_real_car.py`
+(Mitschnitte in `tests/fixtures/traces/mercedes_w177/`, FIN-Seriennummer geschwärzt).
+Mitschnitte enthalten die FIN: nie ungeschwärzt einchecken. Löschen bleibt gesperrt.
 Die Antwortverarbeitung ist ohne Hardware verifiziert (`tests/verification`:
 Datenblatt-Beispiele, echte Nutzer-Logs aus python-OBD/ELMduino/AndrOBD, Vergleich
 mit dem DTC-Decoder von python-OBD über alle 65536 Byte-Paare, Hypothesis-Round-
@@ -191,12 +197,10 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   Dateien arbeiten lassen, danach selbst zusammenführen und alles prüfen.
 
 ## Offen
-- **Test am echten Auto** (wichtigster Punkt). Ablauf: Motor aus, Zündung an,
-  `obd-diag ports`, `info`, dann `diagnose --save --trace`; noch kein `clear`, bis
-  Ausgabe und Mitschnitt geprüft sind. Aus dem Mitschnitt mit `ReplayTransport` einen
-  Regressionstest machen.
-- Nur am echten Gerät prüfbar: CAN-Mode-03-Format ohne Header, Freeze-Frame-Format
-  (`02xx00` vs. `02xx`), ob der ELM327 nach `7F 04 78` weiter lauscht, das dunkle
+- **Löschen freigeben?** Lesen ist am Auto geprüft (siehe Stand); `CLEAR_ENABLED` erst
+  nach ausdrücklicher Freigabe durch den Nutzer einschalten.
+- Am W177 bestätigt: CAN-Mode-03 ohne Header mit Zählbyte, Freeze Frame im Format
+  `02xx00`. Noch offen: ob der ELM327 nach `7F 04 78` weiter lauscht, das dunkle
   Design auf einem echten dunklen Desktop, `list_ports` mit echter Hardware.
 - Nordamerika-Modelljahrregel (Stelle 7) gilt rechtlich nur bis 10.000 lb, wird aber
   auf alle FINs mit 1–5 angewendet. CAN-Plausibilitätsgrenze „ab 2000“ ist geschätzt.

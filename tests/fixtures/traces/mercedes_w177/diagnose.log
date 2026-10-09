@@ -1,0 +1,48 @@
+# obd-diag 0.2.0 Mitschnitt 2026-10-09 /dev/ttyUSB0 38400 Baud
+# Mercedes-Benz A 180 d (W177), FORScan ELMconfig (CH340), Motor aus, Zündung an.
+# Seriennummer der FIN (Stellen 12-17) durch 000000 ersetzt. Die Antwort auf 0142
+# stammt aus dem Live-Mitschnitt derselben Sitzung (2,7 s nach diesem), eingefügt,
+# weil der Scan PID 42 seit diesem Test bei niedrigem ATRV zusätzlich liest.
+    0.016 >> ATZ\r
+    0.817 << \r\rELM327 v1.5\r\r>
+    0.817 >> ATE0\r
+    0.825 << ATE0\rOK\r\r>
+    0.826 >> ATL0\r
+    0.834 << OK\r\r>
+    0.834 >> ATS0\r
+    0.843 << OK\r\r>
+    0.843 >> ATH0\r
+    0.852 << OK\r\r>
+    0.852 >> ATSP0\r
+    0.861 << OK\r\r>
+    0.861 >> ATRV\r
+    0.875 << 11.2V\r\r>
+    0.925 >> 0100\r
+    1.255 << SEARCHING...\r410098180001\r410098180001\r410098180011\r410098180001\r\r>
+    1.255 >> ATDPN\r
+    1.264 << A7\r\r>
+    1.264 >> ATDP\r
+    1.282 << AUTO, ISO 15765-4 (CAN 29/500)\r\r>
+    1.290 >> 0142\r
+    1.320 << 41422EDC\r\r>
+    1.332 >> 03\r
+    1.562 << 4301D218\r4300\r4300\r4300\r\r>
+    1.612 >> 07\r
+    1.701 << 4700\r4700\r4700\r4700\r\r>
+    1.752 >> 0A\r
+    1.837 << 4A00\r\r>
+    1.887 >> 0101\r
+    1.973 << 4101000EEB20\r410100040000\r4101000C0200\r4101010C0000\r\r>
+    2.023 >> 020200\r
+    2.091 << 4202000000\r4202000000\r4202000000\r420200D218\r\r>
+    2.141 >> 020400\r
+    2.201 << 42040000\r\r>
+    2.251 >> 020500\r
+    2.312 << 4205004D\r\r>
+    2.362 >> 020C00\r
+    2.422 << 420C000000\r\r>
+    2.473 >> 020D00\r
+    2.529 << 420D0000\r\r>
+    2.579 >> 0902\r
+    2.656 << 014\r0:490201574444\r1:31373730303331\r2:4A303030303030\r\r>
+    2.657 -- geschlossen

@@ -20,7 +20,7 @@ from typing import Self
 from obd_diag.protocol import pids as pid_table
 from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
 from obd_diag.protocol.pids import PidSpec
-from obd_diag.services.diagnostics import LOW_VOLTAGE
+from obd_diag.services.diagnostics import LOW_VOLTAGE, check_low_voltage
 from obd_diag.services.storage import data_dir
 from obd_diag.transport.trace import new_free_path
 
@@ -187,11 +187,13 @@ def new_recording_path(directory: Path) -> Path:
 
 
 def _read_voltage(elm: Elm327) -> float | None:
-    """Bordspannung (``ATRV``); ``None``, wenn der Adapter sie nicht liefert."""
+    """Bordspannung (``ATRV``, niedrige Werte per ``check_low_voltage`` geprüft);
+    ``None``, wenn der Adapter sie nicht liefert."""
     try:
-        return elm.voltage()
+        voltage = elm.voltage()
     except (ElmError, ValueError):
         return None
+    return check_low_voltage(elm, voltage)
 
 
 def _read_values(

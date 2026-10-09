@@ -62,6 +62,21 @@ def test_preconditions_voltage_at_limit() -> None:
     check_preconditions(Elm327(_car(ATRV="11.8V")))
 
 
+def test_preconditions_low_adapter_voltage_confirmed_by_ecu() -> None:
+    # Mercedes W177: Adapter 11,2 V, Motorsteuergerät 12,0 V (PID 42).
+    transport = _car(ATRV="11.2V", **{"0142": "41422EDC"})
+    check_preconditions(Elm327(transport))
+    assert transport.sent == ["0100", "ATRV", "0142", "010C"]
+
+
+@pytest.mark.parametrize("ecu", ["41422AF8", "NO DATA", "7F014212", "4142FFFF", "?"])
+def test_preconditions_low_voltage_not_lifted_by_low_or_bad_ecu_value(ecu: str) -> None:
+    transport = _car(ATRV="11.2V", **{"0142": ecu})
+    with pytest.raises(ClearRefused, match="Bordspannung zu niedrig"):
+        check_preconditions(Elm327(transport))
+    assert transport.sent == ["0100", "ATRV", "0142"]
+
+
 def test_preconditions_accept_answer_with_spaces() -> None:
     # Mit ATS1 (Standard nach ATZ) trennt der Adapter die Bytes durch Leerzeichen.
     check_preconditions(Elm327(_car(**{"0100": "41 00 BE 3F A8 13"})))

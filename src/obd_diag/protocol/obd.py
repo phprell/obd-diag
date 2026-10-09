@@ -303,18 +303,27 @@ def _freeze_data(
     """Befehl, Antwort, Datenbytes und „Format abgelehnt“ (``7F 02 12``) zu einem PID.
 
     Antwort ``None`` bei ``NO DATA``, Daten ``None``, wenn keine passende Antwort kam.
+    Antworten mehrere Steuergeräte, zählt die erste passende Antwort; bei PID 02 die
+    erste mit einem Code (``00 00`` heißt „kein Freeze Frame gespeichert“, das melden
+    z. B. beim Mercedes W177 drei von vier Steuergeräten vor dem eigentlichen Code).
     """
     cmd = _freeze_cmd(pid, frame_byte)
     response = elm.query(cmd)
     if response is None:
         return cmd, None, None, False
     rejected = False
+    found: bytes | None = None
     for message in _messages(cmd, response):
         data = _freeze_payload(message, pid, size, frame_byte)
         if data is not None:
-            return cmd, response, data, False
-        if message[:3] == b"\x7f\x02\x12":
+            if pid != 0x02 or any(data[:_FREEZE_DTC_SIZE]):
+                return cmd, response, data, False
+            if found is None:
+                found = data
+        elif message[:3] == b"\x7f\x02\x12":
             rejected = True  # Unterfunktion/Format nicht unterstützt
+    if found is not None:
+        return cmd, response, found, False
     return cmd, response, None, rejected
 
 

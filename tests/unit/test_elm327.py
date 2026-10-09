@@ -100,6 +100,29 @@ def test_initialize_ignores_junk_before_version(raw: bytes) -> None:
     assert Elm327(transport).initialize() == "ELM327 v1.5"
 
 
+class _FirstAtzRejected(FakeTransport):
+    """Adapter direkt nach dem Einstecken: das erste ATZ ergibt ``?``."""
+
+    def write(self, data: bytes) -> None:
+        super().write(data)
+        if self.sent.count("ATZ") == 1:
+            self._pending = b"ATZ\r?\r\r>"
+
+
+def test_initialize_repeats_rejected_atz() -> None:
+    # Mitschnitt FORScan ELMconfig (CH340), erster Start nach dem Einstecken.
+    transport = _FirstAtzRejected({"ATZ": "ELM327 v1.5"})
+    assert Elm327(transport).initialize() == "ELM327 v1.5"
+    assert transport.sent == ["ATZ", "ATZ", "ATE0", "ATL0", "ATS0", "ATH0", "ATSP0"]
+
+
+def test_initialize_gives_up_after_second_rejected_atz() -> None:
+    transport = FakeTransport({"ATZ": "?"})
+    with pytest.raises(UnknownCommandError, match=r"^ATZ: \?$"):
+        Elm327(transport).initialize()
+    assert transport.sent == ["ATZ", "ATZ"]
+
+
 @pytest.mark.parametrize(
     "raw",
     [

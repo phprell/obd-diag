@@ -20,7 +20,9 @@ Dekodierung läuft offline in `services/vehicle.py`.
   beste Schätzung, und das 30 Jahre ältere wird mitgenannt: „2026 oder 1996 (ohne
   Gewähr)“. Kommt die FIN aus dem Fahrzeug, fallen Jahre weg, die zum Protokoll nicht
   passen (OBD-II nicht vor 1994, CAN nach ISO 15765-4 nicht vor 2000). Europäische
-  Hersteller nutzen Stelle 10 nicht alle als Modelljahr.
+  Hersteller nutzen Stelle 10 nicht alle als Modelljahr. Bei Mercedes-Benz (WMI WDB,
+  WDC, WDD, WDF, W1K, W1N, W1V) ist Stelle 10 die Lenkung (`1` = links) und Stelle 11
+  das Werk; dort zeigt das Tool kein Modelljahr (am A 180 d, W177, stand sonst „2001“).
 
 ## Online-Abfrage (nur nach Opt-in)
 

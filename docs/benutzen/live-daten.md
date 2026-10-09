@@ -43,8 +43,10 @@ vollständige Liste mit Schlüssel, Formel und Wertebereich steht unter
 
 - Jeder gewählte Wert wird einmal gelesen. Ist einer nicht lesbar, steht „-“ (in der
   CSV eine leere Zelle), die Abfrage läuft weiter.
-- Die Bordspannung (`ATRV`) wird jede zehnte Runde gelesen. Unter 11,8 V wird nur noch
-  alle 5 s abgefragt, um die Batterie zu schonen.
+- Die Bordspannung (`ATRV`) wird jede zehnte Runde gelesen. Zeigt der Adapter weniger
+  als 11,8 V, wird mit der Steuergerätespannung (PID 42) gegengeprüft: viele Adapter
+  messen hinter einer Schutzdiode einige Zehntel Volt zu wenig. Liegt auch sie darunter
+  (oder fehlt sie), wird nur noch alle 5 s abgefragt, um die Batterie zu schonen.
 - Meldet der Adapter drei Runden lang bei jedem Wert einen Busfehler (z. B. Zündung
   aus), endet die Abfrage mit einer Fehlermeldung. `NO DATA`, `?` und Ablehnungen
   zählen dabei nicht als Busfehler.

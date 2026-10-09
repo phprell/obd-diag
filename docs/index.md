@@ -6,9 +6,10 @@ Readiness, Freeze Frame, FIN und Live-Daten und schneidet auf Wunsch die gesamte
 Kommunikation mit dem Adapter mit.
 
 :::{important}
-**Nur lesend, Löschen gesperrt, noch nicht am echten Auto getestet.** Der einzige
-schreibende Befehl ist das Löschen der Fehlercodes (Mode 04); es ist ausgeschaltet,
-bis das Lesen an einem echten Fahrzeug geprüft ist. Die Antwortverarbeitung ist ohne
+**Nur lesend, Löschen gesperrt.** Der einzige schreibende Befehl ist das Löschen der
+Fehlercodes (Mode 04); es ist ausgeschaltet, bis es ausdrücklich freigegeben wird. Das
+Lesen ist bisher an einem Fahrzeug geprüft (Mercedes A 180 d, W177, siehe
+{doc}`benutzen/erster-test`). Die Antwortverarbeitung ist ohne
 Hardware gegen das ELM327-Datenblatt, echte Mitschnitte anderer Programme und
 python-OBD geprüft ({doc}`entwickeln/testen`).
 :::

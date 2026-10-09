@@ -2,7 +2,13 @@ import pytest
 
 from obd_diag.data.dtc_catalog import DtcInfo
 from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
-from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, scan
+from obd_diag.services.diagnostics import (
+    LOW_VOLTAGE,
+    DiagnosticCode,
+    DtcKind,
+    check_low_voltage,
+    scan,
+)
 from tests.fakes import CAN_CAR, FakeCatalog, FakeTransport
 
 
@@ -56,6 +62,35 @@ def test_scan_without_codes_and_low_voltage() -> None:
     result = scan(Elm327(FakeTransport(responses)), None)
     assert result.codes == []
     assert result.low_voltage
+
+
+def test_scan_low_adapter_voltage_uses_ecu_voltage() -> None:
+    responses = CAN_CAR | {"ATRV": "11.2V", "0142": "41422EDC"}
+    transport = FakeTransport(responses)
+    result = scan(Elm327(transport), None)
+    assert result.voltage == pytest.approx(11.996)
+    assert not result.low_voltage
+    # PID 42 erst nach der Protokollsuche (0100), sonst gälte deren lange Wartezeit nicht
+    assert transport.sent.index("0142") > transport.sent.index("0100")
+
+
+@pytest.mark.parametrize(
+    ("atrv", "ecu", "expected"),
+    [
+        (12.4, "41422AF8", 12.4),  # Adapterwert ausreichend: PID 42 wird nicht gelesen
+        (None, "41422EDC", None),  # ohne ATRV keine Ergänzung
+        (11.2, "41422AF8", 11.0),  # Steuergerät misst noch weniger
+        (11.2, "41420000", 11.2),  # unplausibel
+        (11.2, "4142FFFF", 11.2),
+        (11.2, "NO DATA", 11.2),
+        (11.2, "7F014212", 11.2),
+        (11.2, "?", 11.2),
+    ],
+)
+def test_check_low_voltage(atrv: float | None, ecu: str, expected: float | None) -> None:
+    transport = FakeTransport({"0142": ecu})
+    assert check_low_voltage(Elm327(transport), atrv) == expected
+    assert transport.sent == ([] if atrv is None or atrv >= LOW_VOLTAGE else ["0142"])
 
 
 def test_unknown_mode_03_is_an_error() -> None:

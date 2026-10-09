@@ -17,6 +17,7 @@ from obd_diag.services.vehicle import (
     default_vpic_cache_dir,
     lookup_vpic,
     model_year,
+    model_year_text,
     parse_vin_response,
     read_vin,
 )
@@ -445,6 +446,23 @@ TODAY = date(2026, 10, 7)
 )
 def test_model_years_elsewhere(code: str, years: tuple[int, ...]) -> None:
     assert vehicle.model_years(f"WVWZZZ1KZ{code}W123456", today=TODAY) == years
+
+
+@pytest.mark.parametrize(
+    "vin",
+    ["WDD1690071J236589", "WDD1770031J000000", "W1K1770031J000000", "WDB2030461A000000"],
+)
+def test_mercedes_has_no_model_year(vin: str) -> None:
+    # Stelle 10 ist bei Mercedes die Lenkung (1 = links); der W177 ergab sonst „2001“.
+    info = vehicle.decode_vin(vin, protocol="ISO 15765-4 (CAN 29/500)", today=TODAY)
+    assert info.model_year is None
+    assert info.model_year_alternatives == ()
+    assert model_year_text(info) is None
+    assert info.manufacturer == "Mercedes-Benz"
+
+
+def test_mercedes_usa_keeps_model_year() -> None:
+    assert vehicle.decode_vin("4JGDA5HB0JA000000", today=TODAY).model_year == 2018
 
 
 def test_model_years_north_america_unambiguous() -> None:

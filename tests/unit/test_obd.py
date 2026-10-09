@@ -185,6 +185,26 @@ def test_freeze_frame_absent_values() -> None:
     assert frame.values == {}
 
 
+def test_freeze_frame_code_from_ecu_that_stored_it() -> None:
+    # Mercedes A 180 d (W177): vier Steuergeräte antworten, nur das letzte hat einen
+    # Freeze Frame (U1218); die anderen melden 00 00.
+    responses = {
+        "020200": "4202000000\r4202000000\r4202000000\r420200D218",
+        "020400": "42040000",
+        "020500": "4205004D",
+        "020C00": "420C000000",
+        "020D00": "420D0000",
+    }
+    frame = read_freeze_frame(Elm327(FakeTransport(responses)))
+    assert frame.dtc == "U1218"
+    assert frame.values == {
+        "engine_load_pct": 0.0,
+        "coolant_temp_c": 37,
+        "rpm": 0.0,
+        "speed_kmh": 0,
+    }
+
+
 def test_freeze_frame_garbage_is_elm_error() -> None:
     with pytest.raises(ElmError, match=r"^020200: "):
         read_freeze_frame(Elm327(FakeTransport({"020200": "OK"})))
