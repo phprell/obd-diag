@@ -10,7 +10,7 @@ from pathlib import Path
 
 from obd_diag import __version__
 from obd_diag.data.dtc_catalog import DtcCatalog
-from obd_diag.protocol.elm327 import Elm327, ElmError
+from obd_diag.protocol.elm327 import Elm327, ElmError, NoConnectionError
 from obd_diag.protocol.obd import FreezeFrame
 from obd_diag.protocol.pids import PidSpec
 from obd_diag.services.clear import (
@@ -631,5 +631,7 @@ def main(argv: list[str] | None = None) -> int:
             return _run_export(args, args.export_parser)
     except (TransportError, ElmError) as e:
         print(f"Fehler: {e}", file=sys.stderr)
+        if isinstance(e, NoConnectionError):
+            print(f"Hinweis: {NoConnectionError.HINT}", file=sys.stderr)
         return 1
     return 0

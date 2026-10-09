@@ -3,6 +3,7 @@ import pytest
 from obd_diag.protocol.elm327 import (
     Elm327,
     ElmError,
+    NoConnectionError,
     NoDataError,
     ObdProtocol,
     UnknownCommandError,
@@ -61,8 +62,14 @@ def test_bus_init_error_raises() -> None:
 
 def test_searching_then_unable_to_connect_raises() -> None:
     elm = Elm327(FakeTransport({"0100": "SEARCHING...\rUNABLE TO CONNECT"}))
-    with pytest.raises(ElmError, match="UNABLE TO CONNECT"):
+    with pytest.raises(NoConnectionError, match="UNABLE TO CONNECT"):
         elm.protocol()
+
+
+def test_bus_init_unable_to_connect_is_no_connection() -> None:
+    elm = Elm327(FakeTransport({"0100": "BUS INIT: ...UNABLE TO CONNECT"}))
+    with pytest.raises(NoConnectionError):
+        elm.command("0100")
 
 
 def test_protocol_can_auto_detected() -> None:

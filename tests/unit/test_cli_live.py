@@ -205,7 +205,8 @@ def test_no_default_values_supported(
 def test_adapter_error(car: Car, capsys: pytest.CaptureFixture[str]) -> None:
     car.responses["0100"] = "SEARCHING...\rUNABLE TO CONNECT"
     assert main(["live"]) == 1
-    assert capsys.readouterr().err.endswith("Fehler: 0100: UNABLE TO CONNECT\n")
+    err = capsys.readouterr().err
+    assert "Fehler: 0100: UNABLE TO CONNECT\nHinweis: Kein Steuergerät antwortet. Zündung" in err
 
 
 @pytest.mark.parametrize(

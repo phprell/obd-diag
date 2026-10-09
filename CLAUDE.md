@@ -57,7 +57,8 @@ besten nach dem Test am Auto). **Erster Test am echten Auto am 2026-10-09** (Mer
 A 180 d W177, FORScan ELMconfig, CAN 29/500, vier Steuergeräte): `info`, `diagnose`,
 `live` lesen richtig, nach vier Korrekturen (Freeze-Frame-Code vom richtigen
 Steuergerät, erstes `ATZ` mit `?` wiederholen, Spannung per PID 42 gegenprüfen, kein
-Modelljahr bei Mercedes). Regressionstest: `tests/verification/test_real_car.py`
+Modelljahr bei Mercedes). `UNABLE TO CONNECT` (Zündung aus) ist `NoConnectionError` mit Hinweis
+für den Nutzer. Regressionstest: `tests/verification/test_real_car.py` (Diagnose, ATZ, Live)
 (Mitschnitte in `tests/fixtures/traces/mercedes_w177/`, FIN-Seriennummer geschwärzt).
 Mitschnitte enthalten die FIN: nie ungeschwärzt einchecken. Löschen bleibt gesperrt.
 Die Antwortverarbeitung ist ohne Hardware verifiziert (`tests/verification`:

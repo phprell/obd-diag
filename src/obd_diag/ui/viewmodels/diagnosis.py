@@ -8,7 +8,7 @@ from typing import Any
 from PySide6.QtCore import Property, QObject, QSettings, QStandardPaths, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices
 
-from obd_diag.protocol.elm327 import ElmError
+from obd_diag.protocol.elm327 import ElmError, NoConnectionError
 from obd_diag.services.clear import (
     CLEAR_DISABLED_MESSAGE,
     ClearRefused,
@@ -53,6 +53,8 @@ def user_message(error: Exception) -> str:
         return str(error)
     if isinstance(error, TransportError):
         return f"Verbindung fehlgeschlagen: {error}"
+    if isinstance(error, NoConnectionError):
+        return f"{NoConnectionError.HINT} (Adapter: {error})"
     if isinstance(error, ElmError):
         return f"Der Adapter meldet einen Fehler: {error}"
     if isinstance(error, ValueError):
