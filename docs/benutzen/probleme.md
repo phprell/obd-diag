@@ -5,8 +5,10 @@
 | `obd-diag ports` findet nichts | Adapter nicht eingesteckt, Bluetooth nicht gebunden | `dmesg` prüfen; Bluetooth mit `sudo rfcomm bind 0 <MAC>` |
 | „Permission denied“ beim Öffnen des Ports | Nutzer nicht in `uucp`/`dialout` | {doc}`installation`, Abschnitt Rechte |
 | `info` hängt oder „keine Antwort von …“ | falsche Baudrate | `--baud 115200` bzw. `--baud 38400` versuchen |
-| `UNABLE TO CONNECT`, keine Codes, kein Protokoll | Zündung aus, oder Schalter am FORScan-Adapter auf MS-CAN | Zündung an, Schalter auf HS-CAN ({doc}`adapter`) |
-| „Bordspannung zu niedrig“ | Batterie unter 11,8 V (Adapter und Steuergerät messen beide zu wenig) | Batterie laden; Live-Daten fragen dann nur alle 5 s ab |
+| `UNABLE TO CONNECT`, keine Codes, kein Protokoll | Zündung aus (beim ersten Test am W177 genau so), oder Schalter am FORScan-Adapter auf MS-CAN | Zündung an, Schalter auf HS-CAN ({doc}`adapter`) |
+| `info` zeigt eine niedrige Spannung, die Batterie ist aber in Ordnung | Adapter misst an Pin 16 weniger als das Steuergerät (W177: 11,2 statt 12,0 V) | normal; bei niedrigem `ATRV` zählt die Steuergerätespannung (PID 42), sofern lesbar |
+| Erster Start nach dem Einstecken: Fehler bei `ATZ` (`?`) | Störbyte im Adapter direkt nach dem Einstecken | wird inzwischen einmal wiederholt; sonst einfach neu starten |
+| „Bordspannung zu niedrig“ | Batterie unter 11,8 V (Adapter und, falls lesbar, Steuergerät messen beide zu wenig) | Batterie laden; Live-Daten fragen dann nur alle 5 s ab |
 | „Verbindung zu … unterbrochen“ | Adapter abgezogen, Wackelkontakt, Bluetooth weg | neu verbinden; es wurde danach nichts gesendet |
 | „Steuergerät lehnt Mode … ab (Antwort 7F …)“ | Steuergerät beschäftigt oder Bedingungen nicht erfüllt | später erneut; der Fehlerspeicher ist dann unbekannt, nicht leer |
 | Codes ohne Beschreibung, „Fehlercode-Katalog fehlt“ | Katalog nicht gebaut | `uv run python tools/build_dtc_db.py` |

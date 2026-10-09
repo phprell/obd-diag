@@ -13,6 +13,7 @@ from obd_diag.protocol.dtc_decode import decode_dtc, parse_dtc_messages, parse_d
 from obd_diag.protocol.frames import FrameSequenceError, split_messages
 from obd_diag.protocol.headers import HeaderFormat, header_format, parse_header_response
 from obd_diag.protocol.pids import PIDS, parse_supported
+from obd_diag.services.readiness import MonitorState, combine_readiness, decode_readiness
 from obd_diag.services.vehicle import parse_vin_response
 from tests.command_spec import load_spec
 from tools.docs_tables import command_tables, formula, pid_table, write_tables
@@ -136,3 +137,56 @@ def test_write_tables_is_idempotent(tmp_path: Path) -> None:
     stamps = [p.stat().st_mtime_ns for p in first]
     second = write_tables(tmp_path)
     assert [p.stat().st_mtime_ns for p in second] == stamps
+
+
+def test_real_car_page_matches_trace() -> None:
+    """Die Zeilen der W177-Seite stehen so im Regressions-Mitschnitt."""
+    trace = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "traces"
+        / "mercedes_w177"
+        / "diagnose.log"
+    ).read_text(encoding="utf-8")
+    page = _page("mitschnitt-w177.md")
+    for line in trace.splitlines():
+        if ">> 0" in line and "0142" not in line:  # Anfragen ans Fahrzeug
+            request = line.split(">> ")[1]
+            assert f">> {request}" in page, request
+    assert "4301D218\\r4300\\r4300\\r4300" in page
+    assert "2:4A303030303030" in page and "WDD1770031J000000" in page
+
+
+def test_real_car_supported_pids() -> None:
+    page = _page("mitschnitt-w177.md")
+    assert "`98 18 00 01`" in page and "`98 18 00 11`" in page
+    assert parse_supported(0x00, bytes.fromhex("98180001")) == {1, 4, 5, 0x0C, 0x0D, 0x20}
+    assert parse_supported(0x00, bytes.fromhex("98180011")) == {1, 4, 5, 0x0C, 0x0D, 0x1C, 0x20}
+    assert parse_supported(0x60, bytes.fromhex("05190001")) == {0x66, 0x68, 0x6C, 0x6D, 0x70, 0x80}
+    assert parse_supported(0x80, bytes.fromhex("09004000")) == {0x85, 0x88, 0x92}
+    offered = {0x68, 0x6C, 0x6D, 0x70, 0x85, 0x88, 0x92}
+    assert not offered & {spec.pid for spec in PIDS.values()}  # „liest obd-diag noch nicht“
+
+
+def test_real_car_values() -> None:
+    assert parse_dtc_response("4301D218", 0x03, can=True) == ["U1218"]
+    assert PIDS["control_voltage"].decode(bytes.fromhex("2EDC")) == pytest.approx(11.996)
+    assert PIDS["coolant_temp"].decode(bytes.fromhex("4D")) == 37
+    assert PIDS["coolant_temp"].decode(bytes.fromhex("3B")) == 19
+    response = "014\n0:490201574444\n1:31373730303331\n2:4A303030303030"
+    assert parse_vin_response(response) == "WDD1770031J000000"
+
+
+def test_real_car_readiness() -> None:
+    page = _page("mitschnitt-w177.md")
+    lines = ["000EEB20", "00040000", "000C0200", "010C0000"]
+    for line in lines:
+        assert " ".join(line[i : i + 2] for i in range(0, 8, 2)) in page
+    statuses = [decode_readiness(bytes.fromhex(line)) for line in lines]
+    assert [s.compression_ignition for s in statuses] == [True, False, True, True]
+    assert [s.dtc_count for s in statuses] == [0, 0, 0, 1]
+    combined = combine_readiness(statuses)
+    assert not combined.mil_on and combined.dtc_count == 1
+    open_monitors = [m.key for m in combined.monitors if m.state is MonitorState.INCOMPLETE]
+    assert open_monitors == ["exhaust_gas_sensor"]
+    assert combined.monitors[0].state is MonitorState.NOT_SUPPORTED  # Aussetzer

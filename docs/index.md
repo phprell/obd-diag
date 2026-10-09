@@ -36,7 +36,8 @@ Entscheidung ({doc}`adr/0002-nur-lesend`).
   {doc}`benutzen/erster-test`.
 - **Verstehen, was über die Leitung geht:** {doc}`technik/elm327` und
   {doc}`technik/antwortformate`, jeder Befehl mit Datenblatt-Seite in der
-  {doc}`technik/befehle`.
+  {doc}`technik/befehle`. Ein echter Mitschnitt, Zeile für Zeile erklärt:
+  {doc}`technik/mitschnitt-w177`.
 - **Mitentwickeln:** {doc}`entwickeln/regeln` und {doc}`entwickeln/testen`.
 
 ```{toctree}
@@ -68,6 +69,7 @@ technik/befehle
 technik/pids
 technik/sicherheit
 technik/fin
+technik/mitschnitt-w177
 technik/quellen
 ```
 
