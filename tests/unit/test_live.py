@@ -5,6 +5,7 @@ Die PID-Tabelle ersetzt ``tests.live_fakes``; nur ``PidSpec`` kommt aus
 """
 
 import contextlib
+import itertools
 import re
 from collections.abc import Sequence
 from pathlib import Path
@@ -213,6 +214,7 @@ def test_voltage_is_read_in_round_zero_and_every_nth_round() -> None:
 def test_low_voltage_throttles_until_it_recovers() -> None:
     responses = {**CAR, "ATRV": "11.5V"}
     clock = FakeClock()
+    transport = FakeTransport(responses)
 
     def recover(sample: LiveSample) -> None:
         samples.append(sample)
@@ -220,24 +222,52 @@ def test_low_voltage_throttles_until_it_recovers() -> None:
 
     samples: list[LiveSample] = []
     count = run_live(
-        Elm327(FakeTransport(responses)),
+        Elm327(transport),
         [RPM],
         on_sample=recover,
         should_stop=lambda: False,
         interval=1.0,
-        max_samples=VOLTAGE_EVERY + 2,
+        max_samples=4,
         clock=clock,
         sleep=clock.sleep,
     )
-    assert count == VOLTAGE_EVERY + 2
-    assert [s.throttled for s in samples] == [True] * VOLTAGE_EVERY + [False, False]
-    assert samples[0].voltage == 11.5
-    assert samples[VOLTAGE_EVERY - 1].voltage == 11.5  # zuletzt gelesener Wert
-    assert samples[VOLTAGE_EVERY].voltage == 12.6
+    assert count == 4
+    assert [s.throttled for s in samples] == [True, False, False, False]
+    assert [s.voltage for s in samples] == [11.5, 12.6, 12.6, 12.6]
+    # gedrosselt wird jede Runde gemessen, danach wieder nur jede VOLTAGE_EVERY-te
+    assert transport.sent == ["ATRV", "0142", "010C", "ATRV", "010C", "010C", "010C"]
     times = [s.elapsed for s in samples]
-    assert times[1] == pytest.approx(LOW_VOLTAGE_INTERVAL)
-    assert times[VOLTAGE_EVERY] == pytest.approx(VOLTAGE_EVERY * LOW_VOLTAGE_INTERVAL)
-    assert times[VOLTAGE_EVERY + 1] - times[VOLTAGE_EVERY] == pytest.approx(1.0)
+    assert times == pytest.approx([0.0, LOW_VOLTAGE_INTERVAL, 6.0, 7.0])
+
+
+def test_engine_start_ends_throttling_in_the_next_round() -> None:
+    """Zweiter Autotest (W177): Motorstart während Live. Fällt die Spannung beim Anlassen
+    unter 11,8 V, darf die Drosselung nicht bis zur nächsten regulären Messung
+    (``VOLTAGE_EVERY`` Runden zu je 5 s) bestehen bleiben."""
+    responses = {**CAR, "ATRV": "12.4V"}
+    clock = FakeClock()
+
+    def next_voltage(sample: LiveSample) -> None:
+        samples.append(sample)
+        # Anlassen genau zur regulären Messung, danach lädt die Lichtmaschine
+        responses["ATRV"] = "9.8V" if len(samples) == VOLTAGE_EVERY else "13.9V"
+
+    samples: list[LiveSample] = []
+    run_live(
+        Elm327(FakeTransport(responses)),
+        [RPM],
+        on_sample=next_voltage,
+        should_stop=lambda: False,
+        max_samples=VOLTAGE_EVERY + 3,
+        clock=clock,
+        sleep=clock.sleep,
+    )
+    # Runde VOLTAGE_EVERY misst beim Anlassen 9,8 V, die Runde danach schon 13,9 V
+    assert [s.throttled for s in samples][VOLTAGE_EVERY - 1 :] == [False, True, False, False]
+    assert samples[VOLTAGE_EVERY + 1].voltage == 13.9
+    gaps = [b.elapsed - a.elapsed for a, b in itertools.pairwise(samples)]
+    assert gaps[VOLTAGE_EVERY] == pytest.approx(LOW_VOLTAGE_INTERVAL)
+    assert gaps[VOLTAGE_EVERY + 1] == pytest.approx(1.0)
 
 
 def test_unreadable_voltage_keeps_throttling() -> None:
@@ -259,6 +289,7 @@ def test_unreadable_voltage_keeps_throttling() -> None:
         sleep=clock.sleep,
     )
     assert all(s.throttled for s in samples)
+    assert samples[1].voltage is None  # gedrosselt wird jede Runde gemessen
     assert samples[VOLTAGE_EVERY].voltage is None
     last = samples[VOLTAGE_EVERY + 1].elapsed - samples[VOLTAGE_EVERY].elapsed
     assert last == pytest.approx(LOW_VOLTAGE_INTERVAL)

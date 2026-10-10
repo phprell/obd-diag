@@ -173,7 +173,8 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
 - **Live-Daten**: nur `01xx` und `ATRV`. Ein nicht lesbarer Wert ergibt `None` in der
   Runde, `TransportError` bricht ab, ebenso `MAX_FAILED_ROUNDS` (3) Runden, in denen
   jeder Wert an einem Adapterfehler scheitert (`?`/`NO DATA`/`7F` zählen nicht). Unter
-  11,8 V nur alle 5 s abfragen; unlesbares `ATRV` hebt die Drosselung nicht auf.
+  11,8 V nur alle 5 s abfragen und dann `ATRV` jede Runde (sonst jede zehnte); unlesbares
+  `ATRV` hebt die Drosselung nicht auf.
   Auswahlfehler sind `SelectionError` (ein `ValueError`), auch „kein Standardwert
   unterstützt“; die GUI unterscheidet sie so von kaputten Antworten. Vor der ersten
   Verbindung schickt die GUI `skip_unsupported=True` (Liste zeigt noch alle PIDs). Kurven

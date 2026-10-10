@@ -21,7 +21,9 @@ Thread für Minuten.
   diese Runde; Verbindungsfehler brechen ab, ebenso drei Runden nacheinander, in denen
   jeder Wert an einem Adapterfehler scheitert (`CAN ERROR`, `UNABLE TO CONNECT` ...:
   Zündung aus, Bus weg). Unter 11,8 V Bordspannung wird nur alle 5 s abgefragt, um die
-  Batterie zu schonen; eine nicht lesbare Spannung hebt die Drosselung nicht auf.
+  Batterie zu schonen; eine nicht lesbare Spannung hebt die Drosselung nicht auf. Die
+  Spannung wird jede zehnte Runde gemessen, gedrosselt jede Runde (seit dem zweiten
+  Autotest: sonst blieb die Drosselung nach dem Anlassen bis zu 50 s bestehen).
 - Die PID-Tabelle (`protocol/pids.py`) hat einen Eintrag (`PidSpec`) je Wert; mehrere
   Einträge können dieselbe PID haben (Lambdasonden, Nachkat-Trimm, Drehmomentstufen,
   Statusbyte-PIDs `66`/`67`). `decode` bekommt die ersten `size` Datenbytes und darf
