@@ -52,15 +52,15 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   öffentlich: Mitschnitte, Sitzungen und Berichte vom echten Auto nie mit FIN einchecken.
 - Release: Abschnitt `## X.Y.Z – Datum` in `CHANGELOG.md` (auch Doku-Seite
   „Änderungen“), Version in `pyproject.toml` und `__init__.py`; Tag `vX.Y.Z` auf main
-  (nur nach Absprache) startet `.github/workflows/release.yml` (prüft Versionen, baut
+  (nur nach Absprache; aus der Cloud-Umgebung abgewiesen, den Tag pusht der Nutzer) startet `.github/workflows/release.yml` (prüft Versionen, baut
   Katalog, sdist, Wheel, legt das GitHub-Release mit dem Changelog-Abschnitt an).
 - Mutationstests: `uv run --with mutmut mutmut run` (Ziele in `[tool.mutmut]`),
   danach `mutants/` löschen. Die Testsuite legt `elm.log` an (gitignored), löschen.
 
 ## Stand (2026-10-09)
 Roadmap-Schritte 1–4 sind fertig = Funktionsumfang v0.1. v0.2 (Live-Daten) ist in
-main (PR #1). Version 0.2.0, noch kein Release-Tag (Tag erst nach Absprache, am
-besten nach dem Test am Auto). **Erster Test am echten Auto am 2026-10-09** (Mercedes
+main (PR #1). **Release v0.2.0 am 2026-10-10** (Tag `v0.2.0`, GitHub-Release mit sdist
+und Wheel) nach dem zweiten Test am Auto. **Erster Test am echten Auto am 2026-10-09** (Mercedes
 A 180 d W177, FORScan ELMconfig, CAN 29/500, vier Steuergeräte): `info`, `diagnose`,
 `live` lesen richtig, nach vier Korrekturen (Freeze-Frame-Code vom richtigen
 Steuergerät, erstes `ATZ` mit `?` wiederholen, Spannung per PID 42 gegenprüfen, kein
@@ -216,7 +216,6 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   auf alle FINs mit 1–5 angewendet. CAN-Plausibilitätsgrenze „ab 2000“ ist geschätzt.
 - Wird `ATRV` nicht unterstützt, ist Löschen trotzdem erlaubt (nur bekannte niedrige
   Spannung blockiert) – bewusst, ggf. mit dem Nutzer klären.
-- Release-Tag v0.2.0 setzen (mit dem Nutzer absprechen).
 - Nicht aufgenommen sind PIDs mit Statusbyte, deren Aufbau in freien Quellen nicht
   eindeutig ist (68–7F, u. a. 70 Ladedruck, 7A–7C Partikelfilter); Liste im Docstring
   von `protocol/pids.py`. Erst mit der Norm (J1979-DA) oder echten Antworten angehen.
