@@ -43,13 +43,14 @@ Prüfablauf ab. Deshalb gibt es hier keine AU-Bewertung.
 from dataclasses import dataclass
 from enum import StrEnum
 
+from obd_diag.i18n import N_, tr
 from obd_diag.protocol.elm327 import Elm327, ElmError
 from obd_diag.protocol.frames import split_messages
 
 # Bezeichnung des Gesamtergebnisses und Hinweis dazu, gleich in Kommandozeile, Bericht
-# und Oberfläche
-ALL_COMPLETE_LABEL = "Alle Tests abgeschlossen"
-AU_NOTE = (
+# und Oberfläche; deutsch, zur Ausgabe mit ``tr`` übersetzen
+ALL_COMPLETE_LABEL = N_("Alle Tests abgeschlossen")
+AU_NOTE = N_(
     "Das ist keine AU-Bewertung: Zur Abgasuntersuchung gehört immer auch eine "
     "Abgasmessung am Endrohr, und ob einzelne offene Tests toleriert werden, hängt vom "
     "Fahrzeug und vom Prüfablauf ab."
@@ -65,7 +66,7 @@ class MonitorState(StrEnum):
 @dataclass(frozen=True)
 class Monitor:
     key: str  # stabil, z. B. "misfire", "catalyst", "egr"
-    name: str  # Anzeige auf Deutsch, z. B. "Verbrennungsaussetzer"
+    name: str  # deutsch, z. B. "Verbrennungsaussetzer"; zur Anzeige ``tr(name)``
     state: MonitorState
 
 
@@ -95,29 +96,29 @@ class ReadinessStatus:
 
 # Kontinuierliche Monitore in Byte B: (Bit, Schlüssel, Name); "nicht abgeschlossen" = Bit + 4
 _CONTINUOUS = (
-    (0, "misfire", "Verbrennungsaussetzer"),
-    (1, "fuel_system", "Kraftstoffsystem"),
-    (2, "components", "Komponenten"),
+    (0, "misfire", N_("Verbrennungsaussetzer")),
+    (1, "fuel_system", N_("Kraftstoffsystem")),
+    (2, "components", N_("Komponenten")),
 )
 
 # Nicht kontinuierliche Monitore in Byte C (unterstützt) und D (nicht abgeschlossen)
 _SPARK = (
-    (0, "catalyst", "Katalysator"),
-    (1, "heated_catalyst", "Katalysatorheizung"),
-    (2, "evap", "Tankentlüftung"),
-    (3, "secondary_air", "Sekundärluftsystem"),
-    (4, "ac_refrigerant", "Klimaanlage (Kältemittel)"),
-    (5, "oxygen_sensor", "Lambdasonde"),
-    (6, "oxygen_sensor_heater", "Lambdasondenheizung"),
-    (7, "egr", "Abgasrückführung"),  # AGR und/oder variable Ventilsteuerung (VVT)
+    (0, "catalyst", N_("Katalysator")),
+    (1, "heated_catalyst", N_("Katalysatorheizung")),
+    (2, "evap", N_("Tankentlüftung")),
+    (3, "secondary_air", N_("Sekundärluftsystem")),
+    (4, "ac_refrigerant", N_("Klimaanlage (Kältemittel)")),
+    (5, "oxygen_sensor", N_("Lambdasonde")),
+    (6, "oxygen_sensor_heater", N_("Lambdasondenheizung")),
+    (7, "egr", N_("Abgasrückführung")),  # AGR und/oder variable Ventilsteuerung (VVT)
 )
 _COMPRESSION = (
-    (0, "nmhc_catalyst", "NMHC-Katalysator"),
-    (1, "nox_scr", "NOx-Nachbehandlung (SCR)"),
-    (3, "boost_pressure", "Ladedruck"),
-    (5, "exhaust_gas_sensor", "Abgassensor"),
-    (6, "pm_filter", "Partikelfilter"),
-    (7, "egr", "Abgasrückführung"),  # AGR und/oder VVT
+    (0, "nmhc_catalyst", N_("NMHC-Katalysator")),
+    (1, "nox_scr", N_("NOx-Nachbehandlung (SCR)")),
+    (3, "boost_pressure", N_("Ladedruck")),
+    (5, "exhaust_gas_sensor", N_("Abgassensor")),
+    (6, "pm_filter", N_("Partikelfilter")),
+    (7, "egr", N_("Abgasrückführung")),  # AGR und/oder VVT
 )
 
 
@@ -133,7 +134,9 @@ def decode_readiness(data: bytes) -> ReadinessStatus:
     Weitere Bytes werden ignoriert; ``ValueError`` bei weniger als vier.
     """
     if len(data) < 4:
-        raise ValueError(f"PID 01 braucht vier Datenbytes, nicht {len(data)}")
+        raise ValueError(
+            tr("PID 01 braucht vier Datenbytes, nicht {count}").format(count=len(data))
+        )
     a, b, c, d = data[:4]
     diesel = bool(b & 0x08)
     monitors = [Monitor(key, name, _state(b, b >> 4, bit)) for bit, key, name in _CONTINUOUS]
@@ -189,7 +192,7 @@ def combine_readiness(statuses: list[ReadinessStatus]) -> ReadinessStatus:
     unterstützt.
     """
     if not statuses:
-        raise ValueError("keine Readiness-Antwort")
+        raise ValueError(tr("keine Readiness-Antwort"))
     diesel = _ignition_type(statuses)
     same = [s for s in statuses if s.compression_ignition == diesel]
     monitors = []

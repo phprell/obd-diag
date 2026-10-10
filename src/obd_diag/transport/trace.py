@@ -16,6 +16,7 @@ from types import TracebackType
 from typing import Self, TextIO
 
 from obd_diag import __version__
+from obd_diag.i18n import tr
 from obd_diag.transport.base import Transport, TransportError, TransportTimeout
 from obd_diag.transport.serial import SerialTransport
 
@@ -28,7 +29,9 @@ def new_free_path(directory: Path, prefix: str, suffix: str) -> Path:
         path = directory / (f"{stem}{suffix}" if n == 1 else f"{stem}-{n}{suffix}")
         if not path.exists():
             return path
-    raise FileExistsError(f"kein freier Dateiname für {stem} in {directory}")
+    raise FileExistsError(
+        tr("kein freier Dateiname für {stem} in {directory}").format(stem=stem, directory=directory)
+    )
 
 
 def new_trace_path(directory: Path) -> Path:
@@ -169,7 +172,11 @@ def unescape(text: str) -> bytes:
             out.append(int(text[i + 2 : i + 4], 16))
             i += 4
         else:
-            raise ValueError(f"ungültige Escape-Sequenz an Stelle {i}: {text[i : i + 4]!r}")
+            raise ValueError(
+                tr("ungültige Escape-Sequenz an Stelle {pos}: {text}").format(
+                    pos=i, text=repr(text[i : i + 4])
+                )
+            )
     return bytes(out)
 
 
@@ -207,11 +214,15 @@ class ReplayTransport:
 
     def write(self, data: bytes) -> None:
         if self._pos >= len(self._entries) or self._entries[self._pos][0] != ">>":
-            raise TransportError(f"Mitschnitt: unerwarteter Befehl {escape(data)!r}")
+            raise TransportError(
+                tr("Mitschnitt: unerwarteter Befehl {command}").format(command=repr(escape(data)))
+            )
         expected = self._entries[self._pos][1]
         if expected != data:
             raise TransportError(
-                f"Mitschnitt: Befehl {escape(data)!r}, aufgezeichnet war {escape(expected)!r}"
+                tr("Mitschnitt: Befehl {command}, aufgezeichnet war {expected}").format(
+                    command=repr(escape(data)), expected=repr(escape(expected))
+                )
             )
         self._pos += 1
 
@@ -220,7 +231,7 @@ class ReplayTransport:
             data = self._entries[self._pos][1]
             self._pos += 1
             return data
-        raise TransportTimeout("Mitschnitt: keine aufgezeichnete Antwort")
+        raise TransportTimeout(tr("Mitschnitt: keine aufgezeichnete Antwort"))
 
     def __enter__(self) -> Self:
         return self

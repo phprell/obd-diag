@@ -173,7 +173,7 @@ def test_clear_yes_skips_prompt(
     prompts = _answer(monkeypatch, "nein")
     assert main(["clear", "--yes", "--lang", "en"]) == 0
     assert prompts == []
-    assert "Gelöscht. Sicherung: " in capsys.readouterr().out
+    assert "Cleared. Backup: " in capsys.readouterr().out  # --lang gilt für alle Ausgaben
     assert _sent(ready_car[1]).count("04") == 1
 
 

@@ -31,6 +31,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QDesktopServices
 
+from obd_diag.i18n import decimal, tr, trn
 from obd_diag.protocol.pids import PIDS, PidSpec
 from obd_diag.services.live import (
     DEFAULT_INTERVAL,
@@ -58,13 +59,14 @@ INTERVAL_KEY = "live/intervall"
 
 
 def number_text(value: float | None) -> str:
-    """Zahl mit Dezimalkomma; Nachkommastellen nach Größe, ganze Zahlen ohne."""
+    """Zahl mit dem Dezimalzeichen der Sprache; Nachkommastellen nach Größe, ganze Zahlen
+    ohne."""
     if value is None or math.isnan(value):
         return NO_VALUE
     if value == int(value) and abs(value) < 1e9:
         return str(int(value))
     digits = 0 if abs(value) >= 100 else 1 if abs(value) >= 10 else 2
-    return f"{value:.{digits}f}".replace(".", ",")
+    return decimal(value, digits)
 
 
 def elapsed_text(seconds: float) -> str:
@@ -76,7 +78,7 @@ def elapsed_text(seconds: float) -> str:
 
 
 def spec_entry(spec: PidSpec) -> dict[str, Any]:
-    return {"key": spec.key, "name": spec.name, "unit": spec.unit}
+    return {"key": spec.key, "name": spec.name, "unit": tr(spec.unit)}
 
 
 class _Value:
@@ -101,7 +103,7 @@ class _Value:
         return {
             "key": spec.key,
             "name": spec.name,
-            "unit": spec.unit,
+            "unit": tr(spec.unit),
             "minimum": spec.minimum,
             "maximum": spec.maximum,
             "hasValue": self.value is not None,
@@ -142,6 +144,12 @@ class LiveValueModel(QAbstractListModel):
         super().__init__(parent)
         self._values: list[_Value] = []
         self._entries: list[dict[str, Any]] = []
+
+    def retranslate(self) -> None:
+        """Namen und Zahlen nach einem Sprachwechsel neu aufbauen (Werte bleiben)."""
+        self._entries = [v.entry() for v in self._values]
+        if self._values:
+            self.dataChanged.emit(self.index(0), self.index(len(self._values) - 1))
 
     def set_pids(self, pids: Sequence[PidSpec]) -> None:
         self.beginResetModel()
@@ -312,8 +320,8 @@ class LiveViewModel(QObject):
     @Property(str, notify=sampleChanged)
     def voltageText(self) -> str:
         if self._voltage is None:
-            return "unbekannt"
-        return f"{self._voltage:.1f} V".replace(".", ",")
+            return tr("unbekannt")
+        return f"{decimal(self._voltage)} V"
 
     @Property(bool, notify=sampleChanged)
     def throttled(self) -> bool:
@@ -411,11 +419,11 @@ class LiveViewModel(QObject):
         if not self.canStart:
             return
         if not port:
-            self._fail("Bitte einen Port angeben, z. B. /dev/ttyUSB0.")
+            self._fail(tr("Bitte einen Port angeben, z. B. /dev/ttyUSB0."))
             return
         keys = self._keys()
         if keys is not None and not keys:
-            self._fail("Bitte mindestens einen Wert auswählen.")
+            self._fail(tr("Bitte mindestens einen Wert auswählen."))
             return
 
         self._run_id += 1
@@ -479,6 +487,13 @@ class LiveViewModel(QObject):
         self._notice = ""
         self.stateChanged.emit()
 
+    def retranslate(self) -> None:
+        """Nach einem Sprachwechsel: Namen der Werte und Zahlen neu ausgeben."""
+        self._values.retranslate()
+        self.availableChanged.emit()
+        self.sampleChanged.emit()
+        self.stateChanged.emit()
+
     @Slot()
     def openRecordingFolder(self) -> None:
         folder = recording_dir()
@@ -528,9 +543,13 @@ class LiveViewModel(QObject):
         if run_id != self._run_id:
             return
         self._finish()
-        notice = f"Live-Daten beendet nach {result.samples} Runde(n)."
+        notice = trn(
+            "Live-Daten beendet nach {n} Runde.",
+            "Live-Daten beendet nach {n} Runden.",
+            result.samples,
+        ).format(n=result.samples)
         if result.recording is not None:
-            notice += f" Aufzeichnung gespeichert: {result.recording}"
+            notice += " " + tr("Aufzeichnung gespeichert: {path}").format(path=result.recording)
             self._recording_path = str(result.recording)
         self._notice = notice
         self.stateChanged.emit()
@@ -541,11 +560,11 @@ class LiveViewModel(QObject):
             return
         self._finish()
         if isinstance(error, SelectionError):
-            message = f"Auswahl nicht möglich: {error}"
+            message = tr("Auswahl nicht möglich: {error}").format(error=error)
         else:
             message = user_message(error)
         if self._recording_path:
-            message += f" Bisherige Aufzeichnung: {self._recording_path}"
+            message += " " + tr("Bisherige Aufzeichnung: {path}").format(path=self._recording_path)
         self._fail(message)
 
     def _fail(self, message: str) -> None:

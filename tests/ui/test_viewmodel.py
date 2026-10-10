@@ -231,7 +231,7 @@ def test_clear_success_shows_backup_and_after_scan(qtbot: QtBot, fake_backend: F
     ]
     assert blocker.args == ["/var/backup/2026.json"]
     assert "Sicherung: /var/backup/2026.json" in vm.property("notice")
-    assert "1 permanente(r) Code(s) bleiben" in vm.property("notice")
+    assert "1 permanenter Code bleibt" in vm.property("notice")
     assert vm.property("codeCount") == 1 and vm.property("selected")["code"] == "U0100"
     assert vm.property("voltageText") == "12,3 V"
     vm.dismissNotice()

@@ -227,7 +227,7 @@ def test_failed_rediagnosis_keeps_after_scan_and_drops_stale_parts() -> None:
     vm.clearCodes()
     assert not vm.property("busy")
     assert "Sicherung: /tmp/b.json" in vm.property("notice")
-    assert "1 permanente(r) Code(s) bleiben" in vm.property("notice")
+    assert "1 permanenter Code bleibt" in vm.property("notice")
     assert "nicht neu lesen" in vm.property("errorMessage")
     assert "Verbindung fehlgeschlagen: keine Antwort" in vm.property("errorMessage")
     assert vm.property("codeCount") == 1 and vm.property("voltageText") == "12,2 V"

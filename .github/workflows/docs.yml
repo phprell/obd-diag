@@ -3,7 +3,7 @@ name: Dokumentation
 # Baut die Dokumentation bei jedem PR und Push auf main (Warnungen sind Fehler) und
 # legt sie als Artefakt „dokumentation“ ab (HTML, zum Herunterladen am Lauf).
 # Jeder Push auf main (und ein manueller Start) veröffentlicht sie zusätzlich über GitHub
-# Pages (https://phprell.github.io/obd-diag/). Voraussetzung: Settings → Pages → Source
+# Pages (https://phprell.github.io/obd-diag/, englisch unter /en/). Voraussetzung: Settings → Pages → Source
 # „GitHub Actions“.
 
 on:
@@ -31,6 +31,7 @@ jobs:
           python-version: "3.12"
       - run: uv sync --locked --group docs
       - run: uv run --group docs sphinx-build -W --keep-going docs docs/_build
+      - run: uv run --group docs sphinx-build -W --keep-going docs/en docs/_build/en
       - uses: actions/upload-artifact@v4
         with:
           name: dokumentation

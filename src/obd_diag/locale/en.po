@@ -1,0 +1,2874 @@
+# Englische Übersetzung von obd-diag. Quelltexte sind deutsch (msgid).
+# Gepflegt mit: uv run python tools/translations.py (siehe src/obd_diag/i18n.py)
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/obd_diag/cli.py
+msgid "Batteriespannung niedrig – Ergebnisse können unzuverlässig sein"
+msgstr "Battery voltage low: results may be unreliable"
+
+#: src/obd_diag/cli.py
+msgid "Hinweis: Während der Fahrt nur durch Beifahrer bedienen."
+msgstr "Note: while driving, only a passenger should operate this."
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "abgeschlossen"
+msgstr "complete"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "nicht abgeschlossen"
+msgstr "incomplete"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "nicht unterstützt"
+msgstr "not supported"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/protocol/elm327.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+#: src/obd_diag/ui/viewmodels/live.py
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "unbekannt"
+msgstr "unknown"
+
+#: src/obd_diag/cli.py
+msgid "Sprache der Ausgabe und der Fehlercode-Texte (Standard: wie die Systemsprache, Deutsch nur bei deutscher Systemsprache)"
+msgstr "language of the output and the trouble code texts (default: like the system language, German only if the system language is German)"
+
+#: src/obd_diag/cli.py
+msgid "DATEI"
+msgstr "FILE"
+
+#: src/obd_diag/cli.py
+msgid "Ergebnis als JSON ausgeben"
+msgstr "print the result as JSON"
+
+#: src/obd_diag/cli.py
+msgid "Codes ohne Katalogtext online nachschlagen (ungeprüfte Kurzbeschreibung, englisch); lädt eine Datei der Quelle, sendet weder Code noch FIN"
+msgstr "look up codes without a catalog text online (unverified short description, English); downloads a file from the source, sends neither code nor VIN"
+
+#: src/obd_diag/cli.py
+msgid "FIN zusätzlich bei NHTSA vPIC (USA) nachschlagen; sendet die FIN ins Internet, Ergebnis wird lokal gecacht"
+msgstr "also look up the VIN at NHTSA vPIC (USA); sends the VIN to the internet, the result is cached locally"
+
+#: src/obd_diag/cli.py
+msgid "SEK"
+msgstr "SEC"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "Gespeichert"
+msgstr "Stored"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "Ausstehend"
+msgstr "Pending"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "Permanent"
+msgstr "Permanent"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "ja"
+msgstr "yes"
+
+#: src/obd_diag/cli.py
+msgid "Kontroll-Scan:"
+msgstr "Check scan:"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "Motorlast"
+msgstr "Engine load"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/protocol/pids.py
+msgid "Kühlmitteltemperatur"
+msgstr "Coolant temperature"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "Drehzahl"
+msgstr "Engine speed"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/protocol/pids.py
+msgid "1/min"
+msgstr "rpm"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/protocol/pids.py
+msgid "Geschwindigkeit"
+msgstr "Speed"
+
+#: src/obd_diag/cli.py
+msgid "Fahrzeug:"
+msgstr "Vehicle:"
+
+#: src/obd_diag/cli.py
+msgid "Diesel-Motor"
+msgstr "Diesel engine"
+
+#: src/obd_diag/cli.py
+msgid "Otto-Motor"
+msgstr "Petrol engine"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "nein"
+msgstr "no"
+
+#: src/obd_diag/cli.py
+msgid "muss größer als 0 sein"
+msgstr "must be greater than 0"
+
+#: src/obd_diag/cli.py
+msgid "Schlüssel"
+msgstr "Key"
+
+#: src/obd_diag/cli.py
+msgid "Name"
+msgstr "Name"
+
+#: src/obd_diag/cli.py
+msgid "Einheit"
+msgstr "Unit"
+
+#: src/obd_diag/cli.py
+msgid "DATEI.pdf"
+msgstr "FILE.pdf"
+
+#: src/obd_diag/cli.py
+msgid "DATEI.csv"
+msgstr "FILE.csv"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "PDF-Bericht"
+msgstr "PDF report"
+
+#: src/obd_diag/cli.py
+msgid "CSV, eine Zeile pro Fehlercode"
+msgstr "CSV, one row per trouble code"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/qml/CodeList.qml
+msgid "Keine Fehlercodes gespeichert."
+msgstr "No trouble codes stored."
+
+#: src/obd_diag/cli.py
+msgid "Fehlercode-Katalog fehlt, Codes werden ohne Beschreibung angezeigt. Erzeugen mit: uv run python tools/build_dtc_db.py"
+msgstr "Trouble code catalog missing, codes are shown without description. Build it with: uv run python tools/build_dtc_db.py"
+
+#: src/obd_diag/cli.py
+msgid "Keine Adapter gefunden (USB-Seriell oder /dev/rfcomm*)."
+msgstr "No adapters found (USB serial or /dev/rfcomm*)."
+
+#: src/obd_diag/cli.py
+msgid "Wirklich löschen? Zum Bestätigen \"ja\" eingeben: "
+msgstr "Really clear? Type \"yes\" to confirm: "
+
+#: src/obd_diag/cli.py
+msgid "Einige Codes sind sofort wieder da, der Fehler besteht vermutlich noch."
+msgstr "Some codes came back immediately, the fault probably still exists."
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "FIN"
+msgstr "VIN"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/services/vehicle.py
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Hersteller"
+msgstr "Manufacturer"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Land"
+msgstr "Country"
+
+#: src/obd_diag/cli.py
+msgid "Readiness: nicht verfügbar (PID 01 nicht beantwortet)."
+msgstr "Readiness: not available (PID 01 not answered)."
+
+#: src/obd_diag/cli.py
+msgid "Freeze Frame: keiner gespeichert."
+msgstr "Freeze frame: none stored."
+
+#: src/obd_diag/cli.py
+msgid "export: --pdf und/oder --csv angeben"
+msgstr "export: specify --pdf and/or --csv"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/services/live.py
+msgid "Zeit (s)"
+msgstr "Time (s)"
+
+#: src/obd_diag/cli.py
+msgid "Spannung (V)"
+msgstr "Voltage (V)"
+
+#: src/obd_diag/cli.py
+msgid "Das Fahrzeug meldet keine bekannten Live-Werte."
+msgstr "The vehicle reports no known live values."
+
+#: src/obd_diag/cli.py
+msgid "Adapter-Kommunikation mitschneiden (ohne DATEI: unter $XDG_DATA_HOME/obd-diag/traces); enthält ggf. die FIN"
+msgstr "record the adapter communication (without FILE: under $XDG_DATA_HOME/obd-diag/traces); may contain the VIN"
+
+#: src/obd_diag/cli.py
+msgid "Adapter-Version und Bordspannung anzeigen"
+msgstr "show adapter version and battery voltage"
+
+#: src/obd_diag/cli.py
+msgid "Fehlercodes lesen (gespeichert, ausstehend, permanent)"
+msgstr "read trouble codes (stored, pending, permanent)"
+
+#: src/obd_diag/cli.py
+msgid "Fehlercodes löschen (Mode 04), vorher sichern; nur bei Motor aus, Zündung an"
+msgstr "clear trouble codes (mode 04), backed up first; only with engine off, ignition on"
+
+#: src/obd_diag/cli.py
+msgid "ohne Rückfrage löschen"
+msgstr "clear without asking"
+
+#: src/obd_diag/cli.py
+msgid "vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN (nur lesend)"
+msgstr "full diagnosis: trouble codes, readiness, freeze frame, VIN (read-only)"
+
+#: src/obd_diag/cli.py
+msgid "Sitzung als JSON ausgeben"
+msgstr "print the session as JSON"
+
+#: src/obd_diag/cli.py
+msgid "Sitzung unter $XDG_DATA_HOME/obd-diag/sessions sichern"
+msgstr "save the session under $XDG_DATA_HOME/obd-diag/sessions"
+
+#: src/obd_diag/cli.py
+msgid "FIN lesen (Mode 09) und dekodieren"
+msgstr "read the VIN (mode 09) and decode it"
+
+#: src/obd_diag/cli.py
+msgid "diese FIN dekodieren, ohne Adapter"
+msgstr "decode this VIN, without an adapter"
+
+#: src/obd_diag/cli.py
+msgid "Live-Daten (Mode 01) fortlaufend anzeigen und aufzeichnen; Ende mit Strg+C"
+msgstr "show and record live data (mode 01) continuously; stop with Ctrl+C"
+
+#: src/obd_diag/cli.py
+msgid "SCHLÜSSEL,..."
+msgstr "KEY,..."
+
+#: src/obd_diag/cli.py
+msgid "Werte, z. B. rpm,speed,coolant_temp (Standard: die üblichen, soweit unterstützt; Schlüssel zeigt --list)"
+msgstr "values, e.g. rpm,speed,coolant_temp (default: the usual ones, if supported; --list shows the keys)"
+
+#: src/obd_diag/cli.py
+msgid "unterstützte Werte mit Schlüssel anzeigen und beenden"
+msgstr "show supported values with their keys and exit"
+
+#: src/obd_diag/cli.py
+msgid "nach SEK Sekunden beenden"
+msgstr "stop after SEC seconds"
+
+#: src/obd_diag/cli.py
+msgid "als CSV aufzeichnen (ohne DATEI: unter $XDG_DATA_HOME/obd-diag/recordings); vorhandene Dateien werden nicht überschrieben"
+msgstr "record as CSV (without FILE: under $XDG_DATA_HOME/obd-diag/recordings); existing files are never overwritten"
+
+#: src/obd_diag/cli.py
+msgid "angeschlossene Adapter auflisten"
+msgstr "list connected adapters"
+
+#: src/obd_diag/cli.py
+msgid "gespeicherte Diagnosesitzung (JSON) als PDF-Bericht oder CSV ausgeben"
+msgstr "write a saved diagnosis session (JSON) as a PDF report or CSV"
+
+#: src/obd_diag/cli.py
+msgid "SESSION.json"
+msgstr "SESSION.json"
+
+#: src/obd_diag/cli.py
+msgid "Fehler: {message}"
+msgstr "Error: {message}"
+
+#: src/obd_diag/cli.py
+msgid "Hinweis: {message}"
+msgstr "Note: {message}"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "Adapter"
+msgstr "Adapter"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "Protokoll"
+msgstr "Protocol"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "Bordspannung"
+msgstr "Battery voltage"
+
+#: src/obd_diag/cli.py
+msgid "Mitschnitt: {path}"
+msgstr "Trace: {path}"
+
+#: src/obd_diag/cli.py
+msgid "Folgende Fehlercodes werden im Steuergerät gelöscht:"
+msgstr "The following trouble codes will be cleared in the control unit:"
+
+#: src/obd_diag/cli.py
+msgid "Achtung: Dabei gehen auch Freeze Frame und Readiness-Status verloren.\nDie Codes werden vorher gesichert. Ist der Fehler nicht behoben,\nkommen sie wieder."
+msgstr "Caution: this also clears the freeze frame and the readiness status.\nThe codes are backed up first. If the fault is not fixed,\nthey will come back."
+
+#: src/obd_diag/cli.py
+msgid "Gelöscht. Sicherung: {path}"
+msgstr "Cleared. Backup: {path}"
+
+#: src/obd_diag/cli.py
+msgid "FIN nicht verfügbar (Mode 09 nicht unterstützt oder nicht lesbar)."
+msgstr "VIN not available (mode 09 not supported or not readable)."
+
+#: src/obd_diag/cli.py
+msgid "Hinweis"
+msgstr "Note"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "FIN ungültig (Länge oder Zeichen)"
+msgstr "VIN invalid (length or characters)"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Prüfziffer"
+msgstr "Check digit"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/services/vehicle.py
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Modelljahr"
+msgstr "Model year"
+
+#: src/obd_diag/cli.py
+msgid "Readiness ({engine}):"
+msgstr "Readiness ({engine}):"
+
+#: src/obd_diag/cli.py
+msgid "Freeze Frame (ausgelöst durch {code}):"
+msgstr "Freeze frame (triggered by {code}):"
+
+#: src/obd_diag/cli.py
+msgid "Fahrzeug liefert keine FIN (Mode 09 PID 02)."
+msgstr "Vehicle does not report a VIN (mode 09 PID 02)."
+
+#: src/obd_diag/cli.py
+msgid "mindestens {seconds:g} Sekunden"
+msgstr "at least {seconds:g} seconds"
+
+#: src/obd_diag/cli.py
+msgid "Beendet nach {n} Runde."
+msgid_plural "Beendet nach {n} Runden."
+msgstr[0] "Stopped after {n} round."
+msgstr[1] "Stopped after {n} rounds."
+
+#: src/obd_diag/cli.py
+msgid "(keine Beschreibung im Katalog)"
+msgstr "(no description in the catalog)"
+
+#: src/obd_diag/cli.py
+msgid "Warnung: {message}"
+msgstr "Warning: {message}"
+
+#: src/obd_diag/cli.py
+msgid "Keine gespeicherten oder ausstehenden Fehlercodes, es wird nichts gelöscht."
+msgstr "No stored or pending trouble codes, nothing will be cleared."
+
+#: src/obd_diag/cli.py
+msgid "Abgebrochen, nichts gelöscht."
+msgstr "Cancelled, nothing cleared."
+
+#: src/obd_diag/cli.py
+msgid "Kontrollleuchte (MIL): {state}"
+msgstr "Check engine light (MIL): {state}"
+
+#: src/obd_diag/cli.py
+msgid "Gemeldete Fehlercodes: {count}"
+msgstr "Reported trouble codes: {count}"
+
+#: src/obd_diag/cli.py
+msgid "unbekannten Code"
+msgstr "unknown code"
+
+#: src/obd_diag/cli.py
+msgid "PDF-Bericht: {path}"
+msgstr "PDF report: {path}"
+
+#: src/obd_diag/cli.py
+msgid "CSV: {path}"
+msgstr "CSV: {path}"
+
+#: src/obd_diag/cli.py
+msgid "Bordspannung wieder ausreichend."
+msgstr "Battery voltage sufficient again."
+
+#: src/obd_diag/cli.py
+msgid "Aufzeichnung: {path}"
+msgstr "Recording: {path}"
+
+#: src/obd_diag/cli.py
+msgid "Abstand der Abfragerunden (Standard {default:g}, mindestens {minimum:g})"
+msgstr "interval between query rounds (default {default:g}, at least {minimum:g})"
+
+#: src/obd_diag/cli.py
+msgid "Im Web suchen: {url}"
+msgstr "Search the web: {url}"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "an"
+msgstr "on"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "aus"
+msgstr "off"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Sitzung gespeichert: {path}"
+msgstr "Session saved: {path}"
+
+#: src/obd_diag/cli.py
+msgid "keine Zahl: {text}"
+msgstr "not a number: {text}"
+
+#: src/obd_diag/cli.py
+msgid "Adapter: {adapter}, Protokoll: {protocol}"
+msgstr "Adapter: {adapter}, protocol: {protocol}"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Unerwartete Antwort vom Fahrzeug: {error}"
+msgstr "Unexpected response from the vehicle: {error}"
+
+#: src/obd_diag/cli.py
+msgid "Online, ungeprüft: {text}"
+msgstr "Online, unverified: {text}"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "Quelle: {source}, {url}"
+msgstr "Source: {source}, {url}"
+
+#: src/obd_diag/cli.py
+msgid "Bordspannung {voltage:.1f} V unter {minimum:.1f} V, Abfrage nur alle {seconds:g} s."
+msgstr "Battery voltage {voltage:.1f} V below {minimum:.1f} V, querying only every {seconds:g} s."
+
+#: src/obd_diag/cli.py
+msgid "Mit --list anzeigen, mit --pids wählen."
+msgstr "Show them with --list, choose with --pids."
+
+#: src/obd_diag/data/wmi.py
+msgid "Volkswagen Nutzfahrzeuge"
+msgstr "Volkswagen Commercial Vehicles"
+
+#: src/obd_diag/data/wmi.py
+msgid "Volkswagen Nutzfahrzeuge (Bus)"
+msgstr "Volkswagen Commercial Vehicles (bus)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Volkswagen Nutzfahrzeuge (Fahrgestell)"
+msgstr "Volkswagen Commercial Vehicles (chassis)"
+
+#: src/obd_diag/data/wmi.py
+msgid "BMW Motorrad"
+msgstr "BMW Motorrad"
+
+#: src/obd_diag/data/wmi.py
+msgid "Mercedes-Benz (Transporter)"
+msgstr "Mercedes-Benz (vans)"
+
+#: src/obd_diag/data/wmi.py
+msgid "EvoBus (Mercedes-Benz Omnibusse)"
+msgstr "EvoBus (Mercedes-Benz buses)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Setra (Kässbohrer)"
+msgstr "Setra (Kässbohrer)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ford (Europa)"
+msgstr "Ford (Europe)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Opel (seit Übernahme durch PSA)"
+msgstr "Opel (since the PSA takeover)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Toyota Frankreich"
+msgstr "Toyota France"
+
+#: src/obd_diag/data/wmi.py
+msgid "Nissan Spanien"
+msgstr "Nissan Spain"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ford Spanien"
+msgstr "Ford Spain"
+
+#: src/obd_diag/data/wmi.py
+msgid "Citroën Spanien"
+msgstr "Citroën Spain"
+
+#: src/obd_diag/data/wmi.py
+msgid "Opel Spanien"
+msgstr "Opel Spain"
+
+#: src/obd_diag/data/wmi.py
+msgid "Jaguar (SUV; bis 1987 Daimler)"
+msgstr "Jaguar (SUV; Daimler until 1987)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ford Großbritannien"
+msgstr "Ford UK"
+
+#: src/obd_diag/data/wmi.py
+msgid "Honda Großbritannien"
+msgstr "Honda UK"
+
+#: src/obd_diag/data/wmi.py
+msgid "Honda Großbritannien (SUV)"
+msgstr "Honda UK (SUV)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Nissan Großbritannien"
+msgstr "Nissan UK"
+
+#: src/obd_diag/data/wmi.py
+msgid "Toyota Großbritannien"
+msgstr "Toyota UK"
+
+#: src/obd_diag/data/wmi.py
+msgid "Triumph Motorrad"
+msgstr "Triumph Motorcycles"
+
+#: src/obd_diag/data/wmi.py
+msgid "Saab (Valmet Finnland)"
+msgstr "Saab (Valmet Finland)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Hyundai Tschechien"
+msgstr "Hyundai Czech Republic"
+
+#: src/obd_diag/data/wmi.py
+msgid "Audi Ungarn"
+msgstr "Audi Hungary"
+
+#: src/obd_diag/data/wmi.py
+msgid "Suzuki Ungarn"
+msgstr "Suzuki Hungary"
+
+#: src/obd_diag/data/wmi.py
+msgid "Kia Slowakei"
+msgstr "Kia Slovakia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Fiat Polen"
+msgstr "Fiat Poland"
+
+#: src/obd_diag/data/wmi.py
+msgid "Volkswagen Russland"
+msgstr "Volkswagen Russia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Toyota Türkei"
+msgstr "Toyota Turkey"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ford Türkei"
+msgstr "Ford Turkey"
+
+#: src/obd_diag/data/wmi.py
+msgid "Hyundai Türkei"
+msgstr "Hyundai Turkey"
+
+#: src/obd_diag/data/wmi.py
+msgid "Suzuki Motorrad"
+msgstr "Suzuki Motorcycles"
+
+#: src/obd_diag/data/wmi.py
+msgid "Isuzu (Lkw)"
+msgstr "Isuzu (trucks)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Hyundai (Nutzfahrzeuge)"
+msgstr "Hyundai (commercial vehicles)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Maruti Suzuki (für Nissan)"
+msgstr "Maruti Suzuki (for Nissan)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Hyundai Indien"
+msgstr "Hyundai India"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ford Indien"
+msgstr "Ford India"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ford (Lkw)"
+msgstr "Ford (trucks)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Chevrolet (Lkw)"
+msgstr "Chevrolet (trucks)"
+
+#: src/obd_diag/data/wmi.py
+msgid "GMC (Lkw)"
+msgstr "GMC (trucks)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Chrysler-Konzern (MPV)"
+msgstr "Chrysler group (MPV)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Chrysler-Konzern / Ram (Lkw)"
+msgstr "Chrysler group / Ram (trucks)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Dodge (Lkw)"
+msgstr "Dodge (trucks)"
+
+#: src/obd_diag/data/wmi.py
+msgid "Toyota Kanada"
+msgstr "Toyota Canada"
+
+#: src/obd_diag/data/wmi.py
+msgid "Honda Kanada"
+msgstr "Honda Canada"
+
+#: src/obd_diag/data/wmi.py
+msgid "Chevrolet Kanada"
+msgstr "Chevrolet Canada"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ford Kanada"
+msgstr "Ford Canada"
+
+#: src/obd_diag/data/wmi.py
+msgid "Chrysler Kanada"
+msgstr "Chrysler Canada"
+
+#: src/obd_diag/data/wmi.py
+msgid "Volkswagen Mexiko"
+msgstr "Volkswagen Mexico"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ford Mexiko"
+msgstr "Ford Mexico"
+
+#: src/obd_diag/data/wmi.py
+msgid "Nissan Mexiko"
+msgstr "Nissan Mexico"
+
+#: src/obd_diag/data/wmi.py
+msgid "Chevrolet Mexiko"
+msgstr "Chevrolet Mexico"
+
+#: src/obd_diag/data/wmi.py
+msgid "Honda Mexiko"
+msgstr "Honda Mexico"
+
+#: src/obd_diag/data/wmi.py
+msgid "Kia / Hyundai Mexiko"
+msgstr "Kia / Hyundai Mexico"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ford Australien"
+msgstr "Ford Australia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Toyota Australien"
+msgstr "Toyota Australia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Volkswagen Brasilien"
+msgstr "Volkswagen Brazil"
+
+#: src/obd_diag/data/wmi.py
+msgid "Fiat Brasilien"
+msgstr "Fiat Brazil"
+
+#: src/obd_diag/data/wmi.py
+msgid "Chevrolet Brasilien"
+msgstr "Chevrolet Brazil"
+
+#: src/obd_diag/data/wmi.py
+msgid "Südafrika"
+msgstr "South Africa"
+
+#: src/obd_diag/data/wmi.py
+msgid "Elfenbeinküste"
+msgstr "Ivory Coast"
+
+#: src/obd_diag/data/wmi.py
+msgid "Lesotho"
+msgstr "Lesotho"
+
+#: src/obd_diag/data/wmi.py
+msgid "Botswana"
+msgstr "Botswana"
+
+#: src/obd_diag/data/wmi.py
+msgid "Namibia"
+msgstr "Namibia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Madagaskar"
+msgstr "Madagascar"
+
+#: src/obd_diag/data/wmi.py
+msgid "Mauritius"
+msgstr "Mauritius"
+
+#: src/obd_diag/data/wmi.py
+msgid "Tunesien"
+msgstr "Tunisia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Zypern"
+msgstr "Cyprus"
+
+#: src/obd_diag/data/wmi.py
+msgid "Simbabwe"
+msgstr "Zimbabwe"
+
+#: src/obd_diag/data/wmi.py
+msgid "Mosambik"
+msgstr "Mozambique"
+
+#: src/obd_diag/data/wmi.py
+msgid "Angola"
+msgstr "Angola"
+
+#: src/obd_diag/data/wmi.py
+msgid "Äthiopien"
+msgstr "Ethiopia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Kenia"
+msgstr "Kenya"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ruanda"
+msgstr "Rwanda"
+
+#: src/obd_diag/data/wmi.py
+msgid "Nigeria"
+msgstr "Nigeria"
+
+#: src/obd_diag/data/wmi.py
+msgid "Algerien"
+msgstr "Algeria"
+
+#: src/obd_diag/data/wmi.py
+msgid "Eswatini"
+msgstr "Eswatini"
+
+#: src/obd_diag/data/wmi.py
+msgid "Uganda"
+msgstr "Uganda"
+
+#: src/obd_diag/data/wmi.py
+msgid "Libyen"
+msgstr "Libya"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ägypten"
+msgstr "Egypt"
+
+#: src/obd_diag/data/wmi.py
+msgid "Marokko"
+msgstr "Morocco"
+
+#: src/obd_diag/data/wmi.py
+msgid "Sambia"
+msgstr "Zambia"
+
+#: src/obd_diag/data/wmi.py
+msgid "China"
+msgstr "China"
+
+#: src/obd_diag/data/wmi.py
+msgid "Japan"
+msgstr "Japan"
+
+#: src/obd_diag/data/wmi.py
+msgid "Israel"
+msgstr "Israel"
+
+#: src/obd_diag/data/wmi.py
+msgid "Südkorea"
+msgstr "South Korea"
+
+#: src/obd_diag/data/wmi.py
+msgid "Jordanien"
+msgstr "Jordan"
+
+#: src/obd_diag/data/wmi.py
+msgid "Kirgisistan"
+msgstr "Kyrgyzstan"
+
+#: src/obd_diag/data/wmi.py
+msgid "Indien"
+msgstr "India"
+
+#: src/obd_diag/data/wmi.py
+msgid "Indonesien"
+msgstr "Indonesia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Thailand"
+msgstr "Thailand"
+
+#: src/obd_diag/data/wmi.py
+msgid "Myanmar"
+msgstr "Myanmar"
+
+#: src/obd_diag/data/wmi.py
+msgid "Mongolei"
+msgstr "Mongolia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Kasachstan"
+msgstr "Kazakhstan"
+
+#: src/obd_diag/data/wmi.py
+msgid "Iran"
+msgstr "Iran"
+
+#: src/obd_diag/data/wmi.py
+msgid "Pakistan"
+msgstr "Pakistan"
+
+#: src/obd_diag/data/wmi.py
+msgid "Irak"
+msgstr "Iraq"
+
+#: src/obd_diag/data/wmi.py
+msgid "Türkei"
+msgstr "Turkey"
+
+#: src/obd_diag/data/wmi.py
+msgid "Usbekistan"
+msgstr "Uzbekistan"
+
+#: src/obd_diag/data/wmi.py
+msgid "Aserbaidschan"
+msgstr "Azerbaijan"
+
+#: src/obd_diag/data/wmi.py
+msgid "Tadschikistan"
+msgstr "Tajikistan"
+
+#: src/obd_diag/data/wmi.py
+msgid "Armenien"
+msgstr "Armenia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Philippinen"
+msgstr "Philippines"
+
+#: src/obd_diag/data/wmi.py
+msgid "Singapur"
+msgstr "Singapore"
+
+#: src/obd_diag/data/wmi.py
+msgid "Malaysia"
+msgstr "Malaysia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Bangladesch"
+msgstr "Bangladesh"
+
+#: src/obd_diag/data/wmi.py
+msgid "Kambodscha"
+msgstr "Cambodia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Vereinigte Arabische Emirate"
+msgstr "United Arab Emirates"
+
+#: src/obd_diag/data/wmi.py
+msgid "Taiwan"
+msgstr "Taiwan"
+
+#: src/obd_diag/data/wmi.py
+msgid "Vietnam"
+msgstr "Vietnam"
+
+#: src/obd_diag/data/wmi.py
+msgid "Laos"
+msgstr "Laos"
+
+#: src/obd_diag/data/wmi.py
+msgid "Saudi-Arabien"
+msgstr "Saudi Arabia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Hongkong"
+msgstr "Hong Kong"
+
+#: src/obd_diag/data/wmi.py
+msgid "Russland"
+msgstr "Russia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Vereinigtes Königreich"
+msgstr "United Kingdom"
+
+#: src/obd_diag/data/wmi.py
+msgid "Deutschland"
+msgstr "Germany"
+
+#: src/obd_diag/data/wmi.py
+msgid "Polen"
+msgstr "Poland"
+
+#: src/obd_diag/data/wmi.py
+msgid "Lettland"
+msgstr "Latvia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Georgien"
+msgstr "Georgia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Island"
+msgstr "Iceland"
+
+#: src/obd_diag/data/wmi.py
+msgid "Schweiz"
+msgstr "Switzerland"
+
+#: src/obd_diag/data/wmi.py
+msgid "Tschechien"
+msgstr "Czech Republic"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ungarn"
+msgstr "Hungary"
+
+#: src/obd_diag/data/wmi.py
+msgid "Portugal"
+msgstr "Portugal"
+
+#: src/obd_diag/data/wmi.py
+msgid "Serbien"
+msgstr "Serbia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Andorra"
+msgstr "Andorra"
+
+#: src/obd_diag/data/wmi.py
+msgid "Niederlande"
+msgstr "Netherlands"
+
+#: src/obd_diag/data/wmi.py
+msgid "Spanien"
+msgstr "Spain"
+
+#: src/obd_diag/data/wmi.py
+msgid "Dänemark"
+msgstr "Denmark"
+
+#: src/obd_diag/data/wmi.py
+msgid "Irland"
+msgstr "Ireland"
+
+#: src/obd_diag/data/wmi.py
+msgid "Rumänien"
+msgstr "Romania"
+
+#: src/obd_diag/data/wmi.py
+msgid "Nordmazedonien"
+msgstr "North Macedonia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Slowakei"
+msgstr "Slovakia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Bosnien und Herzegowina"
+msgstr "Bosnia and Herzegovina"
+
+#: src/obd_diag/data/wmi.py
+msgid "Österreich"
+msgstr "Austria"
+
+#: src/obd_diag/data/wmi.py
+msgid "Frankreich"
+msgstr "France"
+
+#: src/obd_diag/data/wmi.py
+msgid "Kroatien"
+msgstr "Croatia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Estland"
+msgstr "Estonia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Bulgarien"
+msgstr "Bulgaria"
+
+#: src/obd_diag/data/wmi.py
+msgid "Griechenland"
+msgstr "Greece"
+
+#: src/obd_diag/data/wmi.py
+msgid "Luxemburg"
+msgstr "Luxembourg"
+
+#: src/obd_diag/data/wmi.py
+msgid "Belgien"
+msgstr "Belgium"
+
+#: src/obd_diag/data/wmi.py
+msgid "Finnland"
+msgstr "Finland"
+
+#: src/obd_diag/data/wmi.py
+msgid "Malta"
+msgstr "Malta"
+
+#: src/obd_diag/data/wmi.py
+msgid "Schweden"
+msgstr "Sweden"
+
+#: src/obd_diag/data/wmi.py
+msgid "Norwegen"
+msgstr "Norway"
+
+#: src/obd_diag/data/wmi.py
+msgid "Belarus"
+msgstr "Belarus"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ukraine"
+msgstr "Ukraine"
+
+#: src/obd_diag/data/wmi.py
+msgid "Italien"
+msgstr "Italy"
+
+#: src/obd_diag/data/wmi.py
+msgid "Slowenien"
+msgstr "Slovenia"
+
+#: src/obd_diag/data/wmi.py
+msgid "San Marino"
+msgstr "San Marino"
+
+#: src/obd_diag/data/wmi.py
+msgid "Litauen"
+msgstr "Lithuania"
+
+#: src/obd_diag/data/wmi.py
+msgid "USA"
+msgstr "USA"
+
+#: src/obd_diag/data/wmi.py
+msgid "Kanada"
+msgstr "Canada"
+
+#: src/obd_diag/data/wmi.py
+msgid "Mexiko"
+msgstr "Mexico"
+
+#: src/obd_diag/data/wmi.py
+msgid "Nicaragua"
+msgstr "Nicaragua"
+
+#: src/obd_diag/data/wmi.py
+msgid "Dominikanische Republik"
+msgstr "Dominican Republic"
+
+#: src/obd_diag/data/wmi.py
+msgid "Honduras"
+msgstr "Honduras"
+
+#: src/obd_diag/data/wmi.py
+msgid "Panama"
+msgstr "Panama"
+
+#: src/obd_diag/data/wmi.py
+msgid "Puerto Rico"
+msgstr "Puerto Rico"
+
+#: src/obd_diag/data/wmi.py
+msgid "Neuseeland"
+msgstr "New Zealand"
+
+#: src/obd_diag/data/wmi.py
+msgid "Australien"
+msgstr "Australia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Argentinien"
+msgstr "Argentina"
+
+#: src/obd_diag/data/wmi.py
+msgid "Chile"
+msgstr "Chile"
+
+#: src/obd_diag/data/wmi.py
+msgid "Ecuador"
+msgstr "Ecuador"
+
+#: src/obd_diag/data/wmi.py
+msgid "Peru"
+msgstr "Peru"
+
+#: src/obd_diag/data/wmi.py
+msgid "Venezuela"
+msgstr "Venezuela"
+
+#: src/obd_diag/data/wmi.py
+msgid "Bolivien"
+msgstr "Bolivia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Costa Rica"
+msgstr "Costa Rica"
+
+#: src/obd_diag/data/wmi.py
+msgid "Brasilien"
+msgstr "Brazil"
+
+#: src/obd_diag/data/wmi.py
+msgid "Kolumbien"
+msgstr "Colombia"
+
+#: src/obd_diag/data/wmi.py
+msgid "Uruguay"
+msgstr "Uruguay"
+
+#: src/obd_diag/export/report.py
+msgid "Fehlercode-Texte: OBDex (CC0)"
+msgstr "Trouble code texts: OBDex (CC0)"
+
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "hoch"
+msgstr "high"
+
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "mittel"
+msgstr "medium"
+
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "niedrig"
+msgstr "low"
+
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "einfach"
+msgstr "easy"
+
+#: src/obd_diag/export/report.py
+msgid "schwer"
+msgstr "hard"
+
+#: src/obd_diag/export/report.py
+msgid "nur Werkstatt"
+msgstr "workshop only"
+
+#: src/obd_diag/export/report.py
+msgid "Code"
+msgstr "Code"
+
+#: src/obd_diag/export/report.py
+msgid "Art"
+msgstr "Type"
+
+#: src/obd_diag/export/report.py
+msgid "Titel"
+msgstr "Title"
+
+#: src/obd_diag/export/report.py
+msgid "Beschreibung"
+msgstr "Description"
+
+#: src/obd_diag/export/report.py
+msgid "Ursachen"
+msgstr "Causes"
+
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Symptome"
+msgstr "Symptoms"
+
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Abgasrelevant"
+msgstr "Emissions-related"
+
+#: src/obd_diag/export/report.py
+msgid "Reparaturaufwand"
+msgstr "Repair effort"
+
+#: src/obd_diag/export/report.py
+msgid "Kosten"
+msgstr "Cost"
+
+#: src/obd_diag/export/report.py
+msgid "Kosten von (EUR)"
+msgstr "Cost from (EUR)"
+
+#: src/obd_diag/export/report.py
+msgid "Kosten bis (EUR)"
+msgstr "Cost to (EUR)"
+
+#: src/obd_diag/export/report.py
+msgid "Datum"
+msgstr "Date"
+
+#: src/obd_diag/export/report.py
+msgid "Gespeicherte Fehlercodes"
+msgstr "Stored trouble codes"
+
+#: src/obd_diag/export/report.py
+msgid "Mode 03: bestätigte Fehler"
+msgstr "Mode 03: confirmed faults"
+
+#: src/obd_diag/export/report.py
+msgid "Ausstehende Fehlercodes"
+msgstr "Pending trouble codes"
+
+#: src/obd_diag/export/report.py
+msgid "Mode 07: im aktuellen Fahrzyklus erkannt"
+msgstr "Mode 07: detected in the current drive cycle"
+
+#: src/obd_diag/export/report.py
+msgid "Permanente Fehlercodes"
+msgstr "Permanent trouble codes"
+
+#: src/obd_diag/export/report.py
+msgid "Mode 0A: lassen sich nicht löschen, das Steuergerät entfernt sie selbst"
+msgstr "Mode 0A: cannot be cleared, the control unit removes them itself"
+
+#: src/obd_diag/export/report.py
+msgid "%d.%m.%Y, %H:%M Uhr"
+msgstr "%Y-%m-%d, %H:%M"
+
+#: src/obd_diag/export/report.py
+msgid "Warnung:"
+msgstr "Warning:"
+
+#: src/obd_diag/export/report.py
+msgid "Diesel (Monitore für Diesel-Motoren)"
+msgstr "Diesel (monitors for diesel engines)"
+
+#: src/obd_diag/export/report.py
+msgid "Otto (Monitore für Otto-Motoren)"
+msgstr "Petrol (monitors for spark ignition engines)"
+
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Fehlercodes"
+msgstr "Trouble codes"
+
+#: src/obd_diag/export/report.py
+msgid "OBD-Diagnosebericht"
+msgstr "OBD diagnosis report"
+
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Fahrzeug"
+msgstr "Vehicle"
+
+#: src/obd_diag/export/report.py
+msgid "Verbindung"
+msgstr "Connection"
+
+#: src/obd_diag/export/report.py
+msgid "Bordspannung unter {voltage} V: Ergebnisse können unzuverlässig sein. Batterie laden oder Ladegerät anschließen."
+msgstr "Battery voltage below {voltage} V: results may be unreliable. Charge the battery or connect a charger."
+
+#: src/obd_diag/export/report.py
+msgid "Readiness (Eigendiagnosen Abgassystem)"
+msgstr "Readiness (emission system self-tests)"
+
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "Keine Beschreibung im Katalog"
+msgstr "No description in the catalog"
+
+#: src/obd_diag/export/report.py
+msgid "Betriebszustand des Motors in dem Moment, in dem der Fehlercode gesetzt wurde."
+msgstr "Engine operating conditions at the moment the trouble code was set."
+
+#: src/obd_diag/export/report.py
+msgid "Erstellt mit obd-diag {version}; {source}"
+msgstr "Created with obd-diag {version}; {source}"
+
+#: src/obd_diag/export/report.py
+msgid "Seite {page} von {total}"
+msgstr "Page {page} of {total}"
+
+#: src/obd_diag/export/report.py
+msgid "Fahrzeug-Identifikation (FIN) nicht verfügbar."
+msgstr "Vehicle identification number (VIN) not available."
+
+#: src/obd_diag/export/report.py
+msgid "Kontrollleuchte"
+msgstr "Check engine light"
+
+#: src/obd_diag/export/report.py
+msgid "Readiness-Status nicht verfügbar."
+msgstr "Readiness status not available."
+
+#: src/obd_diag/export/report.py
+msgid "Monitor"
+msgstr "Monitor"
+
+#: src/obd_diag/export/report.py
+msgid "Status"
+msgstr "Status"
+
+#: src/obd_diag/export/report.py
+msgid "Kosten (Richtwert)"
+msgstr "Cost (estimate)"
+
+#: src/obd_diag/export/report.py
+msgid "Mögliche Ursachen (Wahrscheinlichkeit)"
+msgstr "Possible causes (likelihood)"
+
+#: src/obd_diag/export/report.py
+msgid "Freeze Frame nicht verfügbar."
+msgstr "Freeze frame not available."
+
+#: src/obd_diag/export/report.py
+msgid "Ausgelesen am {when}"
+msgstr "Read on {when}"
+
+#: src/obd_diag/export/report.py
+msgid "{voltage} (niedrig)"
+msgstr "{voltage} (low)"
+
+#: src/obd_diag/export/report.py
+msgid "nein, {count} offen"
+msgstr "no, {count} incomplete"
+
+#: src/obd_diag/export/report.py
+msgid "Kontrollleuchte (MIL)"
+msgstr "Check engine light (MIL)"
+
+#: src/obd_diag/export/report.py
+msgid "Gemeldete Fehlercodes"
+msgstr "Reported trouble codes"
+
+#: src/obd_diag/export/report.py
+msgid "Motorart"
+msgstr "Engine type"
+
+#: src/obd_diag/export/report.py
+msgid "Nach dem Löschen von Fehlercodes stehen die Monitore wieder auf „nicht abgeschlossen“; sie schließen erst nach mehreren Fahrten ab."
+msgstr "After clearing trouble codes the monitors are back to “incomplete”; they only complete after several drives."
+
+#: src/obd_diag/export/report.py
+msgid "Vermutlich herstellerspezifischer Code; Bedeutung in den Unterlagen des Herstellers nachschlagen."
+msgstr "Probably a manufacturer-specific code; look up its meaning in the manufacturer's documentation."
+
+#: src/obd_diag/export/report.py
+msgid "Messwert"
+msgstr "Parameter"
+
+#: src/obd_diag/export/report.py
+msgid "Erklärung siehe oben unter „{kind}“."
+msgstr "See the explanation above under “{kind}”."
+
+#: src/obd_diag/export/report.py
+msgid "Ausgelöst durch"
+msgstr "Triggered by"
+
+#: src/obd_diag/export/report.py
+msgid "Wert"
+msgstr "Value"
+
+#: src/obd_diag/export/report.py
+msgid "Online-Erklärung (ungeprüft):"
+msgstr "Online explanation (unverified):"
+
+#: src/obd_diag/protocol/dtc_decode.py
+msgid "Steuergerät lehnt Mode {mode:02X} ab (Antwort 7F {mode:02X} {nrc:02X})"
+msgstr "Control unit rejects mode {mode:02X} (response 7F {mode:02X} {nrc:02X})"
+
+#: src/obd_diag/protocol/dtc_decode.py
+msgid "unerwartete Antwort auf Mode {mode:02X}: {data}"
+msgstr "unexpected response to mode {mode:02X}: {data}"
+
+#: src/obd_diag/protocol/dtc_decode.py
+msgid "Antwort auf Mode {mode:02X} ohne Zählbyte"
+msgstr "response to mode {mode:02X} without count byte"
+
+#: src/obd_diag/protocol/dtc_decode.py
+msgid "Antwort auf Mode {mode:02X} unvollständig ({got} von {count} Codes)"
+msgstr "response to mode {mode:02X} incomplete ({got} of {count} codes)"
+
+#: src/obd_diag/protocol/elm327.py
+msgid "Kein Steuergerät antwortet. Zündung einschalten (der Motor darf aus bleiben), bei Adaptern mit MS-/HS-CAN-Schalter HS-CAN wählen und erneut versuchen."
+msgstr "No control unit responds. Switch the ignition on (the engine may stay off), select HS-CAN on adapters with an MS/HS-CAN switch and try again."
+
+#: src/obd_diag/protocol/elm327.py
+msgid "04 (Fehlercodes löschen) nur über clear_dtcs"
+msgstr "04 (clear trouble codes) only via clear_dtcs"
+
+#: src/obd_diag/protocol/elm327.py
+msgid "nicht freigegebener Befehl {cmd}"
+msgstr "command not allowed: {cmd}"
+
+#: src/obd_diag/protocol/elm327.py
+msgid "{name} (laut Headern {inferred})"
+msgstr "{name} (according to headers {inferred})"
+
+#: src/obd_diag/protocol/elm327.py
+msgid "Adapter lässt sich nicht auf ATH0 zurückstellen ({error}); Sitzung abgebrochen"
+msgstr "Adapter cannot be reset to ATH0 ({error}); session aborted"
+
+#: src/obd_diag/protocol/frames.py
+#: src/obd_diag/protocol/headers.py
+msgid "keine Hex-Daten: {text}"
+msgstr "no hex data: {text}"
+
+#: src/obd_diag/protocol/frames.py
+msgid "mehrteilige Nachricht unvollständig ({got} von {length} Bytes): Frames fehlen oder stammen von mehreren Steuergeräten"
+msgstr "multi-frame message incomplete ({got} of {length} bytes): frames are missing or come from several control units"
+
+#: src/obd_diag/protocol/frames.py
+msgid "Frame {seq:X} nach vollständiger Nachricht"
+msgstr "frame {seq:X} after a complete message"
+
+#: src/obd_diag/protocol/frames.py
+msgid "Frame {seq:X} statt {expected:X}; Antworten mehrerer Steuergeräte vermischt? Nur mit Headern (ATH1) zuzuordnen"
+msgstr "frame {seq:X} instead of {expected:X}; responses from several control units mixed? Only assignable with headers (ATH1)"
+
+#: src/obd_diag/protocol/headers.py
+msgid "ungerade Zahl von Hex-Ziffern nach dem Header: {line}"
+msgstr "odd number of hex digits after the header: {line}"
+
+#: src/obd_diag/protocol/headers.py
+msgid "CAN-Header bei Nicht-CAN-Protokoll: {line}"
+msgstr "CAN header with a non-CAN protocol: {line}"
+
+#: src/obd_diag/protocol/headers.py
+msgid "ungerade Zahl von Hex-Ziffern: {line}"
+msgstr "odd number of hex digits: {line}"
+
+#: src/obd_diag/protocol/headers.py
+msgid "CAN-Frame ohne Daten: {line}"
+msgstr "CAN frame without data: {line}"
+
+#: src/obd_diag/protocol/headers.py
+msgid "mehrteilige Nachricht von {header} unvollständig ({got} von {length} Bytes)"
+msgstr "multi-frame message from {header} incomplete ({got} of {length} bytes)"
+
+#: src/obd_diag/protocol/headers.py
+msgid "Nachricht ohne Daten: {line}"
+msgstr "message without data: {line}"
+
+#: src/obd_diag/protocol/headers.py
+msgid "ungültiger Einzel-Frame: {line}"
+msgstr "invalid single frame: {line}"
+
+#: src/obd_diag/protocol/headers.py
+msgid "Einzel-Frame von {header} vor Ende der mehrteiligen Nachricht"
+msgstr "single frame from {header} before the end of the multi-frame message"
+
+#: src/obd_diag/protocol/headers.py
+msgid "erster Frame ohne Länge: {line}"
+msgstr "first frame without length: {line}"
+
+#: src/obd_diag/protocol/headers.py
+msgid "erster Frame mit Länge {length}: {line}"
+msgstr "first frame with length {length}: {line}"
+
+#: src/obd_diag/protocol/headers.py
+msgid "neue Nachricht von {header} vor Ende der vorigen"
+msgstr "new message from {header} before the end of the previous one"
+
+#: src/obd_diag/protocol/headers.py
+msgid "Folge-Frame ohne ersten Frame von {header}: {line}"
+msgstr "consecutive frame without first frame from {header}: {line}"
+
+#: src/obd_diag/protocol/headers.py
+msgid "Folge-Frame {seq:X} statt {expected:X} von {header}: Frames fehlen oder sind vertauscht"
+msgstr "consecutive frame {seq:X} instead of {expected:X} from {header}: frames are missing or out of order"
+
+#: src/obd_diag/protocol/headers.py
+msgid "unbekanntes PCI-Byte {pci:02X}: {line}"
+msgstr "unknown PCI byte {pci:02X}: {line}"
+
+#: src/obd_diag/protocol/obd.py
+msgid "allgemein abgelehnt"
+msgstr "general reject"
+
+#: src/obd_diag/protocol/obd.py
+msgid "Dienst nicht unterstützt"
+msgstr "service not supported"
+
+#: src/obd_diag/protocol/obd.py
+msgid "Unterfunktion nicht unterstützt"
+msgstr "sub-function not supported"
+
+#: src/obd_diag/protocol/obd.py
+msgid "Steuergerät beschäftigt"
+msgstr "control unit busy"
+
+#: src/obd_diag/protocol/obd.py
+msgid "Bedingungen nicht erfüllt"
+msgstr "conditions not correct"
+
+#: src/obd_diag/protocol/obd.py
+msgid "Anfrage außerhalb des gültigen Bereichs"
+msgstr "request out of range"
+
+#: src/obd_diag/protocol/obd.py
+msgid "Zugriff verweigert"
+msgstr "access denied"
+
+#: src/obd_diag/protocol/obd.py
+msgid "Antwort angekündigt, aber nicht gekommen"
+msgstr "response announced but not received"
+
+#: src/obd_diag/protocol/obd.py
+msgid "unbekannter Grund"
+msgstr "unknown reason"
+
+#: src/obd_diag/protocol/obd.py
+msgid "{cmd}: {reason}; mit Headern wiederholt: NO DATA"
+msgstr "{cmd}: {reason}; repeated with headers: NO DATA"
+
+#: src/obd_diag/protocol/obd.py
+msgid "Mode {mode:02X} liefert keine Fehlercodes"
+msgstr "Mode {mode:02X} does not return trouble codes"
+
+#: src/obd_diag/protocol/obd.py
+msgid "{cmd} (mit Headern)"
+msgstr "{cmd} (with headers)"
+
+#: src/obd_diag/protocol/obd.py
+msgid "{reason} (Antwort 7F {mode:02X} {nrc:02X})"
+msgstr "{reason} (response 7F {mode:02X} {nrc:02X})"
+
+#: src/obd_diag/protocol/obd.py
+msgid "04: keine Bestätigung ({response})"
+msgstr "04: no confirmation ({response})"
+
+#: src/obd_diag/protocol/obd.py
+msgid "PID 0C braucht zwei Datenbytes, nicht {count}"
+msgstr "PID 0C needs two data bytes, not {count}"
+
+#: src/obd_diag/protocol/obd.py
+msgid "{cmd}: {reason}; auch mit Headern nicht lesbar: {error}"
+msgstr "{cmd}: {reason}; not readable with headers either: {error}"
+
+#: src/obd_diag/protocol/obd.py
+msgid "04: unerwartete Antwort {data}"
+msgstr "04: unexpected response {data}"
+
+#: src/obd_diag/protocol/obd.py
+msgid "04: nicht bestätigt (nur 7F 04 78, Antwort folgt; nach {seconds:g} s keine endgültige Antwort)"
+msgstr "04: not confirmed (only 7F 04 78, response pending; no final response after {seconds:g} s)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Motordrehmoment Stützpunkt {n}"
+msgstr "Engine torque point {n}"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kurzzeittrimm Nachkat Bank {n}"
+msgstr "Short-term secondary O2 trim bank {n}"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Langzeittrimm Nachkat Bank {n}"
+msgstr "Long-term secondary O2 trim bank {n}"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Motordrehmoment Leerlauf"
+msgstr "Engine torque idle"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Berechnete Motorlast"
+msgstr "Calculated engine load"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kurzzeit-Kraftstofftrimm Bank 1"
+msgstr "Short-term fuel trim bank 1"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Langzeit-Kraftstofftrimm Bank 1"
+msgstr "Long-term fuel trim bank 1"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kurzzeit-Kraftstofftrimm Bank 2"
+msgstr "Short-term fuel trim bank 2"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Langzeit-Kraftstofftrimm Bank 2"
+msgstr "Long-term fuel trim bank 2"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffdruck (Überdruck)"
+msgstr "Fuel pressure (gauge)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Saugrohrdruck (absolut)"
+msgstr "Intake manifold pressure (absolute)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Motordrehzahl"
+msgstr "Engine speed"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Zündzeitpunkt (vor OT, Zylinder 1)"
+msgstr "Timing advance (before TDC, cylinder 1)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur"
+msgstr "Intake air temperature"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Luftmasse (Luftmassenmesser)"
+msgstr "Air flow rate (MAF sensor)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Drosselklappenstellung"
+msgstr "Throttle position"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Laufzeit seit Motorstart"
+msgstr "Run time since engine start"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Strecke mit Warnleuchte an"
+msgstr "Distance with MIL on"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck (relativ zum Saugrohr)"
+msgstr "Fuel rail pressure (relative to manifold)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck (Überdruck)"
+msgstr "Fuel rail pressure (gauge)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "AGR-Sollwert"
+msgstr "Commanded EGR"
+
+#: src/obd_diag/protocol/pids.py
+msgid "AGR-Abweichung"
+msgstr "EGR error"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Tankentlüftung Sollwert"
+msgstr "Commanded evaporative purge"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Tankfüllstand"
+msgstr "Fuel tank level"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Warmläufe seit Löschen"
+msgstr "Warm-ups since codes cleared"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Strecke seit Löschen"
+msgstr "Distance since codes cleared"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Dampfdruck Tankentlüftung"
+msgstr "Evap system vapor pressure"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Luftdruck (absolut)"
+msgstr "Barometric pressure (absolute)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Steuergerätespannung"
+msgstr "Control module voltage"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Absolute Motorlast"
+msgstr "Absolute load value"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Lambda-Sollwert"
+msgstr "Commanded air-fuel equivalence ratio"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Relative Drosselklappenstellung"
+msgstr "Relative throttle position"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Umgebungstemperatur"
+msgstr "Ambient air temperature"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Drosselklappenstellung B (absolut)"
+msgstr "Absolute throttle position B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Fahrpedalstellung D"
+msgstr "Accelerator pedal position D"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Fahrpedalstellung E"
+msgstr "Accelerator pedal position E"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Drosselklappensteller Sollwert"
+msgstr "Commanded throttle actuator"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Zeit mit Warnleuchte an"
+msgstr "Time run with MIL on"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Zeit seit Löschen"
+msgstr "Time since codes cleared"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ethanolanteil im Kraftstoff"
+msgstr "Ethanol fuel percentage"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Relative Fahrpedalstellung"
+msgstr "Relative accelerator pedal position"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ladezustand Hybridbatterie"
+msgstr "Hybrid battery state of charge"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Motoröltemperatur"
+msgstr "Engine oil temperature"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Einspritzzeitpunkt"
+msgstr "Fuel injection timing"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverbrauch"
+msgstr "Engine fuel rate"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Fahrerwunsch-Drehmoment"
+msgstr "Driver's demand engine torque"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ist-Drehmoment"
+msgstr "Actual engine torque"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Bezugsdrehmoment des Motors"
+msgstr "Engine reference torque"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Luftmasse Sensor A"
+msgstr "Mass air flow sensor A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Luftmasse Sensor B"
+msgstr "Mass air flow sensor B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kühlmitteltemperatur Sensor 1"
+msgstr "Coolant temperature sensor 1"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kühlmitteltemperatur Sensor 2"
+msgstr "Coolant temperature sensor 2"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kilometerstand"
+msgstr "Odometer"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Lambdasonde {n} Spannung"
+msgstr "Oxygen sensor {n} voltage"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Lambdasonde {n} Trimm"
+msgstr "Oxygen sensor {n} trim"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Breitbandsonde {n}"
+msgstr "Wide-band sensor {n}"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Breitbandsonde {n} Spannung"
+msgstr "Wide-band sensor {n} voltage"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Breitbandsonde {n} (Strom)"
+msgstr "Wide-band sensor {n} (current)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Breitbandsonde {n} Pumpstrom"
+msgstr "Wide-band sensor {n} pump current"
+
+#: src/obd_diag/protocol/pids.py
+msgid "keine Basis für unterstützte PIDs: {base:#04x}"
+msgstr "no base for supported PIDs: {base:#04x}"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Bitmaske braucht vier Datenbytes, nicht {count}"
+msgstr "bit mask needs four data bytes, not {count}"
+
+#: src/obd_diag/protocol/pids.py
+msgid "read_values braucht Werte genau einer PID, nicht {pids}"
+msgstr "read_values needs values of exactly one PID, not {pids}"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Katalysatortemperatur Bank 1, Sensor 1"
+msgstr "Catalyst temperature bank 1, sensor 1"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Katalysatortemperatur Bank 2, Sensor 1"
+msgstr "Catalyst temperature bank 2, sensor 1"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Katalysatortemperatur Bank 1, Sensor 2"
+msgstr "Catalyst temperature bank 1, sensor 2"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Katalysatortemperatur Bank 2, Sensor 2"
+msgstr "Catalyst temperature bank 2, sensor 2"
+
+#: src/obd_diag/protocol/pids.py
+msgid "unbekannter Live-Wert {key}; bekannt sind: {known}"
+msgstr "unknown live value {key}; known values: {known}"
+
+#: src/obd_diag/services/clear.py
+msgid "Löschen ist vorerst deaktiviert: Erst muss das Lesen an einem echten Fahrzeug geprüft sein. Es wurde nichts gesendet."
+msgstr "Clearing is disabled for now: reading must first be verified on a real vehicle. Nothing was sent."
+
+#: src/obd_diag/services/clear.py
+msgid "Drehzahl nicht lesbar, daher wird nicht gelöscht. Motor aus, Zündung an?"
+msgstr "Engine speed not readable, so nothing is cleared. Engine off, ignition on?"
+
+#: src/obd_diag/services/clear.py
+msgid "Keine Verbindung zum Steuergerät ({reason}). Ist die Zündung an?"
+msgstr "No connection to the control unit ({reason}). Is the ignition on?"
+
+#: src/obd_diag/services/clear.py
+msgid "Keine gespeicherten oder ausstehenden Fehlercodes, nichts zu löschen."
+msgstr "No stored or pending trouble codes, nothing to clear."
+
+#: src/obd_diag/services/clear.py
+msgid "Antwort {answer}"
+msgstr "Response {answer}"
+
+#: src/obd_diag/services/clear.py
+msgid "Bordspannung zu niedrig ({voltage:.1f} V, mindestens {minimum:.1f} V). Batterie laden oder Ladegerät anschließen."
+msgstr "Battery voltage too low ({voltage:.1f} V, at least {minimum:.1f} V). Charge the battery or connect a charger."
+
+#: src/obd_diag/services/clear.py
+msgid "Motor läuft ({rpm:.0f} 1/min). Motor abstellen, Zündung an lassen."
+msgstr "Engine is running ({rpm:.0f} rpm). Switch the engine off, leave the ignition on."
+
+#: src/obd_diag/services/clear.py
+msgid "Drehzahl nicht lesbar ({error}). Motor aus, Zündung an?"
+msgstr "Engine speed not readable ({error}). Engine off, ignition on?"
+
+#: src/obd_diag/services/clear.py
+msgid "Sicherung nach {target} fehlgeschlagen ({error}), nichts gelöscht."
+msgstr "Backup to {target} failed ({error}), nothing cleared."
+
+#: src/obd_diag/services/clear.py
+msgid "Steuergerät lehnt das Löschen ab: {error}. Sicherung: {backup}"
+msgstr "Control unit refuses to clear: {error}. Backup: {backup}"
+
+#: src/obd_diag/services/clear.py
+msgid "Steuergerät hat das Löschen nicht bestätigt (NO DATA). Sicherung: {backup}"
+msgstr "Control unit did not confirm clearing (NO DATA). Backup: {backup}"
+
+#: src/obd_diag/services/clear.py
+msgid "Löschen nicht bestätigt ({error}), Ergebnis mit 'obd-diag scan' prüfen. Sicherung: {backup}"
+msgstr "Clearing not confirmed ({error}), check the result with 'obd-diag scan'. Backup: {backup}"
+
+#: src/obd_diag/services/live.py
+msgid "keine"
+msgstr "none"
+
+#: src/obd_diag/services/live.py
+msgid "keine Werte gewählt"
+msgstr "no values selected"
+
+#: src/obd_diag/services/live.py
+msgid "vom Fahrzeug nicht unterstützt: {keys}"
+msgstr "not supported by the vehicle: {keys}"
+
+#: src/obd_diag/services/live.py
+msgid "{problem} (verfügbar: {offered})"
+msgstr "{problem} (available: {offered})"
+
+#: src/obd_diag/services/live.py
+msgid "Bordspannung (V)"
+msgstr "Battery voltage (V)"
+
+#: src/obd_diag/services/live.py
+msgid "unbekannte Werte: {keys}"
+msgstr "unknown values: {keys}"
+
+#: src/obd_diag/services/live.py
+msgid "Das Fahrzeug unterstützt keinen der Standardwerte (verfügbar: {offered})"
+msgstr "The vehicle supports none of the default values (available: {offered})"
+
+#: src/obd_diag/services/live.py
+msgid "keine Antwort vom Fahrzeug in {rounds} Runden nacheinander (Zündung aus?): {error}"
+msgstr "no response from the vehicle in {rounds} consecutive rounds (ignition off?): {error}"
+
+#: src/obd_diag/services/readiness.py
+msgid "Alle Tests abgeschlossen"
+msgstr "All tests complete"
+
+#: src/obd_diag/services/readiness.py
+msgid "Das ist keine AU-Bewertung: Zur Abgasuntersuchung gehört immer auch eine Abgasmessung am Endrohr, und ob einzelne offene Tests toleriert werden, hängt vom Fahrzeug und vom Prüfablauf ab."
+msgstr "This is not an emissions test verdict: an official emissions test always includes a tailpipe measurement, and whether individual incomplete tests are tolerated depends on the vehicle and the test procedure."
+
+#: src/obd_diag/services/readiness.py
+msgid "Verbrennungsaussetzer"
+msgstr "Misfire"
+
+#: src/obd_diag/services/readiness.py
+msgid "Kraftstoffsystem"
+msgstr "Fuel system"
+
+#: src/obd_diag/services/readiness.py
+msgid "Komponenten"
+msgstr "Components"
+
+#: src/obd_diag/services/readiness.py
+msgid "Katalysator"
+msgstr "Catalyst"
+
+#: src/obd_diag/services/readiness.py
+msgid "Katalysatorheizung"
+msgstr "Heated catalyst"
+
+#: src/obd_diag/services/readiness.py
+msgid "Tankentlüftung"
+msgstr "Evaporative system"
+
+#: src/obd_diag/services/readiness.py
+msgid "Sekundärluftsystem"
+msgstr "Secondary air system"
+
+#: src/obd_diag/services/readiness.py
+msgid "Klimaanlage (Kältemittel)"
+msgstr "A/C refrigerant"
+
+#: src/obd_diag/services/readiness.py
+msgid "Lambdasonde"
+msgstr "Oxygen sensor"
+
+#: src/obd_diag/services/readiness.py
+msgid "Lambdasondenheizung"
+msgstr "Oxygen sensor heater"
+
+#: src/obd_diag/services/readiness.py
+msgid "Abgasrückführung"
+msgstr "EGR system"
+
+#: src/obd_diag/services/readiness.py
+msgid "NMHC-Katalysator"
+msgstr "NMHC catalyst"
+
+#: src/obd_diag/services/readiness.py
+msgid "NOx-Nachbehandlung (SCR)"
+msgstr "NOx aftertreatment (SCR)"
+
+#: src/obd_diag/services/readiness.py
+msgid "Ladedruck"
+msgstr "Boost pressure"
+
+#: src/obd_diag/services/readiness.py
+msgid "Abgassensor"
+msgstr "Exhaust gas sensor"
+
+#: src/obd_diag/services/readiness.py
+msgid "Partikelfilter"
+msgstr "Particulate filter"
+
+#: src/obd_diag/services/readiness.py
+msgid "keine Readiness-Antwort"
+msgstr "no readiness response"
+
+#: src/obd_diag/services/readiness.py
+msgid "PID 01 braucht vier Datenbytes, nicht {count}"
+msgstr "PID 01 needs four data bytes, not {count}"
+
+#: src/obd_diag/services/session.py
+msgid "Keine obd-diag-Diagnosesitzung (Kennung 'format' fehlt oder ist falsch)."
+msgstr "Not an obd-diag diagnosis session (identifier 'format' missing or wrong)."
+
+#: src/obd_diag/services/session.py
+msgid "Unbekannte Format-Version der Sitzung: {version}."
+msgstr "Unknown format version of the session: {version}."
+
+#: src/obd_diag/services/session.py
+msgid "Sitzung hat Format-Version {version}, diese obd-diag-Version kennt nur bis {known}. Bitte obd-diag aktualisieren."
+msgstr "The session has format version {version}, this obd-diag version only knows up to {known}. Please update obd-diag."
+
+#: src/obd_diag/services/session.py
+msgid "Diagnosesitzung ist unvollständig oder beschädigt ({error})."
+msgstr "Diagnosis session is incomplete or damaged ({error})."
+
+#: src/obd_diag/services/session.py
+msgid "{path}: kein gültiges JSON ({error})."
+msgstr "{path}: not valid JSON ({error})."
+
+#: src/obd_diag/services/storage.py
+#: src/obd_diag/transport/trace.py
+msgid "kein freier Dateiname für {stem} in {directory}"
+msgstr "no free file name for {stem} in {directory}"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Modell"
+msgstr "Model"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Ausstattung"
+msgstr "Trim"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Karosserie"
+msgstr "Body"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Zylinder"
+msgstr "Cylinders"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Hubraum (l)"
+msgstr "Displacement (l)"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Leistung (PS, US)"
+msgstr "Power (hp)"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Kraftstoff"
+msgstr "Fuel"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Getriebe"
+msgstr "Transmission"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Antrieb"
+msgstr "Drive"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Werk-Land"
+msgstr "Plant country"
+
+#: src/obd_diag/services/vehicle.py
+msgid "Werk-Ort"
+msgstr "Plant city"
+
+#: src/obd_diag/services/vehicle.py
+msgid "nicht prüfbar (FIN ungültig)"
+msgstr "cannot be checked (VIN invalid)"
+
+#: src/obd_diag/services/vehicle.py
+msgid "nicht vorgeschrieben (weicht ab)"
+msgstr "not mandatory (differs)"
+
+#: src/obd_diag/services/vehicle.py
+msgid "stimmt"
+msgstr "correct"
+
+#: src/obd_diag/services/vehicle.py
+msgid "stimmt nicht"
+msgstr "incorrect"
+
+#: src/obd_diag/services/vehicle.py
+msgid " oder "
+msgstr " or "
+
+#: src/obd_diag/services/vehicle.py
+msgid "{years} (aus Stelle 10, ohne Gewähr)"
+msgstr "{years} (from position 10, without guarantee)"
+
+#: src/obd_diag/transport/discovery.py
+msgid "USB-Seriell"
+msgstr "USB serial"
+
+#: src/obd_diag/transport/serial.py
+msgid "Transport ist nicht geöffnet"
+msgstr "Transport is not open"
+
+#: src/obd_diag/transport/serial.py
+msgid "Verbindung zu {port} unterbrochen ({reason}). Adapter abgezogen?"
+msgstr "Connection to {port} lost ({reason}). Adapter unplugged?"
+
+#: src/obd_diag/transport/serial.py
+msgid "keine Antwort von {port} nach {timeout} s"
+msgstr "no response from {port} after {timeout} s"
+
+#: src/obd_diag/transport/serial.py
+msgid "{port} lässt sich nicht öffnen ({reason})"
+msgstr "{port} cannot be opened ({reason})"
+
+#: src/obd_diag/transport/trace.py
+msgid "Mitschnitt: keine aufgezeichnete Antwort"
+msgstr "Trace: no recorded response"
+
+#: src/obd_diag/transport/trace.py
+msgid "Mitschnitt: unerwarteter Befehl {command}"
+msgstr "Trace: unexpected command {command}"
+
+#: src/obd_diag/transport/trace.py
+msgid "Mitschnitt: Befehl {command}, aufgezeichnet war {expected}"
+msgstr "Trace: command {command}, recorded was {expected}"
+
+#: src/obd_diag/transport/trace.py
+msgid "ungültige Escape-Sequenz an Stelle {pos}: {text}"
+msgstr "invalid escape sequence at position {pos}: {text}"
+
+#: src/obd_diag/ui/app.py
+#: src/obd_diag/ui/qml/Main.qml
+msgid "OBD-Diagnose"
+msgstr "OBD Diagnostics"
+
+#: src/obd_diag/ui/app.py
+msgid "Fehler: Die Oberfläche braucht PySide6. Installieren mit: pip install 'obd-diag[gui]' (in der Entwicklung: uv sync)"
+msgstr "Error: the user interface needs PySide6. Install it with: pip install 'obd-diag[gui]' (during development: uv sync)"
+
+#: src/obd_diag/ui/app.py
+msgid "Fehler: Die Oberfläche ließ sich nicht laden."
+msgstr "Error: the user interface could not be loaded."
+
+#: src/obd_diag/ui/backend.py
+msgid "Live-Daten sind in diesem Backend nicht verfügbar"
+msgstr "Live data is not available in this backend"
+
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "schwierig"
+msgstr "difficult"
+
+#: src/obd_diag/ui/viewmodels/codes.py
+msgid "ca. {cost} €"
+msgstr "approx. €{cost}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Batteriespannung niedrig: Ergebnisse können unzuverlässig sein. Vor dem Löschen Batterie laden oder Ladegerät anschließen."
+msgstr "Battery voltage low: results may be unreliable. Charge the battery or connect a charger before clearing."
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "CSV-Datei"
+msgstr "CSV file"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Diese Funktion ist noch nicht verfügbar."
+msgstr "This function is not available yet."
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Fehlercodes gelöscht, lese Diagnose neu …"
+msgstr "Trouble codes cleared, reading the diagnosis again …"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Unerwarteter Fehler ({kind}): {error}"
+msgstr "Unexpected error ({kind}): {error}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "%d.%m.%Y, %H:%M"
+msgstr "%Y-%m-%d, %H:%M"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Sichere Codes und Freeze Frame, lösche Fehlercodes …"
+msgstr "Backing up codes and freeze frame, clearing trouble codes …"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Verbindung fehlgeschlagen: {error}"
+msgstr "Connection failed: {error}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "{hint} (Adapter: {error})"
+msgstr "{hint} (adapter: {error})"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Der Adapter meldet einen Fehler: {error}"
+msgstr "The adapter reports an error: {error}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "obd-bericht-{date}"
+msgstr "obd-report-{date}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Bitte einen Port angeben, z. B. /dev/ttyUSB0."
+msgstr "Please specify a port, e.g. /dev/ttyUSB0."
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Gespeicherte Sitzung vom {created} geöffnet (nur ansehen): {path}"
+msgstr "Opened saved session from {created} (view only): {path}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Readiness und Freeze Frame ließen sich nach dem Löschen nicht neu lesen ({error}). „Erneut scannen“ versuchen."
+msgstr "Readiness and freeze frame could not be read again after clearing ({error}). Try “Scan again”."
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Fehlercodes gelöscht. Sicherung: {path}"
+msgstr "Trouble codes cleared. Backup: {path}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Verbinde mit {port} und lese Diagnose …"
+msgstr "Connecting to {port} and reading the diagnosis …"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Schreibe {kind} …"
+msgstr "Writing {kind} …"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "{kind} gespeichert: {path}"
+msgstr "{kind} saved: {path}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "{kind} ließ sich nicht schreiben: {error}"
+msgstr "{kind} could not be written: {error}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "{n} permanenter Code bleibt, bis das Steuergerät den Fehler in Fahrzyklen selbst als behoben erkennt."
+msgid_plural "{n} permanente Codes bleiben, bis das Steuergerät den Fehler in Fahrzyklen selbst als behoben erkennt."
+msgstr[0] "{n} permanent code remains until the control unit itself detects over drive cycles that the fault is fixed."
+msgstr[1] "{n} permanent codes remain until the control unit itself detects over drive cycles that the fault is fixed."
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Sitzung ließ sich nicht speichern: {error}"
+msgstr "Session could not be saved: {error}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Sitzung ließ sich nicht öffnen: {error}"
+msgstr "Session could not be opened: {error}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Weiterhin {n} Code vorhanden."
+msgid_plural "Weiterhin {n} Codes vorhanden."
+msgstr[0] "{n} code still present."
+msgstr[1] "{n} codes still present."
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Bitte mindestens einen Wert auswählen."
+msgstr "Please select at least one value."
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Live-Daten beendet nach {n} Runde."
+msgid_plural "Live-Daten beendet nach {n} Runden."
+msgstr[0] "Live data stopped after {n} round."
+msgstr[1] "Live data stopped after {n} rounds."
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Auswahl nicht möglich: {error}"
+msgstr "Selection not possible: {error}"
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Aufzeichnung gespeichert: {path}"
+msgstr "Recording saved: {path}"
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Bisherige Aufzeichnung: {path}"
+msgstr "Previous recording: {path}"
+
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Nicht alle Tests abgeschlossen"
+msgstr "Not all tests complete"
+
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Diesel (Selbstzünder)"
+msgstr "Diesel (compression ignition)"
+
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Otto"
+msgstr "Petrol"
+
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Herstellercode (WMI)"
+msgstr "Manufacturer code (WMI)"
+
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Alle {n} unterstützten Tests abgeschlossen."
+msgstr "All {n} supported tests complete."
+
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "{n} Test nicht abgeschlossen: {names}."
+msgid_plural "{n} Tests nicht abgeschlossen: {names}."
+msgstr[0] "{n} test incomplete: {names}."
+msgstr[1] "{n} tests incomplete: {names}."
+
+#: src/obd_diag/ui/qml/Banner.qml
+msgid "Hinweis schließen"
+msgstr "Close notice"
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Fehlercodes löschen?"
+msgstr "Clear trouble codes?"
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Dieser Code wird im Steuergerät gelöscht:"
+msgstr "This code will be cleared in the control unit:"
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Diese %1 Codes werden im Steuergerät gelöscht:"
+msgstr "These %1 codes will be cleared in the control unit:"
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Zündung an, Motor aus, Bordspannung mindestens 11,8 V. Sonst wird nicht gelöscht."
+msgstr "Ignition on, engine off, battery voltage at least 11.8 V. Otherwise nothing is cleared."
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Codes und Freeze Frame werden vorher gesichert."
+msgstr "Codes and freeze frame are backed up first."
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Die Bereitschaftstests (Readiness) werden zurückgesetzt: Die Abgasuntersuchung ist erst nach einigen Fahrzyklen wieder möglich."
+msgstr "The readiness monitors are reset: an emissions test is only possible again after a few drive cycles."
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Permanente Codes löscht das Steuergerät erst selbst, wenn der Fehler behoben ist (hier: %1)."
+msgstr "Permanent codes are only removed by the control unit itself once the fault is fixed (here: %1)."
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Permanente Codes löscht das Steuergerät erst selbst, wenn der Fehler behoben ist."
+msgstr "Permanent codes are only removed by the control unit itself once the fault is fixed."
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Löschen behebt keinen Defekt. Kehrt ein Code zurück, besteht die Ursache weiter."
+msgstr "Clearing does not fix a defect. If a code returns, the cause still exists."
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Zündung ist an, der Motor ist aus. Ich möchte die Codes löschen."
+msgstr "The ignition is on, the engine is off. I want to clear the codes."
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Abbrechen"
+msgstr "Cancel"
+
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Fehlercodes löschen"
+msgstr "Clear trouble codes"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Code in der Liste auswählen"
+msgstr "Select a code in the list"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Für diesen Code gibt es keinen Eintrag im Offline-Katalog. Herstellerspezifische Codes (z. B. P1xxx, U1xxx) sind dort oft nicht enthalten; die Bedeutung steht in den Unterlagen des Herstellers."
+msgstr "There is no entry for this code in the offline catalog. Manufacturer-specific codes (e.g. P1xxx, U1xxx) are often missing there; their meaning is in the manufacturer's documentation."
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Online-Erklärung (ungeprüft)"
+msgstr "Online explanation (unverified)"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Englisch, aus einer frei verfügbaren Sammlung ohne belegte Herkunft. Quelle: %1"
+msgstr "English, from a freely available collection without documented origin. Source: %1"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Im Web suchen"
+msgstr "Search the web"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Öffnet eine Websuche nach dem Code im Browser"
+msgstr "Opens a web search for the code in the browser"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Motorkontrollleuchte (MIL) an"
+msgstr "Check engine light (MIL) on"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Keine Motorkontrollleuchte"
+msgstr "No check engine light"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Mögliche Ursachen"
+msgstr "Possible causes"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Reparatur"
+msgstr "Repair"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Kostenrahmen"
+msgstr "Cost range"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Schwierigkeit"
+msgstr "Difficulty"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Richtwert für Teile und Arbeit, je nach Fahrzeug und Werkstatt."
+msgstr "Estimate for parts and labour, depending on vehicle and workshop."
+
+#: src/obd_diag/ui/qml/CodeList.qml
+msgid "Lese Fehlercodes …"
+msgstr "Reading trouble codes …"
+
+#: src/obd_diag/ui/qml/CodeList.qml
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+#: src/obd_diag/ui/qml/ReadinessView.qml
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Noch nicht verbunden"
+msgstr "Not connected yet"
+
+#: src/obd_diag/ui/qml/CodeList.qml
+msgid "Weder gespeicherte noch ausstehende oder permanente Codes."
+msgstr "No stored, pending or permanent codes."
+
+#: src/obd_diag/ui/qml/CodeList.qml
+msgid "Adapter einstecken, Zündung einschalten, Port wählen und „Verbinden & Scannen“ drücken."
+msgstr "Plug in the adapter, switch the ignition on, choose the port and press “Connect & Scan”."
+
+#: src/obd_diag/ui/qml/ConnectionBar.qml
+msgid "Port"
+msgstr "Port"
+
+#: src/obd_diag/ui/qml/ConnectionBar.qml
+msgid "Serieller Port"
+msgstr "Serial port"
+
+#: src/obd_diag/ui/qml/ConnectionBar.qml
+msgid "Adapter wählen oder Pfad eingeben, z. B. /dev/ttyUSB0 oder /dev/pts/5"
+msgstr "Choose an adapter or enter a path, e.g. /dev/ttyUSB0 or /dev/pts/5"
+
+#: src/obd_diag/ui/qml/ConnectionBar.qml
+msgid "Suchen"
+msgstr "Search"
+
+#: src/obd_diag/ui/qml/ConnectionBar.qml
+msgid "Angeschlossene Adapter neu suchen"
+msgstr "Search for connected adapters again"
+
+#: src/obd_diag/ui/qml/ConnectionBar.qml
+msgid "Baud"
+msgstr "Baud"
+
+#: src/obd_diag/ui/qml/ConnectionBar.qml
+msgid "Baudrate"
+msgstr "Baud rate"
+
+#: src/obd_diag/ui/qml/ConnectionBar.qml
+msgid "Erneut scannen"
+msgstr "Scan again"
+
+#: src/obd_diag/ui/qml/ConnectionBar.qml
+msgid "Verbinden && Scannen"
+msgstr "Connect && Scan"
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "Lese Freeze Frame …"
+msgstr "Reading freeze frame …"
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "Kein Freeze Frame gespeichert"
+msgstr "No freeze frame stored"
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+#: src/obd_diag/ui/qml/ReadinessView.qml
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Nicht verfügbar – Steuergerät hat nicht geantwortet"
+msgstr "Not available: the control unit did not respond"
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "Nach „Verbinden & Scannen“ stehen hier die Messwerte, die das Steuergerät beim Speichern eines Fehlercodes festgehalten hat."
+msgstr "After “Connect & Scan” this shows the values the control unit recorded when it stored a trouble code."
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "Das Steuergerät hat keine Momentaufnahme abgelegt, etwa weil kein Fehlercode gesetzt ist oder die Codes gelöscht wurden."
+msgstr "The control unit has not stored a snapshot, for example because no trouble code is set or the codes were cleared."
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "Das Steuergerät hat Mode 02 (Freeze Frame) nicht beantwortet."
+msgstr "The control unit did not answer mode 02 (freeze frame)."
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "Auslösender Code"
+msgstr "Triggering code"
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "nicht gemeldet"
+msgstr "not reported"
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "Messwerte beim Speichern des Codes"
+msgstr "Values when the code was stored"
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "Keine Messwerte gespeichert."
+msgstr "No values stored."
+
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "Momentaufnahme (Frame 0) von dem Augenblick, in dem das Steuergerät den Code gespeichert hat. Hilft einzugrenzen, unter welchen Bedingungen der Fehler auftritt. Wird beim Löschen der Codes mit gelöscht."
+msgstr "Snapshot (frame 0) of the moment the control unit stored the code. Helps narrow down under which conditions the fault occurs. It is cleared together with the codes."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Start"
+msgstr "Start"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Stoppe …"
+msgstr "Stopping …"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Stopp"
+msgstr "Stop"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Intervall"
+msgstr "Interval"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Abfrageintervall"
+msgstr "Query interval"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Aufzeichnen (CSV)"
+msgstr "Record (CSV)"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Jede Runde sofort in eine neue CSV-Datei schreiben"
+msgstr "Write every round straight into a new CSV file"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Bordspannung %1"
+msgstr "Battery voltage %1"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "1 Runde"
+msgstr "1 round"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "%1 Runden"
+msgstr "%1 rounds"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Während der Fahrt nur durch Beifahrer bedienen. Wer fährt, achtet auf den Verkehr, nicht auf den Bildschirm."
+msgstr "While driving, only a passenger should operate this. The driver watches the traffic, not the screen."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Bordspannung niedrig (%1): die Abfrage ist gedrosselt, um die Batterie zu schonen."
+msgstr "Battery voltage low (%1): queries are throttled to protect the battery."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Aufzeichnung"
+msgstr "Recording"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Ordner öffnen"
+msgstr "Open folder"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Werte auswählen"
+msgstr "Choose values"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Übliche Werte"
+msgstr "Usual values"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Welche Werte das Fahrzeug liefert, steht nach dem ersten Start fest. Ohne Auswahl werden die üblichen Werte abgefragt (Drehzahl, Geschwindigkeit, Kühlmittel, Last, Ansaugluft, Steuergerätespannung)."
+msgstr "Which values the vehicle supports is known after the first start. Without a selection the usual values are queried (engine speed, speed, coolant, load, intake air, control module voltage)."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Noch nicht mit dem Fahrzeug abgeglichen: nach dem ersten Start stehen hier nur die unterstützten Werte."
+msgstr "Not matched with the vehicle yet: after the first start only the supported values are listed here."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Verbinde und ermittle unterstützte Werte …"
+msgstr "Connecting and determining supported values …"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Noch keine Live-Daten"
+msgstr "No live data yet"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Port oben wählen, Werte auswählen und „Start“ drücken. Gelesen wird nur (Mode 01); am Fahrzeug wird nichts verändert."
+msgstr "Choose the port above, select values and press “Start”. Read-only (mode 01); nothing is changed on the vehicle."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "gesehen %1 bis %2"
+msgstr "seen %1 to %2"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Sitzung öffnen …"
+msgstr "Open session …"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Sitzung speichern"
+msgstr "Save session"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Bericht als PDF …"
+msgstr "Report as PDF …"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "CSV exportieren …"
+msgstr "Export CSV …"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "&Datei"
+msgstr "&File"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Beenden"
+msgstr "Quit"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "&Optionen"
+msgstr "&Options"
+
+#: src/obd_diag/ui/qml/Main.qml
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "FIN online nachschlagen (NHTSA)"
+msgstr "Look up VIN online (NHTSA)"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Fehlercodes online erklären"
+msgstr "Explain trouble codes online"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Adapter-Mitschnitt aufzeichnen"
+msgstr "Record adapter trace"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Mitschnitt-Ordner öffnen"
+msgstr "Open trace folder"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Design"
+msgstr "Theme"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Wie das System"
+msgstr "Like the system"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Hell"
+msgstr "Light"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Dunkel"
+msgstr "Dark"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Gespeicherte Sitzung · nur ansehen"
+msgstr "Saved session · view only"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Der Fehlercode-Katalog fehlt, Codes erscheinen ohne Beschreibung. Erzeugen mit: uv run python tools/build_dtc_db.py"
+msgstr "The trouble code catalog is missing, codes appear without description. Build it with: uv run python tools/build_dtc_db.py"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Live-Daten: stoppe …"
+msgstr "Live data: stopping …"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Live-Daten laufen"
+msgstr "Live data running"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Nicht verbunden"
+msgstr "Not connected"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "%1 (niedrig)"
+msgstr "%1 (low)"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Sitzung vom %1"
+msgstr "Session from %1"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Adapter: %1"
+msgstr "Adapter: %1"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Protokoll: %1"
+msgstr "Protocol: %1"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Bordspannung: %1"
+msgstr "Battery voltage: %1"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Gespeichert: %1"
+msgstr "Saved: %1"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Fehlercodes löschen …"
+msgstr "Clear trouble codes …"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "nur bei verbundenem Fahrzeug"
+msgstr "only with a connected vehicle"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Löschen nicht möglich"
+msgstr "Clearing not possible"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Diagnosesitzung öffnen"
+msgstr "Open diagnosis session"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Diagnosesitzungen (*.json)"
+msgstr "Diagnosis sessions (*.json)"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Alle Dateien (*)"
+msgstr "All files (*)"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Bericht als PDF speichern"
+msgstr "Save report as PDF"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Fehlercodes als CSV speichern"
+msgstr "Save trouble codes as CSV"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "PDF-Dokumente (*.pdf)"
+msgstr "PDF documents (*.pdf)"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "CSV-Dateien (*.csv)"
+msgstr "CSV files (*.csv)"
+
+#: src/obd_diag/ui/qml/ReadinessView.qml
+msgid "Lese Readiness …"
+msgstr "Reading readiness …"
+
+#: src/obd_diag/ui/qml/ReadinessView.qml
+msgid "Nach „Verbinden & Scannen“ steht hier, ob alle Eigendiagnosen für das Abgassystem (Readiness) abgeschlossen sind."
+msgstr "After “Connect & Scan” this shows whether all self-tests of the emission system (readiness) are complete."
+
+#: src/obd_diag/ui/qml/ReadinessView.qml
+msgid "Das Steuergerät hat den Readiness-Status (Mode 01, PID 01) nicht gemeldet."
+msgstr "The control unit did not report the readiness status (mode 01, PID 01)."
+
+#: src/obd_diag/ui/qml/ReadinessView.qml
+msgid "Motorkontrollleuchte (MIL) %1"
+msgstr "Check engine light (MIL) %1"
+
+#: src/obd_diag/ui/qml/ReadinessView.qml
+msgid "Gemeldete Fehlercodes: %1"
+msgstr "Reported trouble codes: %1"
+
+#: src/obd_diag/ui/qml/ReadinessView.qml
+msgid "Motor: %1"
+msgstr "Engine: %1"
+
+#: src/obd_diag/ui/qml/ReadinessView.qml
+msgid "Abgeschlossen heißt: alle Eigendiagnosen, die das Fahrzeug unterstützt, sind gelaufen. Offene Tests laufen bei normaler Fahrt von selbst; nach dem Löschen von Fehlercodes dauert das einige Fahrzyklen."
+msgstr "Complete means: all self-tests the vehicle supports have run. Incomplete tests run by themselves during normal driving; after clearing trouble codes this takes a few drive cycles."
+
+#: src/obd_diag/ui/qml/ReadinessView.qml
+msgid "Monitore"
+msgstr "Monitors"
+
+#: src/obd_diag/ui/qml/ReadinessView.qml
+msgid "%1 von %2 abgeschlossen"
+msgstr "%1 of %2 complete"
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Lese Fahrzeug-Identifizierungsnummer …"
+msgstr "Reading vehicle identification number …"
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Nach „Verbinden & Scannen“ stehen hier die FIN und was sich daraus ablesen lässt: Hersteller, Land, Modelljahr."
+msgstr "After “Connect & Scan” this shows the VIN and what it tells: manufacturer, country, model year."
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Das Fahrzeug hat keine FIN gemeldet (Mode 09). Viele Fahrzeuge vor etwa 2005 unterstützen das nicht; die FIN steht dann im Fahrzeugschein (Feld E)."
+msgstr "The vehicle did not report a VIN (mode 09). Many vehicles from before about 2005 do not support this; the VIN is then in the vehicle registration document."
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Fahrzeug-Identifizierungsnummer (FIN)"
+msgstr "Vehicle identification number (VIN)"
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "gültig"
+msgstr "valid"
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "ungültig"
+msgstr "invalid"
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Prüfziffer stimmt nicht"
+msgstr "Check digit incorrect"
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Hersteller und Land stammen aus den ersten drei Stellen (WMI), das Modelljahr aus Stelle 10. Der Code wiederholt sich alle 30 Jahre; außerhalb Nordamerikas ist er nicht eindeutig, weitere mögliche Jahre stehen mit „oder“ dabei."
+msgstr "Manufacturer and country come from the first three characters (WMI), the model year from position 10. The code repeats every 30 years; outside North America it is ambiguous, further possible years are listed with “or”."
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Online-Angaben (NHTSA vPIC)"
+msgstr "Online details (NHTSA vPIC)"
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Keine Online-Angaben zu dieser FIN (kein Netz, oder die Datenbank kennt das Fahrzeug nicht). Die Datenbank deckt vor allem Fahrzeuge für den US-Markt ab."
+msgstr "No online details for this VIN (no network, or the database does not know the vehicle). The database mainly covers vehicles for the US market."
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Modell, Motor und weitere Angaben lassen sich bei der US-Behörde NHTSA nachschlagen. Dabei wird nur die FIN übertragen."
+msgstr "Model, engine and further details can be looked up at the US authority NHTSA. Only the VIN is transmitted."
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Gilt ab dem nächsten Scan; die Antwort wird je FIN lokal gespeichert."
+msgstr "Applies from the next scan; the response is stored locally per VIN."
+
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Readiness"
+msgstr "Readiness"
+
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Freeze Frame"
+msgstr "Freeze frame"
+
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Live-Daten"
+msgstr "Live data"

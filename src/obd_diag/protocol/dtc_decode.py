@@ -1,5 +1,6 @@
 """Dekodierung von Fehlercodes (DTC) nach SAE J2012 aus Mode-03/07/0A-Antworten."""
 
+from obd_diag.i18n import tr
 from obd_diag.protocol.frames import split_messages
 
 _SYSTEM = "PCBU"
@@ -21,7 +22,11 @@ class NegativeDtcResponse(ValueError):
     def __init__(self, mode: int, nrc: int) -> None:
         self.mode = mode
         self.nrc = nrc
-        super().__init__(f"Steuergerät lehnt Mode {mode:02X} ab (Antwort 7F {mode:02X} {nrc:02X})")
+        super().__init__(
+            tr("Steuergerät lehnt Mode {mode:02X} ab (Antwort 7F {mode:02X} {nrc:02X})").format(
+                mode=mode, nrc=nrc
+            )
+        )
 
 
 def decode_dtc(high: int, low: int) -> str:
@@ -58,17 +63,20 @@ def parse_dtc_messages(messages: list[bytes], mode: int = 0x03, *, can: bool = F
             raise NegativeDtcResponse(mode, message[2] if len(message) >= 3 else 0x00)
         if not message or message[0] != sid:
             raise ValueError(
-                f"unerwartete Antwort auf Mode {mode:02X}: {message.hex(' ').upper()!r}"
+                tr("unerwartete Antwort auf Mode {mode:02X}: {data}").format(
+                    mode=mode, data=repr(message.hex(" ").upper())
+                )
             )
         data = message[1:]
         if can:
             if not data:
-                raise ValueError(f"Antwort auf Mode {mode:02X} ohne Zählbyte")
+                raise ValueError(tr("Antwort auf Mode {mode:02X} ohne Zählbyte").format(mode=mode))
             count, data = data[0], data[1:]
             if len(data) < 2 * count:
                 raise ValueError(
-                    f"Antwort auf Mode {mode:02X} unvollständig "
-                    f"({len(data) // 2} von {count} Codes)"
+                    tr(
+                        "Antwort auf Mode {mode:02X} unvollständig ({got} von {count} Codes)"
+                    ).format(mode=mode, got=len(data) // 2, count=count)
                 )
             data = data[: 2 * count]
         for i in range(0, len(data) - 1, 2):

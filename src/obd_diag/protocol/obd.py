@@ -8,6 +8,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from obd_diag.i18n import N_, tr
 from obd_diag.protocol.dtc_decode import (
     RESPONSE_PENDING,
     NegativeDtcResponse,
@@ -35,11 +36,17 @@ def read_with_headers(elm: Elm327, cmd: str, reason: Exception) -> list[EcuMessa
     log.info("%s: %s; wiederhole mit Headern (ATH1)", cmd, reason)
     response = elm.query_with_headers(cmd)
     if response is None:
-        raise ElmError(f"{cmd}: {reason}; mit Headern wiederholt: NO DATA")
+        raise ElmError(
+            tr("{cmd}: {reason}; mit Headern wiederholt: NO DATA").format(cmd=cmd, reason=reason)
+        )
     try:
         return parse_header_response(response)
     except ValueError as e:
-        raise ElmError(f"{cmd}: {reason}; auch mit Headern nicht lesbar: {e}") from e
+        raise ElmError(
+            tr("{cmd}: {reason}; auch mit Headern nicht lesbar: {error}").format(
+                cmd=cmd, reason=reason, error=e
+            )
+        ) from e
 
 
 # Wie lange auf die endgültige Antwort nach ``7F <Mode> 78`` gewartet wird (Sekunden).
@@ -80,7 +87,7 @@ def read_dtcs(
     der Fehlerspeicher ist dann unbekannt, nicht leer.
     """
     if mode not in DTC_MODES:
-        raise ValueError(f"Mode {mode:02X} liefert keine Fehlercodes")
+        raise ValueError(tr("Mode {mode:02X} liefert keine Fehlercodes").format(mode=mode))
     cmd = f"{mode:02X}"
     response = elm.query(cmd)
     if response is None:
@@ -90,7 +97,8 @@ def read_dtcs(
     except FrameSequenceError as e:
         # Vermischte mehrteilige Antworten gibt es nur bei CAN; dort steht das Zählbyte.
         headed = read_with_headers(elm, cmd, e)
-        return _parse_dtcs(f"{cmd} (mit Headern)", [m.data for m in headed], mode, can=True)
+        label = tr("{cmd} (mit Headern)").format(cmd=cmd)
+        return _parse_dtcs(label, [m.data for m in headed], mode, can=True)
     except ValueError as e:
         raise ElmError(f"{cmd}: {e}") from e
     deadline = time.monotonic() + pending_timeout
@@ -118,14 +126,14 @@ def _parse_dtcs(cmd: str, messages: list[bytes], mode: int, *, can: bool) -> lis
 
 # Gründe negativer Antworten (``7F <Mode> <NRC>``, ISO 14229 bzw. ISO 15031-5)
 _NRC_TEXT = {
-    0x10: "allgemein abgelehnt",
-    0x11: "Dienst nicht unterstützt",
-    0x12: "Unterfunktion nicht unterstützt",
-    0x21: "Steuergerät beschäftigt",
-    0x22: "Bedingungen nicht erfüllt",
-    0x31: "Anfrage außerhalb des gültigen Bereichs",
-    0x33: "Zugriff verweigert",
-    0x78: "Antwort angekündigt, aber nicht gekommen",
+    0x10: N_("allgemein abgelehnt"),
+    0x11: N_("Dienst nicht unterstützt"),
+    0x12: N_("Unterfunktion nicht unterstützt"),
+    0x21: N_("Steuergerät beschäftigt"),
+    0x22: N_("Bedingungen nicht erfüllt"),
+    0x31: N_("Anfrage außerhalb des gültigen Bereichs"),
+    0x33: N_("Zugriff verweigert"),
+    0x78: N_("Antwort angekündigt, aber nicht gekommen"),
 }
 _RESPONSE_PENDING = 0x78  # Steuergerät arbeitet noch, die eigentliche Antwort folgt
 
@@ -136,8 +144,12 @@ class NegativeResponseError(ElmError):
     def __init__(self, mode: int, nrc: int) -> None:
         self.mode = mode
         self.nrc = nrc
-        reason = _NRC_TEXT.get(nrc, "unbekannter Grund")
-        super().__init__(f"{reason} (Antwort 7F {mode:02X} {nrc:02X})")
+        reason = tr(_NRC_TEXT.get(nrc, N_("unbekannter Grund")))
+        super().__init__(
+            tr("{reason} (Antwort 7F {mode:02X} {nrc:02X})").format(
+                reason=reason, mode=mode, nrc=nrc
+            )
+        )
 
 
 def _messages(cmd: str, response: str) -> list[bytes]:
@@ -161,7 +173,9 @@ def _clear_answers(cmd: str, response: str) -> tuple[bool, bool]:
                 continue
             raise NegativeResponseError(0x04, message[2])
         if message[:1] != b"\x44":
-            raise ElmError(f"04: unerwartete Antwort {message.hex(' ').upper()!r}")
+            raise ElmError(
+                tr("04: unerwartete Antwort {data}").format(data=repr(message.hex(" ").upper()))
+            )
         confirmed = True
         pending = False  # die endgültige Antwort folgt auf die Zwischenmeldung
     return confirmed, pending
@@ -197,14 +211,16 @@ def clear_dtcs(elm: Elm327, *, pending_timeout: float = CLEAR_PENDING_TIMEOUT) -
                 log.warning("04: ein Steuergerät meldet weiter 7F 04 78 (%s)", str(e) or "Zeit um")
                 return
             raise ElmError(
-                f"04: nicht bestätigt (nur 7F 04 78, Antwort folgt; nach {pending_timeout:g} s "
-                "keine endgültige Antwort)"
+                tr(
+                    "04: nicht bestätigt (nur 7F 04 78, Antwort folgt; nach {seconds:g} s "
+                    "keine endgültige Antwort)"
+                ).format(seconds=pending_timeout)
             ) from e
         response += "\n" + more
         now_confirmed, pending = _clear_answers("04", more)
         confirmed = confirmed or now_confirmed
     if not confirmed:
-        raise ElmError(f"04: keine Bestätigung ({response!r})")
+        raise ElmError(tr("04: keine Bestätigung ({response})").format(response=repr(response)))
 
 
 def read_pid(elm: Elm327, pid: int) -> bytes | None:
@@ -225,7 +241,9 @@ def read_pid(elm: Elm327, pid: int) -> bytes | None:
 def decode_rpm(data: bytes) -> float:
     """PID 0C: Motordrehzahl in 1/min, ((A*256)+B)/4."""
     if len(data) < 2:
-        raise ValueError(f"PID 0C braucht zwei Datenbytes, nicht {len(data)}")
+        raise ValueError(
+            tr("PID 0C braucht zwei Datenbytes, nicht {count}").format(count=len(data))
+        )
     return (data[0] * 256 + data[1]) / 4
 
 

@@ -24,6 +24,19 @@ def _clear_enabled(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPat
 
 
 @pytest.fixture(autouse=True)
+def _german(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Die Tests prüfen die deutschen Texte (Quelltexte, ``obd_diag.i18n``), unabhängig
+    von der Systemsprache; Kommandozeile und GUI lesen sie aus der Umgebung. Englisch
+    prüft ``tests/unit/test_i18n.py`` mit ``set_language("en")``."""
+    from obd_diag import i18n
+
+    monkeypatch.setenv("LANGUAGE", "de")
+    i18n.set_language("de")
+    yield
+    i18n.set_language("de")
+
+
+@pytest.fixture(autouse=True)
 def _no_request_gap(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     """Die Mindestpause zwischen zwei Anfragen ans Fahrzeug (``MIN_REQUEST_GAP``) kostete
     bei rund 1600 Tests Minuten. Sie wird in ``tests/unit/test_request_gap.py`` geprüft;

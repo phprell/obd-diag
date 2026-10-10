@@ -11,6 +11,7 @@ from typing import Any
 
 from obd_diag import __version__
 from obd_diag.data.dtc_catalog import Cause, DtcInfo
+from obd_diag.i18n import tr
 from obd_diag.protocol.elm327 import Elm327, ElmError
 from obd_diag.protocol.obd import FreezeFrame, read_freeze_frame
 from obd_diag.services.diagnostics import (
@@ -42,7 +43,7 @@ class Session:
 def run_diagnosis(
     elm: Elm327,
     catalog: DtcLookup | None,
-    lang: str = "de",
+    lang: str | None = None,
     *,
     online_vin_lookup: bool = False,
     online_dtc_lookup: bool = False,
@@ -206,15 +207,21 @@ def _vehicle(data: dict[str, Any]) -> VinInfo:
 def session_from_dict(data: dict[str, Any]) -> Session:
     """Gegenstück zu ``session_to_dict``; ``ValueError`` bei fremden oder kaputten Daten."""
     if not isinstance(data, dict) or data.get("format") != SESSION_FORMAT:
-        raise ValueError("Keine obd-diag-Diagnosesitzung (Kennung 'format' fehlt oder ist falsch).")
+        raise ValueError(
+            tr("Keine obd-diag-Diagnosesitzung (Kennung 'format' fehlt oder ist falsch).")
+        )
     version = data.get("version")
     if version != SESSION_VERSION:
         if isinstance(version, int) and version > SESSION_VERSION:
             raise ValueError(
-                f"Sitzung hat Format-Version {version}, diese obd-diag-Version kennt nur "
-                f"bis {SESSION_VERSION}. Bitte obd-diag aktualisieren."
+                tr(
+                    "Sitzung hat Format-Version {version}, diese obd-diag-Version kennt nur "
+                    "bis {known}. Bitte obd-diag aktualisieren."
+                ).format(version=version, known=SESSION_VERSION)
             )
-        raise ValueError(f"Unbekannte Format-Version der Sitzung: {version!r}.")
+        raise ValueError(
+            tr("Unbekannte Format-Version der Sitzung: {version}.").format(version=repr(version))
+        )
     try:
         created = datetime.fromisoformat(data["created"])
         readiness, freeze, vehicle = (
@@ -228,7 +235,9 @@ def session_from_dict(data: dict[str, Any]) -> Session:
             vehicle=None if vehicle is None else _vehicle(vehicle),
         )
     except (KeyError, TypeError, ValueError, AttributeError, IndexError) as e:
-        raise ValueError(f"Diagnosesitzung ist unvollständig oder beschädigt ({e!r}).") from e
+        raise ValueError(
+            tr("Diagnosesitzung ist unvollständig oder beschädigt ({error}).").format(error=repr(e))
+        ) from e
 
 
 def save_session(session: Session, directory: Path | None = None) -> Path:
@@ -245,13 +254,15 @@ def save_session(session: Session, directory: Path | None = None) -> Path:
 def load_session(path: Path) -> Session:
     """Liest eine mit ``save_session`` gespeicherte Sitzung.
 
-    ``ValueError`` (Meldung auf Deutsch), wenn die Datei kein gültiges JSON oder keine
-    obd-diag-Sitzung ist; ``OSError``, wenn sie sich nicht lesen lässt.
+    ``ValueError`` (Meldung in der eingestellten Sprache), wenn die Datei kein gültiges
+    JSON oder keine obd-diag-Sitzung ist; ``OSError``, wenn sie sich nicht lesen lässt.
     """
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as e:
-        raise ValueError(f"{path}: kein gültiges JSON ({e}).") from e
+        raise ValueError(
+            tr("{path}: kein gültiges JSON ({error}).").format(path=path, error=e)
+        ) from e
     try:
         return session_from_dict(data)
     except ValueError as e:

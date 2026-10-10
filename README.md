@@ -1,560 +1,572 @@
 # obd-diag
 
-OBD-II-Diagnose für Linux über ELM327-kompatible Adapter: Fehlercodes lesen und erklären,
-Freeze Frame, Readiness, FIN, Live-Daten mit Aufzeichnung, als Kommandozeile und
-Desktop-Oberfläche (PySide6/QML). Standardmäßig nur lesend: der einzige schreibende
-Befehl ist das Löschen der Fehlercodes, und das nur nach Prüfung und Sicherung.
+**English** · [Deutsch](README.de.md)
 
-> **Löschen ist vorerst deaktiviert** (`CLEAR_ENABLED` in `services/clear.py`). Das
-> Lesen ist seit dem 2026-10-09 an einem echten Fahrzeug geprüft; freigegeben wird
-> Löschen erst nach einer bewussten Entscheidung. Bis dahin bricht `obd-diag clear` ab,
-> ohne den Port zu öffnen, und die Schaltfläche in der Oberfläche bleibt grau. Der
-> Ablauf unten beschreibt, wie es nach der Freigabe läuft.
+OBD-II diagnostics for Linux with ELM327-compatible adapters: read and explain trouble
+codes, freeze frame, readiness, VIN, live data with recording, as a command line tool
+and a desktop application (PySide6/QML), in English or German. Read-only by default:
+the only writing command is clearing the trouble codes, and only after checks and a
+backup.
 
-Design und Roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/artifact/de949a8a-4f58-41b4-a629-6b9d238bdac7)
+> **Clearing is disabled for now** (`CLEAR_ENABLED` in `services/clear.py`). Reading
+> has been verified on a real vehicle since 2026-10-09; clearing will only be enabled
+> after a deliberate decision. Until then `obd-diag clear` aborts without opening the
+> port, and the button in the user interface stays grey. The procedure below describes
+> how it works once enabled.
 
-Ausführliche Dokumentation (Benutzen, Wie es funktioniert, Entwickeln):
-<https://phprell.github.io/obd-diag/> (Quelltext unter `docs/`, siehe
-[Dokumentation](#dokumentation)).
+Design and roadmap: [OBD-Diagnose – Designvorschlag](https://claude.ai/code/artifact/de949a8a-4f58-41b4-a629-6b9d238bdac7) (German)
 
-## Stand
+Full documentation (usage, how it works, development):
+<https://phprell.github.io/obd-diag/en/>, German at <https://phprell.github.io/obd-diag/>
+(sources in `docs/en/` and `docs/`, see [Documentation](#documentation)).
 
-- **v0.1** (Roadmap-Schritte 1–4, in `main`): Fehlercodes (Mode 03/07/0A) mit deutschem
-  Klartext, Readiness, Freeze Frame, FIN mit Offline-Dekodierung, sicheres Löschen,
-  Diagnosesitzungen als JSON, PDF-Bericht und CSV, Adapter-Mitschnitt, Oberfläche
-  mit hellem und dunklem Design.
-- **v0.2** (Version 0.2.0, Änderungen in [CHANGELOG.md](CHANGELOG.md)): Live-Daten nach SAE
-  J1979 (116 Werte aus 82 PIDs, darunter alle Lambdasonden), Aufzeichnung als CSV,
-  Reiter „Live-Daten“ und `obd-diag live`.
-- **Am echten Auto getestet** (2026-10-09, Mercedes A 180 d W177, Adapter FORScan
-  ELMconfig, CAN 29 Bit/500 kBit/s, vier Steuergeräte): `info`, `diagnose` und `live`
-  lesen richtig. Vier Befunde aus dem Test sind behoben (erstes `ATZ` mit `?`, Freeze
-  Frame vom richtigen Steuergerät, Spannung per PID 42 gegengeprüft, kein Modelljahr bei
-  Mercedes), dazu ein klarer Hinweis bei `UNABLE TO CONNECT` (Zündung aus). Die
-  Mitschnitte laufen als Regressionstest (`tests/verification/test_real_car.py`, FIN
-  geschwärzt). Details: „Erster Test am Auto“ unten.
-- Ohne Hardware ist die Antwortverarbeitung zusätzlich gegen Datenblatt, fremde
-  Mitschnitte und python-OBD geprüft (siehe „Entwicklung“).
-- Geplant (v0.3+): Bluetooth LE, Community-Profile, Fehlerspeicher aller
-  Steuergeräte über UDS (nur lesend), siehe Designdokument.
+## Status
 
-## Dokumentation
+- **v0.1** (roadmap steps 1–4, in `main`): trouble codes (mode 03/07/0A) with plain
+  text, readiness, freeze frame, VIN with offline decoding, safe clearing, diagnosis
+  sessions as JSON, PDF report and CSV, adapter trace, user interface with light and
+  dark theme.
+- **v0.2** (version 0.2.0, changes in [CHANGELOG.md](CHANGELOG.md), German): live data
+  according to SAE J1979 (116 values from 82 PIDs, including all oxygen sensors), CSV
+  recording, tab “Live data” and `obd-diag live`.
+- **English and German** (not released yet, see CHANGELOG): user interface
+  (*Options → Sprache / Language*), command line (`--lang en|de`), PDF report, CSV,
+  trouble code texts and documentation. The default is the system language: German if
+  it is German, otherwise English.
+- **Tested on a real car** (2026-10-09, Mercedes A 180 d W177, adapter FORScan
+  ELMconfig, CAN 29 bit/500 kbit/s, four control units): `info`, `diagnose` and `live`
+  read correctly. Four findings from the test are fixed (first `ATZ` with `?`, freeze
+  frame from the right control unit, voltage cross-checked via PID 42, no model year
+  for Mercedes), plus a clear hint on `UNABLE TO CONNECT` (ignition off). The traces
+  run as a regression test (`tests/verification/test_real_car.py`, VIN redacted).
+  Details: “First test at the car” below.
+- Without hardware, the response handling is additionally verified against the
+  datasheet, third-party traces and python-OBD (see “Development”).
+- Planned (v0.3+): Bluetooth LE, community profiles, fault memory of all control units
+  via UDS (read-only), see the design document.
 
-Die Website (Sphinx mit MyST, Furo und Mermaid, Deutsch) liegt unter `docs/`:
-Installation, Adapter, erster Test am Auto, Oberfläche, CLI-Referenz, Fehlercodes,
-Live-Daten, häufige Probleme; dazu, wie das Tool mit dem ELM327 spricht (Antwortformate
-mit Byte-Beispielen, Befehlsreferenz mit Datenblatt-Zitaten, PID-Formeln,
-Sicherheitskonzept, der Mitschnitt vom W177 Zeile für Zeile) und die API-Referenz.
+## Documentation
+
+The website (Sphinx with MyST, Furo and Mermaid) is in `docs/en/` in English and in
+`docs/` in German, with the same file names: installation, adapter, first test at the
+car, user interface, language, CLI reference, trouble codes, live data, common
+problems; plus how the tool talks to the ELM327 (response formats with byte examples,
+command reference with datasheet quotes, PID formulas, safety concept, the W177 trace
+line by line) and the API reference.
 
 ```sh
-uv run --group docs sphinx-build -W docs docs/_build    # danach docs/_build/index.html
+uv run --group docs sphinx-build -W docs docs/_build          # then docs/_build/index.html
+uv run --group docs sphinx-build -W docs/en docs/_build/en    # English
 ```
 
-Befehls- und PID-Tabellen erzeugt `tools/docs_tables.py` beim Bauen aus
-`tests/fixtures/command_spec.yaml` bzw. `PIDS`, die CLI-Optionen kommen aus
-`cli.build_parser`, die Byte-Beispiele prüft `tests/unit/test_docs_examples.py`. Die
-Bilder der Oberfläche erzeugt `uv run python tools/docs_screenshots.py` (Emulator,
-ohne Bildschirm); sie sind eingecheckt.
+`tools/docs_tables.py` generates the command and PID tables from
+`tests/fixtures/command_spec.yaml` and `PIDS` when building, the CLI options come from
+`cli.build_parser`, and `tests/unit/test_docs_examples.py` checks the byte examples.
+`uv run python tools/docs_screenshots.py` creates the pictures of the user interface
+(emulator, no screen, English with `--lang en`); they are checked in. Every page exists
+in both languages; `tests/unit/test_docs_i18n.py` checks that the structure matches.
 
-Die CI baut die Website bei jedem PR (HTML als Artefakt „dokumentation“ am Lauf) und
-veröffentlicht sie bei jedem Push auf `main` unter <https://phprell.github.io/obd-diag/>
-(`.github/workflows/docs.yml`, GitHub Pages mit Quelle „GitHub Actions“).
+CI builds the website for every PR (HTML as the artifact “dokumentation” on the run)
+and publishes it on every push to `main` at <https://phprell.github.io/obd-diag/>
+(`.github/workflows/docs.yml`, GitHub Pages with source “GitHub Actions”).
 
-## Entwicklung
+### Translations
+
+Texts in the code are German and go through `tr("…")` from `obd_diag.i18n` (`qsTr` in
+QML); the English ones are in `src/obd_diag/locale/en.po`.
+`uv run python tools/translations.py` adds new texts (`--todo` lists missing ones,
+`--fill` enters them). `tests/unit/test_i18n.py` fails while a translation is missing
+or a German text is output without `tr`. Comments, docstrings, log messages and commit
+messages stay German.
+
+## Development
 
 ```sh
-uv sync                     # Umgebung inkl. Dev-Werkzeuge
-uv run pytest               # Unit- und Emulator-Tests
+uv sync                     # environment incl. dev tools
+uv run pytest               # unit and emulator tests
 uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
 
-Ohne uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytest-qt pypdf ruff mypy types-pyserial types-reportlab ELM327-emulator hypothesis pyyaml`.
+Without uv: `python -m venv .venv && .venv/bin/pip install -e '.[gui]' pytest pytest-qt pypdf ruff mypy types-pyserial types-reportlab ELM327-emulator hypothesis pyyaml`.
 
-`tests/verification` prüft die Antwortverarbeitung ohne Adapter gegen echte Mitschnitte
-(eigene vom Mercedes W177 in `tests/fixtures/traces/mercedes_w177/`, dazu
-ELM327-Datenblatt und Nutzer-Logs aus python-OBD/ELMduino/AndrOBD, Quellen in
-`tests/fixtures/traces/`), gegen den DTC-Decoder von python-OBD und mit
-Hypothesis-Round-Trip- und Fuzz-Tests. Die Formeln der Live-Daten werden für jeden
-Bytewert mit python-OBD verglichen (`test_pid_differential.py`); die zwei
-Abweichungen (PID `32` und `44`) sind dort gegen J1979 begründet. python-OBD steht
-unter GPL-2.0 und kommt nur in Tests vor.
+`tests/verification` checks the response handling without an adapter against real
+traces (own ones from the Mercedes W177 in `tests/fixtures/traces/mercedes_w177/`, plus
+the ELM327 datasheet and user logs from python-OBD/ELMduino/AndrOBD, sources in
+`tests/fixtures/traces/`), against the DTC decoder of python-OBD and with Hypothesis
+round-trip and fuzz tests. The live data formulas are compared with python-OBD for
+every byte value (`test_pid_differential.py`); the two deviations (PID `32` and `44`)
+are justified against J1979 there. python-OBD is GPL-2.0 and only used in tests.
 
-Mutationstests (Freigabeliste, Löschen, Live-Daten, Ablage, Scan, Sitzung, Katalog,
-Mitschnitt; Konfiguration unter `[tool.mutmut]` in `pyproject.toml`, rund zwei
-Minuten):
-`uv run --with mutmut mutmut run`, danach `uv run --with mutmut mutmut results`.
-In `services/clear.py` darf kein Mutant überleben. In `protocol/elm327.py`,
-`protocol/obd.py`, `protocol/pids.py` und `services/live.py` überleben nur Mutanten an
-Log- und Fehlertexten oder gleichwertige (z. B. `"utf-8"` → `"UTF-8"`); keiner davon
-ändert, ob oder wie oft etwas gesendet wird. Tests, die den Quelltext selbst prüfen,
-laufen unter mutmut nicht. Der Ordner `mutants/` ist nur Arbeitskopie.
+Mutation tests (allowlist, clearing, live data, storage, scan, session, catalog, trace;
+configuration under `[tool.mutmut]` in `pyproject.toml`, about two minutes):
+`uv run --with mutmut mutmut run`, then `uv run --with mutmut mutmut results`. No
+mutant may survive in `services/clear.py`. In `protocol/elm327.py`, `protocol/obd.py`,
+`protocol/pids.py` and `services/live.py` only mutants of log and error texts or
+equivalent ones (e.g. `"utf-8"` → `"UTF-8"`) survive; none of them changes whether or
+how often something is sent. Tests that inspect the source code itself do not run
+under mutmut. The folder `mutants/` is only a working copy.
 
-Die GUI-Tests (`tests/ui`) laufen ohne Bildschirm (`QT_QPA_PLATFORM=offscreen`, setzt
-`tests/ui/conftest.py`) und werden übersprungen, wenn PySide6 fehlt.
+The GUI tests (`tests/ui`) run without a screen (`QT_QPA_PLATFORM=offscreen`, set by
+`tests/ui/conftest.py`) and are skipped if PySide6 is missing.
 
-Release: Version in `pyproject.toml` und `src/obd_diag/__init__.py` setzen, Abschnitt
-`## X.Y.Z – Datum` in `CHANGELOG.md` schreiben, nach dem Merge den Tag `vX.Y.Z` auf
-`main` pushen. `.github/workflows/release.yml` prüft dann Tag und Versionen, baut
-Katalog, sdist und Wheel und legt das GitHub-Release mit dem Changelog-Abschnitt an.
+Release: set the version in `pyproject.toml` and `src/obd_diag/__init__.py`, write a
+section `## X.Y.Z – date` in `CHANGELOG.md`, and after the merge push the tag `vX.Y.Z`
+on `main`. `.github/workflows/release.yml` then checks tag and versions, builds the
+catalog, sdist and wheel and creates the GitHub release with the changelog section.
 
-### Fehlercode-Katalog
+### Trouble code catalog
 
-Die Klartexte zu den Fehlercodes (Deutsch/Englisch, Ursachen, Symptome, Kostenrahmen)
-liegen offline in `src/obd_diag/data/dtc_catalog.sqlite`. Die Datei wird nicht
-eingecheckt, sondern gebaut – vor dem ersten Start und vor `uv build`:
+The plain texts for the trouble codes (English/German, causes, symptoms, cost range)
+are stored offline in `src/obd_diag/data/dtc_catalog.sqlite`. The file is not checked
+in but built, before the first start and before `uv build`:
 
 ```sh
-uv run python tools/build_dtc_db.py                     # lädt die Daten von GitHub
-uv run python tools/build_dtc_db.py --source ../OBDex   # oder aus lokalem Checkout
+uv run python tools/build_dtc_db.py                     # downloads the data from GitHub
+uv run python tools/build_dtc_db.py --source ../OBDex   # or from a local checkout
 ```
 
-Datenquelle ist [OBDex](https://github.com/foerbsnavi/OBDex) (Daten unter
-[CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/), Code MIT), fest auf einen
-Commit gepinnt (`OBDEX_COMMIT` im Skript). Quelle, Commit, Lizenz und Bauzeit stehen in
-der Tabelle `meta` des Katalogs. Ein Test gegen den echten Katalog läuft nur, wenn er
-gebaut ist.
+The data source is [OBDex](https://github.com/foerbsnavi/OBDex) (data under
+[CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/), code MIT), pinned to one
+commit (`OBDEX_COMMIT` in the script). Source, commit, licence and build time are in the
+catalog's `meta` table. A test against the real catalog only runs if it is built.
 
-### Ohne Auto testen
+### Testing without a car
 
-Der [ELM327-emulator](https://github.com/Ircama/ELM327-emulator) stellt ein virtuelles
-serielles Gerät bereit. `tools/emulator.py` startet ihn mit standardgemäßen Antworten
-(der Emulator lässt sonst bei CAN das Zählbyte der Fehlercodes weg und beantwortet den
-Freeze Frame nicht nach SAE J1979, siehe `tests/emulator_patches.py`):
+The [ELM327-emulator](https://github.com/Ircama/ELM327-emulator) provides a virtual
+serial device. `tools/emulator.py` starts it with standard-compliant responses
+(otherwise the emulator leaves out the count byte of trouble codes with CAN and does
+not answer the freeze frame according to SAE J1979, see `tests/emulator_patches.py`):
 
 ```sh
-uv run python tools/emulator.py                    # zeigt das pty an, z. B. /dev/pts/5
+uv run python tools/emulator.py                    # shows the pty, e.g. /dev/pts/5
 uv run python tools/emulator.py --stored P0420,P0300 --pending P0171 --engine-off
 uv run obd-diag diagnose --port /dev/pts/5
 ```
 
-`--engine-off` meldet Drehzahl 0, damit sich das Löschen ausprobieren lässt.
-`uv run elm -s car` direkt funktioniert für `info`, aber nicht für Fehlercodes.
+`--engine-off` reports engine speed 0 so that clearing can be tried out. Running
+`uv run elm -s car` directly works for `info`, but not for trouble codes.
 
-### Echter Adapter
+### Real adapter
 
 ```sh
 obd-diag info --port /dev/ttyUSB0
 ```
 
-Unterstützt werden ELM327-kompatible Adapter über USB und klassisches Bluetooth
-(`/dev/rfcomm*`). Bluetooth LE kommt erst mit v0.3. Billige „v1.5“-Klone sind oft
-fehlerhaft; Adapter mit echtem ELM327- oder STN-Chip (z. B. OBDLink) sind
-verlässlicher.
+Supported are ELM327-compatible adapters via USB and classic Bluetooth
+(`/dev/rfcomm*`). Bluetooth LE only comes with v0.3. Cheap “v1.5” clones are often
+faulty; adapters with a genuine ELM327 or STN chip (e.g. OBDLink) are more reliable.
 
-Rechte: unter Arch heißt die Gruppe `uucp` (Debian/Ubuntu: `dialout`):
-`sudo usermod -aG uucp $USER` – oder die udev-Regel aus `packaging/` installieren.
+Permissions: on Arch the group is called `uucp` (Debian/Ubuntu: `dialout`):
+`sudo usermod -aG uucp $USER`, or install the udev rule from `packaging/`.
 
-### Erster Test am Auto
+### First test at the car
 
-1. Motor aus, Zündung an (bei Start-Stopp-Knopf: drücken, ohne auf die Bremse zu
-   treten).
-2. `obd-diag ports` zeigt den Adapter, `obd-diag info --port …` Version und
-   Bordspannung.
-3. `obd-diag diagnose --port … --save --trace`: liest alles, nur lesend, und schneidet
-   die Kommunikation mit.
-4. Optional mit laufendem Motor: `obd-diag live --port … --duration 30 --record --trace`.
-5. `clear` bleibt gesperrt. Aus dem Mitschnitt wird mit `ReplayTransport` ein
-   Regressionstest (FIN vorher schwärzen, siehe „Mitschnitt“).
+1. Engine off, ignition on (with a start/stop button: press it without pressing the
+   brake).
+2. `obd-diag ports` shows the adapter, `obd-diag info --port …` version and battery
+   voltage.
+3. `obd-diag diagnose --port … --save --trace`: reads everything, read-only, and
+   records the communication.
+4. Optionally with the engine running: `obd-diag live --port … --duration 30 --record --trace`.
+5. `clear` stays locked. The trace becomes a regression test via `ReplayTransport`
+   (redact the VIN first, see “Trace”).
 
-Am 2026-10-09 lief dieser Ablauf an einem Mercedes A 180 d (W177): CAN 29/500, vier
-Steuergeräte, ein gespeicherter Code (U1218, herstellerspezifisch), Readiness, Freeze
-Frame, FIN und Live-Daten im Stand. Der erste Versuch endete mit `UNABLE TO CONNECT`,
-weil die Zündung noch aus war; das Tool sagt dann „Kein Steuergerät antwortet. Zündung
-einschalten (der Motor darf aus bleiben), bei Adaptern mit MS-/HS-CAN-Schalter HS-CAN
-wählen und erneut versuchen.“ Die Bordspannung laut Adapter sank in wenigen Minuten
-auf 11,2 V: den Test kurz halten oder ein Ladegerät anschließen. Der ganze Ablauf und
-der Mitschnitt Zeile für Zeile stehen in der Dokumentation („Erster Test am Auto“,
-„Mitschnitt vom W177“).
+On 2026-10-09 this procedure ran on a Mercedes A 180 d (W177): CAN 29/500, four control
+units, one stored code (U1218, manufacturer-specific), readiness, freeze frame, VIN and
+live data while stationary. The first attempt ended with `UNABLE TO CONNECT` because
+the ignition was still off; the tool then says “No control unit responds. Switch the
+ignition on (the engine may stay off), select HS-CAN on adapters with an MS/HS-CAN
+switch and try again.” The battery voltage according to the adapter dropped to 11.2 V
+within a few minutes: keep the test short or connect a charger. The whole procedure and
+the trace line by line are in the documentation (“First test at the car”, “Trace from
+the W177”).
 
-Vorsicht, unabhängig von der Software:
+Caution, independent of the software:
 
-- Adapterschalter **vor** dem Einstecken auf HS-CAN stellen und bei Zündung aus
-  einstecken bzw. abziehen. Findet das Tool nichts („UNABLE TO CONNECT“), nicht mit
-  dem Schalter experimentieren, sondern aufhören und den Mitschnitt ansehen.
-- Zündung an ohne Motor zieht Strom aus der Batterie: Test kurz halten (eine Diagnose
-  dauert Sekunden), danach Zündung aus. Liegt die Bordspannung unter 12 V, lieber mit
-  laufendem Motor oder Ladegerät testen.
-- Adapter nach dem Test abziehen: er hängt an Dauerplus (Pin 16) und kann über Nacht
-  die Batterie leeren oder Steuergeräte wachhalten.
-- Kabel so legen, dass es nicht an Pedalen hängt; Live-Daten im Stand, Motor nur im
-  Freien laufen lassen.
+- Set the adapter switch to HS-CAN **before** plugging in, and plug in and unplug with
+  the ignition off. If the tool finds nothing (“UNABLE TO CONNECT”), do not experiment
+  with the switch; stop and look at the trace.
+- Ignition on without the engine draws current from the battery: keep the test short (a
+  diagnosis takes seconds), then ignition off. If the battery voltage is below 12 V,
+  better test with the engine running or a charger.
+- Unplug the adapter after the test: it is connected to permanent positive (pin 16) and
+  can drain the battery overnight or keep control units awake.
+- Route the cable so that it does not catch on the pedals; live data while stationary,
+  run the engine only outdoors.
 
-Wird die Verbindung mitten in der Abfrage unterbrochen (Adapter abgezogen, Stecker vom
-Auto ab, Bluetooth weg), bricht das Tool mit einer Meldung ab („Verbindung zu …
-unterbrochen“ bzw. „keine Antwort von …“). Danach wird nichts mehr gesendet, eine
-halbe Diagnose wird nicht gespeichert, und eine Live-Aufzeichnung behält alle
-vollständigen Runden. Meldet der Adapter dagegen Busfehler (Zündung aus), endet
-Live nach drei Runden ohne Antwort.
+If the connection is interrupted during a query (adapter unplugged, plug pulled from
+the car, Bluetooth gone), the tool aborts with a message (“Connection to … lost” or “no
+response from …”). After that nothing more is sent, half a diagnosis is not saved, and
+a live recording keeps all complete rounds. If the adapter reports bus errors instead
+(ignition off), live data ends after three rounds without response.
 
-Die genormte Diagnose sieht nur abgasrelevante Steuergeräte (Motor, Getriebe).
-Airbag, ABS, Komfortelektronik usw. brauchen herstellerspezifische Diagnose; die ist
-noch nicht eingebaut (geplant: nur lesend über UDS).
+The standardised diagnostics only see emissions-related control units (engine,
+transmission). Airbag, ABS, comfort electronics etc. need manufacturer-specific
+diagnostics; that is not built in yet (planned: read-only via UDS).
 
-### Sicherheit: was das Tool senden kann
+### Safety: what the tool can send
 
-Das Tool soll am Auto nichts verändern können. Dafür gibt es eine harte Grenze im
-Code und Tests, die sie prüfen:
+The tool should not be able to change anything in the car. For that there is a hard
+limit in the code and tests that check it:
 
-- **Freigabeliste** (`protocol/elm327.py`): `Elm327.command` ist der einzige Weg zum
-  Adapter. Durch geht nur, was dort steht: Adapter-Befehle (`ATZ`, `ATE0`, `ATRV` …),
-  die nichts ans Fahrzeug senden, und lesende OBD-Anfragen (`01xx`, `02xx[00]`, `03`,
-  `07`, `0A`, `0902`). Alles andere wird **vor** dem Senden mit
-  `ForbiddenCommandError` abgewiesen, auch Kleinschreibung, Leerzeichen oder ein
-  angehängter zweiter Befehl.
-- **Löschen** (`04`) ist nur innerhalb von `clear_dtcs` freigeschaltet und läuft nur
-  über den Ablauf unter „Fehlercodes löschen“.
-- **Keine Codierung, kein Flashen, keine Servicefunktionen** (Routinen, Aktoren,
-  Anlernwerte). Das ist eine bewusste Entscheidung (`docs/adr/0002-nur-lesend.md`).
-- **Tempo:** Es ist immer nur eine Anfrage unterwegs; die nächste geht erst hinaus,
-  wenn der Adapter mit dem Prompt `>` fertig gemeldet hat (bei 7F-78-Antworten wird
-  ohne erneutes Senden weitergelesen). Dahinter steht eine harte Mindestpause von
-  50 ms zwischen Antwort und nächster Anfrage ans Fahrzeug (`MIN_REQUEST_GAP`), also
-  höchstens 20 Anfragen je Sekunde, auch wenn ein Adapter den Prompt zu früh schickt.
-  Live-Daten fragen zusätzlich höchstens alle 0,1 s eine Runde ab. Nach einem
-  Verbindungsfehler oder einer ausbleibenden Antwort wird nichts mehr gesendet.
+- **Allowlist** (`protocol/elm327.py`): `Elm327.command` is the only way to the adapter.
+  Only what is listed there gets through: adapter commands (`ATZ`, `ATE0`, `ATRV` …)
+  that send nothing to the vehicle, and read OBD requests (`01xx`, `02xx[00]`, `03`,
+  `07`, `0A`, `0902`). Everything else is rejected with `ForbiddenCommandError`
+  **before** sending, including lower case, spaces or an appended second command.
+- **Clearing** (`04`) is only enabled inside `clear_dtcs` and only runs through the
+  procedure under “Clearing trouble codes”.
+- **No coding, no flashing, no service functions** (routines, actuators, adaptation
+  values). This is a deliberate decision (`docs/en/adr/0002-nur-lesend.md`).
+- **Pace:** there is only ever one request in flight; the next one only goes out when
+  the adapter has reported completion with the prompt `>` (with 7F-78 responses,
+  reading continues without sending again). Behind this is a hard minimum gap of 50 ms
+  between a response and the next request to the vehicle (`MIN_REQUEST_GAP`), so at
+  most 20 requests per second, even if an adapter sends the prompt too early. Live data
+  additionally queries at most one round every 0.1 s. After a connection error or a
+  missing response nothing more is sent.
 
-Geprüft wird das so:
+This is checked as follows:
 
-- Freigabeliste mit Hypothesis: beliebiger Text ist entweder freigegeben oder wird
-  nie gesendet; für jede Funktion steht die exakte Befehlsfolge im Test, gegen
-  Datenblatt und J1979 geprüft.
-- Löschen mit beliebig kaputten Antworten: `04` geht höchstens einmal hinaus, und nur
-  wenn alle Vorbedingungen nachweislich erfüllt sind und die Sicherung auf der Platte
-  liegt.
-- Live-Daten mit beliebigen Antworten: nur Lesendes, nie `04`.
-- Aufrufgraph (AST): nur die vorgesehenen Stellen erreichen `allow_clear`,
-  `clear_dtcs`, `clear_codes`, den Transport und pyserial; keine Sockets, kein
-  `os.write`, kein `eval`/`getattr`.
-- Jeder gesendete Befehl hat auf der Leitung genau das ELM327-Format (Großbuchstaben,
-  Ziffern, ein CR), auch in den Emulator-Tests über den echten seriellen Transport.
-- Mindestpause mit simulierter Uhr: nie eine Anfrage vor der vorigen Antwort, nie
-  zwei Anfragen ans Fahrzeug näher als 50 ms, auch nach Fehlern und Timeouts, für eine
-  vollständige Diagnose und beliebige Befehlsfolgen (Hypothesis).
+- Allowlist with Hypothesis: arbitrary text is either allowed or never sent; for every
+  function the exact command sequence is in the test, checked against the datasheet
+  and J1979.
+- Clearing with arbitrarily broken responses: `04` goes out at most once, and only if
+  all preconditions are demonstrably fulfilled and the backup is on disk.
+- Live data with arbitrary responses: only reading, never `04`.
+- Call graph (AST): only the intended places reach `allow_clear`, `clear_dtcs`,
+  `clear_codes`, the transport and pyserial; no sockets, no `os.write`, no
+  `eval`/`getattr`.
+- Every sent command has exactly the ELM327 format on the line (upper case, digits, one
+  CR), also in the emulator tests via the real serial transport.
+- Minimum gap with a simulated clock: never a request before the previous response,
+  never two requests to the vehicle closer than 50 ms, also after errors and timeouts,
+  for a full diagnosis and arbitrary command sequences (Hypothesis).
 
-Siehe `tests/unit/test_command_guard.py`, `test_write_safety.py`, `test_live_safety.py`,
+See `tests/unit/test_command_guard.py`, `test_write_safety.py`, `test_live_safety.py`,
 `test_request_gap.py`.
 
-### Fehlercodes lesen
+### Reading trouble codes
 
 ```sh
-obd-diag scan --port /dev/ttyUSB0              # Tabelle, Texte auf Deutsch
-obd-diag scan --port /dev/ttyUSB0 --lang en    # Texte auf Englisch
-obd-diag scan --port /dev/ttyUSB0 --json       # maschinenlesbar
+obd-diag scan --port /dev/ttyUSB0              # table, language like the system
+obd-diag scan --port /dev/ttyUSB0 --lang en    # everything in English
+obd-diag scan --port /dev/ttyUSB0 --json       # machine-readable
 ```
 
-`scan` zeigt Adapter, Fahrzeugprotokoll und Bordspannung (mit Warnung unter 11,8 V)
-und listet gespeicherte (Mode 03), ausstehende (Mode 07) und permanente (Mode 0A)
-Fehlercodes mit Klartext aus dem Offline-Katalog. Fehlt der Katalog, erscheinen die
-Codes ohne Beschreibung (bauen mit `uv run python tools/build_dtc_db.py`). Es wird
-nur gelesen, nichts gelöscht.
+`scan` shows adapter, vehicle protocol and battery voltage (with a warning below
+11.8 V) and lists stored (mode 03), pending (mode 07) and permanent (mode 0A) trouble
+codes with plain text from the offline catalog. Without the catalog the codes appear
+without description (build it with `uv run python tools/build_dtc_db.py`). It only
+reads, nothing is cleared.
 
-Mit `--online-codes` (auch bei `diagnose`; in der Oberfläche *Optionen* → „Fehlercodes
-online erklären“, standardmäßig aus) bekommen Codes ohne Katalogtext eine kurze,
-ungeprüfte Erklärung aus [Wal33D/dtc-database](https://github.com/Wal33D/dtc-database)
-(MIT) mit Quelle und Link, dazu einen Link für die Websuche. Geladen werden ganze
-Dateien je Hersteller, Fehlercode und FIN verlassen den Rechner nicht; Einzelheiten in
-der Doku unter „Fehlercodes online erklären“.
+With `--online-codes` (also for `diagnose`; in the user interface *Options* → “Explain
+trouble codes online”, off by default), codes without catalog text get a short,
+unverified explanation from [Wal33D/dtc-database](https://github.com/Wal33D/dtc-database)
+(MIT) with source and link, plus a link for a web search. Whole files per manufacturer
+are downloaded; trouble code and VIN never leave the computer. Details in the
+documentation under “Explaining trouble codes online”.
 
-Misst der Adapter (`ATRV`) unter 11,8 V, gilt die Steuergerätespannung (PID 42), sofern
-plausibel: viele Adapter messen hinter einer Schutzdiode einige Zehntel Volt zu wenig
-(am Mercedes W177: Adapter 11,2 V, Steuergerät 12,0 V). Das gilt auch für Löschen und
-Live-Daten.
+If the adapter (`ATRV`) measures below 11.8 V, the control module voltage (PID 42)
+counts if it is plausible: many adapters measure a few tenths of a volt too little
+behind a protection diode (on the Mercedes W177: adapter 11.2 V, control unit 12.0 V).
+This also applies to clearing and live data.
 
-Im Emulator sind standardmäßig keine Codes gesetzt; die Tests geben sie über die
-Listen `DTC_STORED`, `DTC_PENDING` und `DTC_PERMANENT` in `elm.obd_message` vor
-(siehe `tests/integration/test_scan_emulator.py`).
+The emulator sets no codes by default; the tests specify them via the lists
+`DTC_STORED`, `DTC_PENDING` and `DTC_PERMANENT` in `elm.obd_message` (see
+`tests/integration/test_scan_emulator.py`).
 
-### Adapter finden
+### Finding adapters
 
 ```sh
 obd-diag ports
 ```
 
-listet USB-Seriell-Adapter (`/dev/ttyUSB*`, `/dev/ttyACM*` und andere Geräte mit
-USB-Kennung) und gebundene Bluetooth-Geräte (`/dev/rfcomm*`, z. B. nach
-`sudo rfcomm bind 0 <MAC>`). Eingebaute Schnittstellen (`/dev/ttyS*`) erscheinen nicht.
+lists USB serial adapters (`/dev/ttyUSB*`, `/dev/ttyACM*` and other devices with a USB
+ID) and bound Bluetooth devices (`/dev/rfcomm*`, e.g. after `sudo rfcomm bind 0 <MAC>`).
+Built-in ports (`/dev/ttyS*`) are not listed.
 
-### Fehlercodes löschen
+### Clearing trouble codes
 
-**Derzeit deaktiviert** (siehe oben). Die Tests prüfen den Ablauf trotzdem vollständig,
-damit er bei der Freigabe stimmt.
+**Currently disabled** (see above). The tests still check the procedure completely, so
+that it is right when it is enabled.
 
-Das Tool kann technisch nur freigegebene Befehle senden: Adapter-Befehle (`AT…`) und
-lesende OBD-Anfragen (`01xx`, `02xx00`, `03`, `07`, `0A`, `0902`). `04` (Löschen) ist
-nur innerhalb des Lösch-Ablaufs freigeschaltet; alles andere wird vor dem Senden
-abgewiesen (`ForbiddenCommandError`).
-
-```sh
-obd-diag clear --port /dev/ttyUSB0          # zeigt die Codes und fragt nach
-obd-diag clear --port /dev/ttyUSB0 --yes    # ohne Rückfrage
-```
-
-`clear` ist die einzige schreibende Aktion (Mode 04) und hält sich an feste Regeln:
-
-1. Erst lesen: Scan wie bei `scan`. Gibt es keine gespeicherten oder ausstehenden
-   Codes, wird nichts gesendet. Permanente Codes (Mode 0A) löscht Mode 04 nicht, sie
-   verschwinden erst, wenn das Steuergerät den Fehler in Fahrzyklen als behoben sieht.
-2. Vorbedingungen: das Steuergerät antwortet (Zündung an), die Bordspannung liegt
-   nicht unter 11,8 V (bei niedrigem `ATRV` gegengeprüft mit PID 42) und die Drehzahl ist 0 (Motor aus). Antworten mehrere
-   Steuergeräte (z. B. Motor und Getriebe), muss jedes gültig 0 melden. Ist eine
-   Drehzahl nicht lesbar, wird ebenfalls abgelehnt.
-3. Rückfrage: die Codes werden aufgelistet, gelöscht wird nur nach Eingabe von `ja`
-   (oder mit `--yes`).
-4. Sicherung: Scan-Ergebnis, Freeze Frame (Mode 02: auslösender Code, Last,
-   Kühlmitteltemperatur, Drehzahl, Geschwindigkeit, roh und dekodiert), Zeitpunkt,
-   Adapter und Protokoll als JSON nach `$XDG_DATA_HOME/obd-diag/backups/`
-   (Standard `~/.local/share/obd-diag/backups/`). Die Datei wird vollständig
-   geschrieben, bevor Mode 04 gesendet wird; vorhandene Sicherungen werden nie
-   überschrieben.
-5. Erst dann Mode 04, danach ein Kontroll-Scan. Lehnt das Steuergerät ab
-   (`7F 04 22`: Bedingungen nicht erfüllt), bricht `clear` mit Fehlermeldung ab;
-   die Sicherung bleibt.
-
-Schlägt ein Schritt vor dem Löschen fehl, wird Mode 04 nicht gesendet. Mit dem Löschen
-gehen auch Freeze Frame und Readiness-Status verloren; ist der Fehler nicht behoben,
-kommen die Codes wieder.
-
-Im Emulator läuft der Motor standardmäßig (`010C` liefert wechselnde Drehzahlen ab
-1303 1/min), `clear` lehnt also ab. Die Tests setzen die Drehzahl über
-`emulator.answer["RPM"]` auf 0 (siehe `tests/integration/test_clear_emulator.py`).
-
-### Vollständige Diagnose
+Technically the tool can only send allowed commands: adapter commands (`AT…`) and read
+OBD requests (`01xx`, `02xx00`, `03`, `07`, `0A`, `0902`). `04` (clearing) is only
+enabled inside the clearing procedure; everything else is rejected before sending
+(`ForbiddenCommandError`).
 
 ```sh
-obd-diag diagnose --port /dev/ttyUSB0                   # Tabelle
-obd-diag diagnose --port /dev/ttyUSB0 --json            # Sitzung als JSON
-obd-diag diagnose --port /dev/ttyUSB0 --save            # Sitzung speichern, Pfad auf stderr
-obd-diag diagnose --port /dev/ttyUSB0 --pdf bericht.pdf --csv codes.csv
-obd-diag diagnose --port /dev/ttyUSB0 --online-vin      # FIN zusätzlich bei NHTSA vPIC
+obd-diag clear --port /dev/ttyUSB0          # shows the codes and asks for confirmation
+obd-diag clear --port /dev/ttyUSB0 --yes    # without asking
 ```
 
-`diagnose` liest in einem Durchgang, nur lesend (nie Mode 04):
+`clear` is the only writing action (mode 04) and follows fixed rules:
 
-1. Scan wie bei `scan` (Adapter-Reset, Protokoll, Bordspannung, Codes aus Mode 03/07/0A).
-   Schlägt er fehl, bricht `diagnose` ab.
-2. Readiness (Mode 01 PID 01): MIL, gemeldete Codezahl, Motorart (Otto/Diesel) und je
-   Monitor „abgeschlossen“, „nicht abgeschlossen“ oder „nicht unterstützt“, dazu
-   „Alle Tests abgeschlossen: ja/nein“ (ja, wenn kein unterstützter Monitor offen
-   ist). Antworten mehrere Steuergeräte, zählt je Monitor der schlechteste Stand, die
-   MIL ist an, wenn ein Steuergerät sie meldet, und die Codezahlen werden addiert.
+1. Read first: a scan as with `scan`. If there are no stored or pending codes, nothing
+   is sent. Mode 04 does not clear permanent codes (mode 0A); they only disappear once
+   the control unit sees the fault as fixed over drive cycles.
+2. Preconditions: the control unit answers (ignition on), the battery voltage is not
+   below 11.8 V (cross-checked with PID 42 if `ATRV` is low) and the engine speed is 0
+   (engine off). If several control units answer (e.g. engine and transmission), each
+   must validly report 0. If an engine speed cannot be read, clearing is refused as
+   well.
+3. Confirmation: the codes are listed, and they are only cleared after typing `yes`
+   (`ja` in German), or with `--yes`.
+4. Backup: scan result, freeze frame (mode 02: triggering code, load, coolant
+   temperature, engine speed, speed, raw and decoded), time, adapter and protocol as
+   JSON in `$XDG_DATA_HOME/obd-diag/backups/` (default
+   `~/.local/share/obd-diag/backups/`). The file is written completely before mode 04
+   is sent; existing backups are never overwritten.
+5. Only then mode 04, followed by a check scan. If the control unit refuses
+   (`7F 04 22`: conditions not correct), `clear` aborts with an error message; the
+   backup remains.
 
-   Das ist bewusst **keine AU-Bewertung** (früher „AU-bereit“): Seit der AU-Richtlinie
-   von 2017 (Verkehrsblatt 19/2017, Leitfaden 5.01, ab 01.01.2018) gehört zur AU bei
-   allen OBD-Fahrzeugen neben der OBD-Prüfung wieder die Endrohrmessung; offene
-   Monitore führen nicht pauschal zum Nichtbestehen. Eine allgemeine, zitierfähige
-   Liste, welche offenen Monitore toleriert werden, gibt es nicht – das hängt vom
-   Fahrzeug und vom Prüfablauf des AU-Geräts ab. Quellen: Hella Gutmann,
+If a step before clearing fails, mode 04 is not sent. Clearing also deletes the freeze
+frame and the readiness status; if the fault is not fixed, the codes come back.
+
+In the emulator the engine runs by default (`010C` returns changing engine speeds from
+1303 rpm), so `clear` refuses. The tests set the engine speed to 0 via
+`emulator.answer["RPM"]` (see `tests/integration/test_clear_emulator.py`).
+
+### Full diagnosis
+
+```sh
+obd-diag diagnose --port /dev/ttyUSB0                   # table
+obd-diag diagnose --port /dev/ttyUSB0 --json            # session as JSON
+obd-diag diagnose --port /dev/ttyUSB0 --save            # save session, path on stderr
+obd-diag diagnose --port /dev/ttyUSB0 --pdf report.pdf --csv codes.csv
+obd-diag diagnose --port /dev/ttyUSB0 --online-vin      # also look up the VIN at NHTSA vPIC
+```
+
+`diagnose` reads in one pass, read-only (never mode 04):
+
+1. Scan as with `scan` (adapter reset, protocol, battery voltage, codes from mode
+   03/07/0A). If it fails, `diagnose` aborts.
+2. Readiness (mode 01 PID 01): MIL, reported number of codes, engine type
+   (petrol/diesel) and per monitor “complete”, “incomplete” or “not supported”, plus
+   “All tests complete: yes/no” (yes if no supported monitor is incomplete). If several
+   control units answer, the worst state counts per monitor, the MIL is on if one
+   control unit reports it, and the code counts are added up.
+
+   This is deliberately **not an emissions test verdict** (formerly “AU-bereit”): since
+   the German emissions test guideline of 2017 (Verkehrsblatt 19/2017, Leitfaden 5.01,
+   from 2018-01-01) the periodic emissions test (AU) again includes a tailpipe
+   measurement besides the OBD check for all OBD vehicles; incomplete monitors do not
+   automatically lead to a fail. There is no general, citable list of which incomplete
+   monitors are tolerated; that depends on the vehicle and the test procedure of the
+   AU device. Sources (German): Hella Gutmann,
    [Informationen zum Leitfaden 5.01](https://www.hella-gutmann.com/fileadmin/user_upload/Download-Dateien/X_Downloads/downloads_instructions/downloads_manuals_quickstarts/DE/BD0059_HG4_Info_Leitfaden_5-01.pdf)
-   (12/2017); zur Regelung ab 2010 (Readiness nicht gesetzt → Abgasmessung statt
-   Mangel) die [Zusammenfassung bei werner-austen.de](http://www.werner-austen.de/plaintext/informationen/regelung-abgasuntersuchung-112010/index.php). In JSON heißt das Feld
-   `all_complete`; `ready` bleibt als alter Name erhalten.
-3. Freeze Frame (Mode 02, Frame 00): auslösender Code, Last, Kühlmitteltemperatur,
-   Drehzahl, Geschwindigkeit. Ohne gespeicherten Code ist er leer und erscheint als
-   „keiner gespeichert“.
-4. FIN (Mode 09 PID 02, CAN mehrteilig oder ältere Protokolle mit fünf Zeilen) und
-   ihre Offline-Dekodierung.
+   (12/2017); on the rules from 2010 (readiness not set → exhaust measurement instead
+   of a defect) the [summary at werner-austen.de](http://www.werner-austen.de/plaintext/informationen/regelung-abgasuntersuchung-112010/index.php).
+   In JSON the field is called `all_complete`; `ready` remains as the old name.
+3. Freeze frame (mode 02, frame 00): triggering code, load, coolant temperature, engine
+   speed, speed. Without a stored code it is empty and shown as “none stored”.
+4. VIN (mode 09 PID 02, CAN multi-frame or older protocols with five lines) and its
+   offline decoding.
 
-Antwortet das Fahrzeug auf Readiness, Freeze Frame oder FIN nicht (oder unbrauchbar),
-fehlt nur dieser Teil. `--save` legt die Sitzung wie unten beschrieben ab, `--pdf` und
-`--csv` exportieren direkt (wie `obd-diag export`). Bei `--json` bleibt stdout reines
-JSON; Pfade gespeicherter Dateien stehen auf stderr.
+If the vehicle does not answer readiness, freeze frame or VIN (or answers unusably),
+only that part is missing. `--save` stores the session as described below, `--pdf` and
+`--csv` export directly (like `obd-diag export`). With `--json` stdout stays pure JSON;
+paths of saved files go to stderr.
 
-### FIN
+### VIN
 
 ```sh
-obd-diag vin --port /dev/ttyUSB0          # aus dem Fahrzeug lesen und dekodieren
-obd-diag vin WVWZZZ1KZ6W123456            # nur dekodieren, ohne Adapter
+obd-diag vin --port /dev/ttyUSB0          # read from the vehicle and decode
+obd-diag vin WVWZZZ1KZ6W123456            # decode only, without an adapter
 obd-diag vin WVWZZZ1KZ6W123456 --json
 ```
 
-Die Dekodierung ist offline:
+The decoding is offline:
 
-- gültig: 17 Zeichen, nur 0-9 und A-Z ohne I, O, Q;
-- Prüfziffer (Stelle 9, ISO 3779 / 49 CFR 565): Pflicht nur in Nordamerika (FIN
-  beginnt mit 1-5) und China (`L`), dort „stimmt“/„stimmt nicht“; sonst „stimmt“, wenn
-  sie zufällig oder freiwillig passt, und „nicht vorgeschrieben (passt nicht, kein
-  Fehler)“ andernfalls;
-- Hersteller aus einer Tabelle häufiger Herstellerkennungen (WMI, Stellen 1-3,
-  `src/obd_diag/data/wmi.py`, geprüft gegen Wikipedia und NHTSA vPIC, Quellen dort),
-  Land aus den ISO-3780-Regionsbereichen der Stellen 1-2 (ISO-Übersicht 2021);
-- Modelljahr aus Stelle 10. Der Code wiederholt sich alle 30 Jahre; in Nordamerika
-  entscheidet Stelle 7 (Ziffer: 1980-2009, Buchstabe: 2010-2039), sonst gilt das
-  jüngste Jahr bis höchstens ein Jahr in der Zukunft als beste Schätzung, und das 30
-  Jahre ältere wird mitgenannt: „2026 oder 1996 (aus Stelle 10, ohne Gewähr)“. Kommt
-  die FIN aus dem Fahrzeug, fallen ältere Jahre weg, die zum OBD-Protokoll nicht
-  passen (OBD-II-Protokolle: nicht vor 1994; CAN nach ISO 15765-4: nicht vor 2000).
-  Europäische Hersteller nutzen Stelle 10 nicht alle als Modelljahr, die Angabe ist
-  dort ohne Gewähr. Bei Mercedes-Benz (WMI WDB, WDC, WDD, WDF, W1K, W1N, W1V) steht
-  dort die Lenkung, ein Modelljahr wird dann nicht angezeigt. In JSON steht das zweite Jahr in `model_year_alternatives`.
+- valid: 17 characters, only 0-9 and A-Z without I, O, Q;
+- check digit (position 9, ISO 3779 / 49 CFR 565): mandatory only in North America (VIN
+  starts with 1-5) and China (`L`), there “correct”/“incorrect”; otherwise “correct” if
+  it happens to match or is used voluntarily, and “not mandatory (differs)” if not, which
+  is not an error;
+- manufacturer from a table of common manufacturer identifiers (WMI, positions 1-3,
+  `src/obd_diag/data/wmi.py`, checked against Wikipedia and NHTSA vPIC, sources there),
+  country from the ISO 3780 region ranges of positions 1-2 (ISO overview 2021);
+- model year from position 10. The code repeats every 30 years; in North America
+  position 7 decides (digit: 1980-2009, letter: 2010-2039), otherwise the most recent
+  year up to at most one year in the future is the best guess, and the year 30 years
+  earlier is named as well: “2026 or 1996 (from position 10, without guarantee)”. If the
+  VIN comes from the vehicle, older years that do not fit the OBD protocol are dropped
+  (OBD-II protocols: not before 1994; CAN according to ISO 15765-4: not before 2000).
+  Not all European manufacturers use position 10 as model year, so the value is given
+  without guarantee there. At Mercedes-Benz (WMI WDB, WDC, WDD, WDF, W1K, W1N, W1V)
+  position 10 is the steering side, so no model year is shown. In JSON the second year
+  is in `model_year_alternatives`.
 
-**Datenschutz:** Die FIN bleibt auf dem Rechner. Nur mit `--online-vin` wird sie an die
-NHTSA-Datenbank [vPIC](https://vpic.nhtsa.dot.gov/api/) (USA) geschickt; übernommen
-werden Modell, Modelljahr, Karosserie, Zylinder, Hubraum, Kraftstoff, Werk u. Ä. Die
-Antwort wird je FIN unter `$XDG_CACHE_HOME/obd-diag/vpic/` (Standard
-`~/.cache/obd-diag/vpic/`) abgelegt, eine FIN wird also nur einmal abgefragt.
-Netzwerkfehler werden ignoriert. vPIC kennt vor allem Fahrzeuge für den US-Markt; für
-europäische Modelle sind die Angaben oft lückenhaft.
+**Privacy:** the VIN stays on the computer. Only with `--online-vin` is it sent to the
+NHTSA database [vPIC](https://vpic.nhtsa.dot.gov/api/) (USA); model, model year, body,
+cylinders, displacement, fuel, plant and similar are taken over. The response is stored
+per VIN under `$XDG_CACHE_HOME/obd-diag/vpic/` (default `~/.cache/obd-diag/vpic/`), so a
+VIN is only queried once. Network errors are ignored. vPIC mainly knows vehicles for the
+US market; for European models the details are often incomplete.
 
-Im Emulator antworten `0101` und `0902` standardgemäß (die FIN wechselt reihum zwischen
-drei Beispielen); Mode 02 erwartet er ohne Frame-Nummer, der Freeze Frame bleibt dort
-leer. `tests/integration/test_diagnosis_emulator.py` stellt das für die Tests um.
+In the emulator `0101` and `0902` answer as the standard says (the VIN rotates between
+three examples); it expects mode 02 without frame number, so the freeze frame stays
+empty there. `tests/integration/test_diagnosis_emulator.py` adjusts this for the tests.
 
-### Live-Daten
+### Live data
 
 ```sh
-obd-diag live --port /dev/ttyUSB0 --list                      # unterstützte Werte
-obd-diag live --port /dev/ttyUSB0                             # übliche Werte, Strg+C beendet
+obd-diag live --port /dev/ttyUSB0 --list                      # supported values
+obd-diag live --port /dev/ttyUSB0                             # usual values, Ctrl+C stops
 obd-diag live --port /dev/ttyUSB0 --pids rpm,speed,fuel_rail_pressure --interval 0.5
-obd-diag live --port /dev/ttyUSB0 --duration 60 --record      # 60 s als CSV aufzeichnen
+obd-diag live --port /dev/ttyUSB0 --duration 60 --record      # record 60 s as CSV
 ```
 
 ```
-Zeit (s)  Motordrehzahl (1/min)  Geschwindigkeit (km/h)  Kühlmitteltemperatur (°C)  …  Spannung (V)
-     0.0                   1726                      50                         86  …          14.1
-     1.0                   1731                      51                         86  …          14.1
+Time (s)  Engine speed (rpm)  Speed (km/h)  Coolant temperature (°C)  …  Voltage (V)
+     0.0                1726            50                        86  …         14.1
+     1.0                1731            51                        86  …         14.1
 ```
 
-- **Werte:** 116 Werte aus 82 Mode-01-PIDs nach SAE J1979 (`protocol/pids.py`), u. a.
-  Drehzahl, Geschwindigkeit, Kühlmittel-, Ansaugluft- und Öltemperatur, Last,
-  Luftmasse, Saugrohr- und Raildruck, AGR, Lambda-Sollwert, Kraftstofftrimm (auch
-  Nachkat), Lambdasonden 1–8 (Schmal- und Breitband), Drehmomentstufen,
-  Tankfüllstand, Kraftstoffverbrauch und Kilometerstand. Liefert eine PID mehrere
-  Werte (z. B. Sondenspannung und Trimm), wird sie je Runde nur einmal abgefragt.
-  Die Sonden heißen 1–8 in PID-Reihenfolge; welche Bank und Position das ist, legt
-  das Fahrzeug fest (PID `13` oder `1D`). Angefragt werden nur Werte, die das
-  Fahrzeug als unterstützt meldet (`0100`, `0120` … über alle Steuergeräte).
-  Ohne `--pids`: Drehzahl, Geschwindigkeit, Kühlmitteltemperatur, Last,
-  Ansauglufttemperatur und Steuergerätespannung, soweit unterstützt.
-- **Nicht enthalten:** PIDs mit Statusbyte, deren Aufbau sich zwischen Ausgaben der
-  Norm geändert hat oder in freien Quellen nicht eindeutig ist, darunter Ladedruck
-  (`70`) und Partikelfilter (`7A`–`7C`); Liste im Docstring von `protocol/pids.py`.
-- **Ablauf:** Runde für Runde wird jeder Wert einmal gelesen; ist einer nicht lesbar,
-  steht „-“ (in der CSV eine leere Zelle), die Abfrage läuft weiter. Meldet der Adapter
-  drei Runden lang bei jedem Wert einen Busfehler (z. B. Zündung aus), endet sie mit
-  einer Fehlermeldung. Die Bordspannung wird jede zehnte Runde gelesen; unter 11,8 V
-  (nach Gegenprobe mit dem Steuergerät) wird nur noch alle 5 s abgefragt und die Spannung
-  jede Runde gemessen, bis sie wieder reicht.
-- **Aufzeichnung:** CSV unter `$XDG_DATA_HOME/obd-diag/recordings/`
-  (`live-JJJJMMTT-HHMMSS.csv`) oder in der angegebenen Datei, die nicht überschrieben
-  wird. Format wie beim Export: UTF-8 mit BOM, `;`, Dezimalkomma; erste Spalte
-  `Zeit (s)`, dann je Wert `Name (Einheit)`, zuletzt `Bordspannung (V)`. Jede Zeile
-  wird sofort geschrieben, ein Abbruch verliert also nichts.
-- **Nur lesend:** gesendet werden nur `01xx` und `ATRV`.
+- **Values:** 116 values from 82 mode 01 PIDs according to SAE J1979
+  (`protocol/pids.py`), among them engine speed, speed, coolant, intake air and oil
+  temperature, load, air flow, manifold and rail pressure, EGR, commanded equivalence
+  ratio, fuel trim (also secondary), oxygen sensors 1–8 (narrow and wide band), torque
+  points, fuel level, fuel rate and odometer. If one PID returns several values (e.g.
+  sensor voltage and trim), it is queried only once per round. The sensors are
+  numbered 1–8 in PID order; which bank and position that is, is defined by the vehicle
+  (PID `13` or `1D`). Only values the vehicle reports as supported are requested
+  (`0100`, `0120` … across all control units). Without `--pids`: engine speed, speed,
+  coolant temperature, load, intake air temperature and control module voltage, as far
+  as supported.
+- **Not included:** PIDs with a status byte whose structure changed between editions of
+  the standard or is not unambiguous in free sources, among them boost pressure (`70`)
+  and particulate filter (`7A`–`7C`); list in the docstring of `protocol/pids.py`.
+- **Procedure:** round by round every value is read once; if one cannot be read, “-” is
+  shown (an empty cell in the CSV) and the query carries on. If the adapter reports a
+  bus error for every value for three rounds (e.g. ignition off), it ends with an error
+  message. The battery voltage is read every tenth round; below 11.8 V (after a
+  cross-check with the control unit) values are only queried every 5 s and the voltage
+  is measured every round until it is high enough again.
+- **Recording:** CSV under `$XDG_DATA_HOME/obd-diag/recordings/`
+  (`live-YYYYMMDD-HHMMSS.csv`) or in the given file, which is never overwritten. Format
+  as for the export: UTF-8 with BOM, in English `,` and a decimal point (in German `;`
+  and a decimal comma); first column `Time (s)`, then `Name (unit)` per value, last
+  `Battery voltage (V)`. Every row is written immediately, so an abort loses nothing.
+- **Read-only:** only `01xx` and `ATRV` are sent.
 
-Während der Fahrt nur durch Beifahrer bedienen. Gegen den Emulator liefert
-`tools/emulator.py` zufällig wechselnde Werte bei laufendem Motor.
+While driving, only a passenger should operate this. Against the emulator,
+`tools/emulator.py` returns randomly changing values with the engine running.
 
-### Diagnosesitzungen und Export
+### Diagnosis sessions and export
 
-Eine Diagnosesitzung (Scan mit Klartexten, Readiness, Freeze Frame, FIN, Zeitpunkt)
-wird als JSON unter `$XDG_DATA_HOME/obd-diag/sessions/` gespeichert (Standard
-`~/.local/share/obd-diag/sessions/`), Dateiname `session-JJJJMMTT-HHMMSS.json` nach
-dem Zeitpunkt der Diagnose; vorhandene Dateien werden nie überschrieben (dann
-`…-2.json` usw.). Die Datei trägt `"format": "obd-diag-session"` und `"version": 1`,
-der Teil `scan` hat dieselbe Form wie `obd-diag scan --json`. Fremde oder neuere
-Formate lehnt das Laden mit Meldung ab.
+A diagnosis session (scan with plain texts, readiness, freeze frame, VIN, time) is saved
+as JSON under `$XDG_DATA_HOME/obd-diag/sessions/` (default
+`~/.local/share/obd-diag/sessions/`), file name `session-YYYYMMDD-HHMMSS.json` after the
+time of the diagnosis; existing files are never overwritten (then `…-2.json` etc.). The
+file carries `"format": "obd-diag-session"` and `"version": 1`, the part `scan` has the
+same form as `obd-diag scan --json`. Loading rejects foreign or newer formats with a
+message. Trouble code texts are stored in the language of the scan; everything else is
+shown in the current language.
 
-Eine gespeicherte Sitzung lässt sich umwandeln:
+A saved session can be converted:
 
 ```sh
 obd-diag export ~/.local/share/obd-diag/sessions/session-20261007-143205.json \
-    --pdf bericht.pdf --csv fehlercodes.csv
+    --pdf report.pdf --csv trouble-codes.csv
 ```
 
-- **PDF** (DIN A4, Deutsch): Fahrzeug (FIN, Prüfziffer, Hersteller, Land, Modelljahr),
-  Adapter, Protokoll und Bordspannung (mit Warnung bei niedriger Spannung),
-  Kurzübersicht, Readiness mit „Alle Tests abgeschlossen: ja/nein“, Fehlercodes nach Art mit
-  Erklärung, Ursachen samt Wahrscheinlichkeit, Symptomen und Kostenrahmen, Freeze
-  Frame. Fehlende Teile erscheinen als „nicht verfügbar“. Erzeugt mit
-  [ReportLab](https://www.reportlab.com/) (BSD-Lizenz). Schrift: DejaVu Sans,
-  Liberation Sans oder Noto Sans, falls installiert (wird eingebettet), sonst
-  Helvetica aus dem PDF-Standardumfang.
-- **CSV**: eine Zeile pro Fehlercode mit den Spalten Code; Art (Gespeichert,
-  Ausstehend, Permanent); Titel; Beschreibung; Ursachen; Symptome; MIL;
-  Abgasrelevant; Reparaturaufwand; Kosten; Kosten von (EUR); Kosten bis (EUR);
-  Datum; FIN. Mehrere Ursachen/Symptome stehen durch ` | ` getrennt in einer Zelle.
-  Kodierung UTF-8 mit BOM und `;` als Trennzeichen, damit ein deutsches Excel die
-  Datei per Doppelklick mit Umlauten und Spalten richtig öffnet.
+- **PDF** (A4, in the current language): vehicle (VIN, check digit, manufacturer,
+  country, model year), adapter, protocol and battery voltage (with a warning for low
+  voltage), summary, readiness with “All tests complete: yes/no”, trouble codes by type
+  with explanation, causes with likelihood, symptoms and cost range, freeze frame.
+  Missing parts appear as “not available”. Created with
+  [ReportLab](https://www.reportlab.com/) (BSD licence). Font: DejaVu Sans, Liberation
+  Sans or Noto Sans if installed (embedded), otherwise Helvetica from the PDF standard
+  set.
+- **CSV**: one row per trouble code with the columns Code, Type (Stored, Pending,
+  Permanent), Title, Description, Causes, Symptoms, MIL, Emissions-related, Repair
+  effort, Cost, Cost from (EUR), Cost to (EUR), Date, VIN. Several causes/symptoms are
+  separated by ` | ` within one cell. Encoding UTF-8 with BOM; in English with `,` as
+  separator, in German with German column names and `;`, so that a German Excel opens
+  the file correctly with a double click.
 
-
-### Oberfläche
+### User interface
 
 ```sh
 uv run obd-diag-gui
 ```
 
-Installiert wird die Oberfläche über das Extra `gui` (`pip install 'obd-diag[gui]'`);
-ohne es bleibt eine Kopfzeilen-Installation (z. B. auf dem Raspberry Pi) klein.
+The user interface is installed via the extra `gui` (`pip install 'obd-diag[gui]'`);
+without it a headless installation (e.g. on a Raspberry Pi) stays small.
 
-Oben Port und Baudrate wählen – die Liste zeigt gefundene Adapter, ein Pfad lässt sich
-auch eintippen – und „Verbinden & Scannen“ drücken. Das liest in einem Durchgang
-Fehlercodes, Readiness, Freeze Frame und FIN (nur lesend). Rechts oben steht dann das
-Fahrzeug (Hersteller und FIN), darunter fünf Reiter:
+Choose port and baud rate at the top (the list shows adapters that were found, a path
+can also be typed in) and press “Connect & Scan”. This reads trouble codes, readiness,
+freeze frame and VIN in one pass (read-only). The vehicle (manufacturer and VIN) then
+appears at the top right, below it five tabs:
 
-- **Fehlercodes**: links die Codes nach gespeichert, ausstehend und permanent
-  gruppiert, rechts die Erklärung des gewählten Codes mit Ursachen, Symptomen und
-  Kostenrahmen.
-- **Readiness**: „Alle Tests abgeschlossen“ (grün) oder „Nicht alle Tests abgeschlossen“ (gelb) mit den offenen
-  Tests, Motorkontrollleuchte, und jeder Monitor als abgeschlossen, nicht
-  abgeschlossen oder nicht unterstützt.
-- **Freeze Frame**: auslösender Code und die Messwerte beim Speichern des Codes
-  (Motorlast, Kühlmitteltemperatur, Drehzahl, Geschwindigkeit).
-- **Fahrzeug**: FIN, Hersteller, Land, Modelljahr, Prüfziffer; auf Wunsch Angaben aus
-  NHTSA vPIC (Modell, Motor …).
-- **Live-Daten**: Werte auswählen (die vom Fahrzeug unterstützten erscheinen nach dem
-  ersten Start), Intervall 0,5/1/2 s, „Aufzeichnen (CSV)“, dann Start. Je Wert eine
-  Kachel mit aktuellem Wert, kleinster/größter gesehener Wert und einer Kurve der
-  letzten 120 Werte; die Kurve skaliert nach den gezeigten Werten. Oben Bordspannung,
-  Laufzeit und Runden. Solange Live-Daten laufen, sind Scan, Löschen und Export
-  gesperrt (am Adapter läuft immer nur eine Aktion); umgekehrt startet Live nicht
-  während einer Diagnose.
+- **Trouble codes**: on the left the codes grouped into stored, pending and permanent,
+  on the right the explanation of the selected code with causes, symptoms and cost
+  range.
+- **Readiness**: “All tests complete” (green) or “Not all tests complete” (yellow) with
+  the incomplete tests, check engine light, and each monitor as complete, incomplete or
+  not supported.
+- **Freeze frame**: triggering code and the values when the code was stored (engine
+  load, coolant temperature, engine speed, speed).
+- **Vehicle**: VIN, manufacturer, country, model year, check digit; optionally details
+  from NHTSA vPIC (model, engine …).
+- **Live data**: choose values (the ones the vehicle supports appear after the first
+  start), interval 0.5/1/2 s, “Record (CSV)”, then Start. One tile per value with the
+  current value, smallest/largest value seen and a curve of the last 120 values; the
+  curve scales to the values shown. At the top battery voltage, run time and rounds.
+  While live data runs, scan, clearing and export are locked (only one action runs on
+  the adapter at a time); conversely, live data does not start during a diagnosis.
 
-Antwortet das Steuergerät auf einen Teil nicht, zeigt der Reiter „Nicht verfügbar“.
-Unten: Adapter, Protokoll, Bordspannung (rot bei niedriger Spannung).
+If the control unit does not answer a part, the tab shows “Not available”. At the
+bottom: adapter, protocol, battery voltage (red when low).
 
-„FIN online nachschlagen (NHTSA)“ (Menü *Optionen* oder Reiter *Fahrzeug*) ist
-standardmäßig aus. Eingeschaltet geht beim nächsten Scan nur die FIN an die
-US-Behörde NHTSA; die Einstellung wird je Nutzer gespeichert
-(`~/.config/obd-diag/obd-diag.conf`).
+*Options → Sprache / Language* switches the language (Deutsch or English, applies
+immediately; trouble code texts from the next scan). Without a stored choice the system
+language applies.
 
-Menü *Datei* und Schaltflächen unten:
+“Look up VIN online (NHTSA)” (menu *Options* or tab *Vehicle*) is off by default. When
+switched on, only the VIN goes to the US authority NHTSA at the next scan; the setting is
+stored per user (`~/.config/obd-diag/obd-diag.conf`).
 
-- **Sitzung speichern** (Strg+S) legt die Diagnose als JSON ab (siehe oben) und zeigt
-  den Pfad.
-- **Sitzung öffnen …** (Strg+O) zeigt eine gespeicherte Sitzung nur zum Ansehen;
-  Löschen geht dann nicht („nur bei verbundenem Fahrzeug“).
-- **Bericht als PDF …** (Strg+P) und **CSV exportieren …** fragen nach dem Ziel
-  (Vorschlag `obd-bericht-JJJJMMTT-HHMM.pdf` bzw. `.csv` im Ordner Dokumente) und
-  schreiben im Hintergrund.
+Menu *File* and buttons at the bottom:
 
-Die Dateidialoge kommen vom Desktop (xdg-desktop-portal oder GTK); fehlt beides,
-nimmt Qt einen eigenen Dialog.
+- **Save session** (Ctrl+S) stores the diagnosis as JSON (see above) and shows the
+  path.
+- **Open session …** (Ctrl+O) shows a saved session for viewing only; clearing is not
+  possible then (“only with a connected vehicle”).
+- **Report as PDF …** (Ctrl+P) and **Export CSV …** ask for the target (suggestion
+  `obd-report-YYYYMMDD-HHMM.pdf` or `.csv` in the Documents folder) and write in the
+  background.
 
-„Fehlercodes löschen …“ ist derzeit gesperrt (grau, der Tooltip nennt den Grund).
-Nach der Freigabe fragt es vorher nach (Zündung an, Motor aus; Codes und Freeze
-Frame werden gesichert; die Readiness für die Abgasuntersuchung wird zurückgesetzt),
-zeigt danach den Pfad der Sicherung und liest die Diagnose neu ein – Readiness und
-Freeze Frame zeigen also den Stand nach dem Löschen.
+The file dialogs come from the desktop (xdg-desktop-portal or GTK); if neither is
+available, Qt uses its own dialog.
 
-Gegen den Emulator:
+“Clear trouble codes …” is currently locked (grey, the tooltip gives the reason). Once
+enabled, it asks first (ignition on, engine off; codes and freeze frame are backed up;
+the readiness for the emissions test is reset), then shows the path of the backup and
+reads the diagnosis again, so readiness and freeze frame show the state after clearing.
+
+Against the emulator:
 
 ```sh
-uv run python tools/emulator.py   # zeigt das pty an, z. B. /dev/pts/5
-uv run obd-diag-gui               # /dev/pts/5 ins Port-Feld eintragen, verbinden
+uv run python tools/emulator.py   # shows the pty, e.g. /dev/pts/5
+uv run obd-diag-gui               # enter /dev/pts/5 in the port field, connect
 ```
 
-Jede Aktion öffnet den Port, arbeitet in einem Hintergrund-Thread und schließt ihn
-wieder; die Oberfläche bleibt dabei bedienbar.
+Every action opens the port, works in a background thread and closes it again; the user
+interface stays responsive meanwhile.
 
-### Mitschnitt (`--trace`)
+### Trace (`--trace`)
 
-Alle Befehle mit Adapter (`info`, `scan`, `diagnose`, `vin`, `clear`, `live`) schneiden mit
-`--trace` jede gesendete und empfangene Zeile mit Zeitstempel mit:
+All commands that use the adapter (`info`, `scan`, `diagnose`, `vin`, `clear`, `live`)
+record every sent and received line with a timestamp when given `--trace`:
 
 ```sh
 uv run obd-diag diagnose --port /dev/ttyUSB0 --trace            # ~/.local/share/obd-diag/traces/
-uv run obd-diag diagnose --port /dev/ttyUSB0 --trace auto.log   # eigene Datei
+uv run obd-diag diagnose --port /dev/ttyUSB0 --trace car.log    # own file
 ```
 
 ```
@@ -565,52 +577,55 @@ uv run obd-diag diagnose --port /dev/ttyUSB0 --trace auto.log   # eigene Datei
     3.016 << 00A\r0: 430404200133\r1: 0300C100\r\r>
 ```
 
-Steuerzeichen stehen als `\r`, `\xNN`; `>>` ist gesendet, `<<` empfangen, `!!` ein
-Fehler. In der Oberfläche schaltet „Optionen → Adapter-Mitschnitt aufzeichnen“ das
-für jede Aktion ein (eine Datei je Aktion). Der Mitschnitt enthält ggf. die FIN und
-bleibt lokal; vor dem Weitergeben oder Einchecken die FIN in der Antwort auf `0902`
-schwärzen (Anleitung in der Dokumentation unter „Erster Test am Auto“, „Mitschnitte weitergeben“). `ReplayTransport` in `transport/trace.py` spielt ihn ohne Adapter wieder
-ab, z. B. als Test-Fixture.
+Control characters appear as `\r`, `\xNN`; `>>` is sent, `<<` received, `!!` an error.
+The header line is part of the file format and stays German (“Mitschnitt” = trace). In
+the user interface “Options → Record adapter trace” switches this on for every action
+(one file per action). The trace may contain the VIN and stays local; before sharing or
+checking it in, redact the VIN in the response to `0902` (instructions in the
+documentation under “First test at the car”, “Sharing traces”). `ReplayTransport` in
+`transport/trace.py` plays it back without an adapter, e.g. as a test fixture.
 
-### Protokoll-Details
+### Protocol details
 
-Der Adapter läuft ohne Header (`ATH0`), ohne Leerzeichen und ohne Echo. Abweichungen
-echter Adapter und Steuergeräte fängt das Tool so ab:
+The adapter runs without headers (`ATH0`), without spaces and without echo. The tool
+handles deviations of real adapters and control units like this:
 
-- **Vermischte mehrteilige Antworten:** Senden zwei Steuergeräte gleichzeitig
-  mehrteilige CAN-Nachrichten, mischt der ELM327 ohne Header deren Frames (Datenblatt
-  ELM327DS S. 45). Erkennt das Zerlegen das (Lücken in der Frame-Nummerierung,
-  unvollständige Nachricht), wird die lesende Anfrage (Mode 03/07/0A, FIN `0902`) einmal
-  mit `ATH1` wiederholt, die Frames werden je CAN-ID nach ISO 15765-2 zusammengesetzt
-  (11 Bit `7E8 …`, 29 Bit `18 DA F1 10 …`), danach wieder `ATH0`
-  (`protocol/headers.py`). Die Codes stehen dann nach Steuergeräte-Adresse geordnet
-  (7E8 vor 7E9), sonst in Eingangsreihenfolge. Ältere Protokolle mit Header
-  (`48 6B 10 … <Prüfbyte>`) werden ebenfalls zerlegt; das Prüfbyte wird entfernt, aber
-  nicht geprüft. Dort tritt das Mischen nicht auf (eine Zeile je Nachricht).
-- **Freeze Frame:** angefragt nach SAE J1979 mit Frame-Nummer (`020C00`). Antwortet
-  das Fahrzeug auf `020200` mit `NO DATA` oder `7F 02 12`, wird `0202` ohne
-  Frame-Nummer versucht (wie python-OBD) und bei Erfolg der ganze Freeze Frame so
-  gelesen. Die Schlüssel in `raw` (Sicherung, Sitzung) zeigen das benutzte Format.
-- **Löschen mit `7F 04 78`** (Steuergerät meldet „Antwort folgt“): es wird ohne
-  erneutes Senden bis zu 10 s auf `44` oder eine Ablehnung gewartet. Kommt nichts,
-  gilt das Löschen als nicht bestätigt (Hinweis auf `obd-diag scan`, Sicherung bleibt).
-  Mode 04 wird nie wiederholt.
-- **Protokollnummer unklar** (`ATDPN` meldet `0`, `?` o. Ä.): `ATDPN` wird erneut
-  gefragt; bleibt sie unklar, wird `0100` einmal mit Headern gesendet und an deren
-  Form erkannt, ob CAN 11 Bit, CAN 29 Bit oder ein älteres Protokoll vorliegt. Die
-  Protokollangabe trägt dann den Zusatz „laut Headern …“.
-- **Echo:** eine erste Zeile, die dem Befehl ohne Rücksicht auf Groß-/Kleinschreibung
-  und Leerzeichen gleicht (`at dpn` für `ATDPN`), wird entfernt.
+- **Mixed multi-frame responses:** if two control units send multi-frame CAN messages
+  at the same time, the ELM327 mixes their frames without headers (datasheet ELM327DS
+  p. 45). If splitting detects this (gaps in the frame numbering, incomplete message),
+  the read request (mode 03/07/0A, VIN `0902`) is repeated once with `ATH1`, the frames
+  are assembled per CAN ID according to ISO 15765-2 (11 bit `7E8 …`, 29 bit
+  `18 DA F1 10 …`), then `ATH0` again (`protocol/headers.py`). The codes are then
+  ordered by control unit address (7E8 before 7E9), otherwise in order of arrival.
+  Older protocols with headers (`48 6B 10 … <checksum>`) are split as well; the
+  checksum byte is removed but not checked. Mixing does not occur there (one line per
+  message).
+- **Freeze frame:** requested according to SAE J1979 with frame number (`020C00`). If
+  the vehicle answers `020200` with `NO DATA` or `7F 02 12`, `0202` without frame
+  number is tried (like python-OBD) and, if that works, the whole freeze frame is read
+  that way. The keys in `raw` (backup, session) show the format used.
+- **Clearing with `7F 04 78`** (control unit reports “response pending”): it waits up to
+  10 s for `44` or a rejection without sending again. If nothing comes, clearing counts
+  as not confirmed (hint to `obd-diag scan`, the backup remains). Mode 04 is never
+  repeated.
+- **Unclear protocol number** (`ATDPN` reports `0`, `?` or similar): `ATDPN` is asked
+  again; if it remains unclear, `0100` is sent once with headers, and their form shows
+  whether it is CAN 11 bit, CAN 29 bit or an older protocol. The protocol name then
+  carries the addition “according to headers …”.
+- **Echo:** a first line that equals the command regardless of case and spaces
+  (`at dpn` for `ATDPN`) is removed.
 
-## Struktur
+## Structure
 
 ```
 src/obd_diag/
-├── transport/   # Byte-Kanal zum Adapter (Protocol, USB-Seriell, Adaptersuche)
-├── protocol/    # ELM327-Befehle mit Freigabeliste, OBD-II-Dekodierung, PID-Tabelle
-├── services/    # Abläufe: Scan, Löschen, Sitzung speichern/laden, Live-Daten
-├── data/        # DTC-Katalog (SQLite), WMI-Tabelle für die FIN
-├── export/      # PDF-Bericht und CSV einer Sitzung
-├── ui/          # Desktop-Oberfläche: View-Models (Python) und QML
+├── transport/   # byte channel to the adapter (protocol, USB serial, adapter discovery)
+├── protocol/    # ELM327 commands with allowlist, OBD-II decoding, PID table
+├── services/    # procedures: scan, clearing, save/load session, live data
+├── data/        # DTC catalog (SQLite), WMI table for the VIN
+├── export/      # PDF report and CSV of a session
+├── ui/          # desktop user interface: view models (Python) and QML
+├── locale/      # en.po: English translation of the texts
+├── i18n.py      # tr/N_/trn, setting the language
 └── cli.py
 ```

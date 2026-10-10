@@ -17,6 +17,7 @@ from typing import Any, Protocol
 
 from obd_diag.data.dtc_catalog import DtcCatalog
 from obd_diag.export.report import export_csv, export_pdf
+from obd_diag.i18n import tr
 from obd_diag.protocol.elm327 import Elm327
 from obd_diag.protocol.pids import PidSpec
 from obd_diag.services.clear import ClearResult, clear_codes
@@ -78,7 +79,7 @@ class LiveFunction(Protocol):
 
 
 def _no_live(*args: Any, **kwargs: Any) -> LiveResult:
-    raise NotImplementedError("Live-Daten sind in diesem Backend nicht verfügbar")
+    raise NotImplementedError(tr("Live-Daten sind in diesem Backend nicht verfügbar"))
 
 
 @dataclass(frozen=True)
@@ -114,10 +115,11 @@ def diagnose_port(
     baud: int,
     online_vin_lookup: bool = False,
     online_dtc_lookup: bool = False,
-    lang: str = "de",
+    lang: str | None = None,
     trace: bool = False,
 ) -> Session:
-    """Scan, Readiness, Freeze Frame und FIN; nur lesend."""
+    """Scan, Readiness, Freeze Frame und FIN; nur lesend. ``lang`` ohne Angabe: die
+    eingestellte Sprache."""
     catalog = DtcCatalog.default()
     try:
         with open_serial(port, baud, _trace_path(trace)) as transport:
@@ -133,7 +135,7 @@ def diagnose_port(
             catalog.close()
 
 
-def clear_port(port: str, baud: int, lang: str = "de", trace: bool = False) -> ClearResult:
+def clear_port(port: str, baud: int, lang: str | None = None, trace: bool = False) -> ClearResult:
     catalog = DtcCatalog.default()
     try:
         with open_serial(port, baud, _trace_path(trace)) as transport:

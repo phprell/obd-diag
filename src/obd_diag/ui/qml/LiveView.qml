@@ -17,8 +17,9 @@ Rectangle {
 
     color: Theme.background
 
+    // ohne Dezimalzeichen, damit es in jeder Sprache gleich aussieht
     function intervalText(seconds) {
-        return String(seconds).replace(".", ",") + " s"
+        return seconds < 1 ? Math.round(seconds * 1000) + " ms" : seconds + " s"
     }
 
     ColumnLayout {
@@ -42,7 +43,7 @@ Rectangle {
 
                 Button {
                     objectName: "liveStartButton"
-                    text: !pane.running ? "Start" : pane.live.stopping ? "Stoppe …" : "Stopp"
+                    text: !pane.running ? qsTr("Start") : pane.live.stopping ? qsTr("Stoppe …") : qsTr("Stopp")
                     enabled: pane.running ? !pane.live.stopping : pane.live.canStart
                     palette.button: pane.running ? Theme.stopButton : Theme.accentButton
                     palette.buttonText: "white"
@@ -61,7 +62,7 @@ Rectangle {
                     Layout.preferredWidth: Theme.gap
                 }
                 Label {
-                    text: "Intervall"
+                    text: qsTr("Intervall")
                 }
                 ComboBox {
                     id: intervalBox
@@ -71,7 +72,7 @@ Rectangle {
                     model: pane.live.intervals.map(s => ({ text: pane.intervalText(s), value: s }))
                     textRole: "text"
                     valueRole: "value"
-                    Accessible.name: "Abfrageintervall"
+                    Accessible.name: qsTr("Abfrageintervall")
                     Component.onCompleted: currentIndex = indexOfValue(pane.live.interval)
                     onActivated: pane.live.interval = currentValue
                 }
@@ -81,13 +82,13 @@ Rectangle {
                 }
                 Switch {
                     objectName: "liveRecordSwitch"
-                    text: "Aufzeichnen (CSV)"
+                    text: qsTr("Aufzeichnen (CSV)")
                     enabled: !pane.running
                     checked: pane.live.recording
                     onToggled: pane.live.recording = checked
                     ToolTip.visible: hovered
                     ToolTip.delay: 600
-                    ToolTip.text: "Jede Runde sofort in eine neue CSV-Datei schreiben"
+                    ToolTip.text: qsTr("Jede Runde sofort in eine neue CSV-Datei schreiben")
                 }
 
                 Item {
@@ -103,14 +104,14 @@ Rectangle {
                 Chip {
                     objectName: "liveVoltage"
                     visible: pane.running || pane.live.sampleCount > 0
-                    text: "Bordspannung " + pane.live.voltageText
+                    text: qsTr("Bordspannung %1").arg(pane.live.voltageText)
                     textColor: pane.live.throttled ? Theme.warnText : Theme.muted
                     fill: pane.live.throttled ? Theme.warnBg : Theme.background
                 }
                 Chip {
                     objectName: "liveElapsed"
                     visible: pane.running || pane.live.sampleCount > 0
-                    text: pane.live.elapsedText + " · " + pane.live.sampleCount + " Runden"
+                    text: pane.live.elapsedText + " · " + (pane.live.sampleCount === 1 ? qsTr("1 Runde") : qsTr("%1 Runden").arg(pane.live.sampleCount))
                 }
             }
             Rectangle {
@@ -131,16 +132,14 @@ Rectangle {
                 objectName: "liveSafetyBanner"
                 Layout.fillWidth: true
                 kind: "warn"
-                text: "⚠  Während der Fahrt nur durch Beifahrer bedienen. "
-                      + "Wer fährt, achtet auf den Verkehr, nicht auf den Bildschirm."
+                text: "⚠  " + qsTr("Während der Fahrt nur durch Beifahrer bedienen. Wer fährt, achtet auf den Verkehr, nicht auf den Bildschirm.")
             }
             Banner {
                 objectName: "liveThrottleBanner"
                 Layout.fillWidth: true
                 kind: "warn"
                 text: pane.running && pane.live.throttled
-                      ? "Bordspannung niedrig (" + pane.live.voltageText + "): die Abfrage ist "
-                        + "gedrosselt, um die Batterie zu schonen."
+                      ? qsTr("Bordspannung niedrig (%1): die Abfrage ist gedrosselt, um die Batterie zu schonen.").arg(pane.live.voltageText)
                       : ""
             }
             Banner {
@@ -166,7 +165,7 @@ Rectangle {
                 visible: pane.running && pane.live.recordingPath !== ""
                 spacing: Theme.gap
                 Chip {
-                    text: "● Aufzeichnung"
+                    text: "● " + qsTr("Aufzeichnung")
                     textColor: Theme.errorText
                     fill: Theme.errorBg
                 }
@@ -179,7 +178,7 @@ Rectangle {
                     font.family: "monospace"
                 }
                 Button {
-                    text: "Ordner öffnen"
+                    text: qsTr("Ordner öffnen")
                     flat: true
                     onClicked: pane.live.openRecordingFolder()
                 }
@@ -220,11 +219,11 @@ Rectangle {
                         Layout.fillWidth: true
                         SectionTitle {
                             Layout.fillWidth: true
-                            text: "Werte auswählen"
+                            text: qsTr("Werte auswählen")
                             topPadding: 0
                         }
                         Button {
-                            text: "Übliche Werte"
+                            text: qsTr("Übliche Werte")
                             flat: true
                             onClicked: pane.live.resetSelection()
                         }
@@ -233,12 +232,8 @@ Rectangle {
                         Layout.fillWidth: true
                         visible: !pane.live.supportedKnown
                         text: pane.live.available.length === 0
-                              ? "Welche Werte das Fahrzeug liefert, steht nach dem ersten Start "
-                                + "fest. Ohne Auswahl werden die üblichen Werte abgefragt "
-                                + "(Drehzahl, Geschwindigkeit, Kühlmittel, Last, Ansaugluft, "
-                                + "Steuergerätespannung)."
-                              : "Noch nicht mit dem Fahrzeug abgeglichen: nach dem ersten Start "
-                                + "stehen hier nur die unterstützten Werte."
+                              ? qsTr("Welche Werte das Fahrzeug liefert, steht nach dem ersten Start fest. Ohne Auswahl werden die üblichen Werte abgefragt (Drehzahl, Geschwindigkeit, Kühlmittel, Last, Ansaugluft, Steuergerätespannung).")
+                              : qsTr("Noch nicht mit dem Fahrzeug abgeglichen: nach dem ersten Start stehen hier nur die unterstützten Werte.")
                         color: Theme.muted
                         font.pixelSize: 12
                         wrapMode: Text.Wrap
@@ -276,11 +271,10 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.pad
                     visible: !pane.hasTiles
-                    title: pane.running ? "Verbinde und ermittle unterstützte Werte …"
-                                        : "Noch keine Live-Daten"
+                    title: pane.running ? qsTr("Verbinde und ermittle unterstützte Werte …")
+                                        : qsTr("Noch keine Live-Daten")
                     text: pane.running ? ""
-                          : "Port oben wählen, Werte auswählen und „Start“ drücken. Gelesen wird "
-                            + "nur (Mode 01); am Fahrzeug wird nichts verändert."
+                          : qsTr("Port oben wählen, Werte auswählen und „Start“ drücken. Gelesen wird nur (Mode 01); am Fahrzeug wird nichts verändert.")
                 }
 
                 GridLayout {
@@ -405,7 +399,7 @@ Rectangle {
 
                 function scaleText(v) {
                     const digits = Math.abs(v) >= 100 ? 0 : 1
-                    return Number(v).toLocaleString(Qt.locale("de_DE"), "f", digits)
+                    return Number(v).toLocaleString(Qt.locale(), "f", digits)  // Sprache der Oberfläche
                 }
 
                 onPointsChanged: requestPaint()
@@ -480,7 +474,7 @@ Rectangle {
                     objectName: "liveRange_" + tile.key
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    text: tile.lowText === "–" ? "" : "gesehen " + tile.lowText + " bis " + tile.highText
+                    text: tile.lowText === "–" ? "" : qsTr("gesehen %1 bis %2").arg(tile.lowText).arg(tile.highText)
                     color: Theme.muted
                     font.pixelSize: 11
                     elide: Text.ElideRight

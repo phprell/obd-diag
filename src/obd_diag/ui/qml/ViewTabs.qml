@@ -71,26 +71,26 @@ TabBar {
 
     ViewTab {
         objectName: "tabCodes"
-        text: "Fehlercodes"
+        text: qsTr("Fehlercodes")
         badge: bar.vm.hasResult ? String(bar.vm.codeCount) : ""
     }
     ViewTab {
         objectName: "tabReadiness"
-        text: "Readiness"
+        text: qsTr("Readiness")
         dot: !bar.vm.readiness.available ? "transparent"
              : bar.vm.readiness.ready ? Theme.okDot : Theme.warnDot  // offen ist kein Fehler
     }
     ViewTab {
         objectName: "tabFreezeFrame"
-        text: "Freeze Frame"
+        text: qsTr("Freeze Frame")
     }
     ViewTab {
         objectName: "tabVehicle"
-        text: "Fahrzeug"
+        text: qsTr("Fahrzeug")
     }
     ViewTab {
         objectName: "tabLive"
-        text: "Live-Daten"
+        text: qsTr("Live-Daten")
         dot: bar.live.running ? Theme.okDot : "transparent"  // Abfrage läuft
     }
 }

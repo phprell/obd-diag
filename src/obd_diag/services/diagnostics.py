@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Any, Protocol
 
 from obd_diag.data.dtc_catalog import DtcInfo
+from obd_diag.i18n import language
 from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
 from obd_diag.protocol.obd import read_dtcs
 from obd_diag.protocol.pids import PIDS, read_values
@@ -74,11 +75,13 @@ class DtcLookup(Protocol):
     def lookup(self, code: str, lang: str) -> DtcInfo | None: ...
 
 
-def scan(elm: Elm327, catalog: DtcLookup | None, lang: str = "de") -> ScanResult:
+def scan(elm: Elm327, catalog: DtcLookup | None, lang: str | None = None) -> ScanResult:
     """Initialisiert den Adapter und liest gespeicherte, ausstehende und permanente Codes.
 
-    Nur lesend: es wird nichts gelöscht (kein Mode 04).
+    Nur lesend: es wird nichts gelöscht (kein Mode 04). ``lang``: Sprache der
+    Katalogtexte, ohne Angabe die eingestellte (``obd_diag.i18n``).
     """
+    lang = lang or language()
     adapter = elm.initialize()
     try:
         voltage: float | None = elm.voltage()

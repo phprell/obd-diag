@@ -35,6 +35,7 @@ import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from obd_diag.i18n import N_, tr
 from obd_diag.protocol.elm327 import Elm327
 from obd_diag.protocol.frames import split_messages
 
@@ -43,17 +44,26 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class PidSpec:
-    """Ein Live-Wert: PID, Schlüssel, deutscher Name, Einheit, Dekodierung."""
+    """Ein Live-Wert: PID, Schlüssel, Bezeichnung, Einheit, Dekodierung.
+
+    ``label`` ist deutsch und darf ``{n}`` enthalten (Sonde, Stützpunkt), das ``number``
+    füllt; ``name`` ist die Bezeichnung in der eingestellten Sprache (``obd_diag.i18n``).
+    """
 
     pid: int  # z. B. 0x0C; mehrere Werte können dieselbe PID haben
     key: str  # stabiler Schlüssel für CSV, CLI und GUI, z. B. "rpm"
-    name: str  # deutsch, z. B. "Motordrehzahl"
+    label: str  # deutsch, z. B. "Motordrehzahl" oder "Lambdasonde {n} Spannung"
     unit: str  # z. B. "1/min", "km/h", "°C", "%", "kPa", "g/s", "V", "km"
     size: int  # nötige Datenbytes nach ``41 <pid>`` (vom ersten an gezählt)
     # bekommt genau ``size`` Bytes; None: Wert laut Antwort nicht gültig
     decode: Callable[[bytes], float | None]
     minimum: float  # Wertebereich laut J1979, für Skalen in der Anzeige
     maximum: float
+    number: int | None = None  # für ``{n}`` in ``label``
+
+    @property
+    def name(self) -> str:
+        return tr(self.label).format(n=self.number)
 
 
 # --- Umrechnungen nach J1979 -----------------------------------------------------
@@ -110,8 +120,9 @@ def _spec(
     size: int,
     decode: Callable[[bytes], float | None],
     bounds: tuple[float, float],
+    number: int | None = None,
 ) -> PidSpec:
-    return PidSpec(pid, key, name, unit, size, decode, bounds[0], bounds[1])
+    return PidSpec(pid, key, name, unit, size, decode, bounds[0], bounds[1], number)
 
 
 _LAMBDA = (0.0, 65535 * 2 / 65536)
@@ -157,35 +168,45 @@ def _oxygen_sensors() -> list[PidSpec]:
             _spec(
                 0x13 + n,
                 f"o2_s{n}_voltage",
-                f"Lambdasonde {n} Spannung",
+                N_("Lambdasonde {n} Spannung"),
                 "V",
                 1,
                 lambda d: d[0] / 200,
                 (0.0, 1.275),
+                n,
             ),
             _spec(
                 0x13 + n,
                 f"o2_s{n}_trim",
-                f"Lambdasonde {n} Trimm",
+                N_("Lambdasonde {n} Trimm"),
                 "%",
                 2,
                 _o2_trim,
                 (-100.0, 98.4375),
+                n,
             ),
         ]
     for n in range(1, 9):
         specs += [
             _spec(
-                0x23 + n, f"o2_s{n}_lambda", f"Breitbandsonde {n}", "Lambda", 2, _lambda, _LAMBDA
+                0x23 + n,
+                f"o2_s{n}_lambda",
+                N_("Breitbandsonde {n}"),
+                "Lambda",
+                2,
+                _lambda,
+                _LAMBDA,
+                n,
             ),
             _spec(
                 0x23 + n,
                 f"o2_s{n}_wide_voltage",
-                f"Breitbandsonde {n} Spannung",
+                N_("Breitbandsonde {n} Spannung"),
                 "V",
                 4,
                 _wide_voltage,
                 (0.0, 65535 * 8 / 65536),
+                n,
             ),
         ]
     for n in range(1, 9):
@@ -193,20 +214,22 @@ def _oxygen_sensors() -> list[PidSpec]:
             _spec(
                 0x33 + n,
                 f"o2_s{n}_lambda_current",
-                f"Breitbandsonde {n} (Strom)",
+                N_("Breitbandsonde {n} (Strom)"),
                 "Lambda",
                 2,
                 _lambda,
                 _LAMBDA,
+                n,
             ),
             _spec(
                 0x33 + n,
                 f"o2_s{n}_current",
-                f"Breitbandsonde {n} Pumpstrom",
+                N_("Breitbandsonde {n} Pumpstrom"),
                 "mA",
                 4,
                 _wide_current,
                 (-128.0, 65535 / 256 - 128),
+                n,
             ),
         ]
     return specs
@@ -216,22 +239,24 @@ def _secondary_trims() -> list[PidSpec]:
     """55-58: Kraftstofftrimm über die Sonden hinter dem Katalysator (Nachkat), A und B
     für zwei Bänke."""
     specs: list[PidSpec] = []
-    for pid, term, key, banks in (
-        (0x55, "Kurzzeit", "stft", (1, 3)),
-        (0x56, "Langzeit", "ltft", (1, 3)),
-        (0x57, "Kurzzeit", "stft", (2, 4)),
-        (0x58, "Langzeit", "ltft", (2, 4)),
+    short, long = N_("Kurzzeittrimm Nachkat Bank {n}"), N_("Langzeittrimm Nachkat Bank {n}")
+    for pid, label, key, banks in (
+        (0x55, short, "stft", (1, 3)),
+        (0x56, long, "ltft", (1, 3)),
+        (0x57, short, "stft", (2, 4)),
+        (0x58, long, "ltft", (2, 4)),
     ):
         for index, bank in enumerate(banks):
             specs.append(
                 _spec(
                     pid,
                     f"{key}_secondary_bank{bank}",
-                    f"{term}trimm Nachkat Bank {bank}",
+                    label,
                     "%",
                     index + 1,
                     _at(index, _trim),
                     _TRIM,
+                    bank,
                 )
             )
     return specs
@@ -239,75 +264,68 @@ def _secondary_trims() -> list[PidSpec]:
 
 def _torque_points() -> list[PidSpec]:
     """64: Motordrehmoment im Leerlauf und an vier Stützpunkten (je A - 125 %)."""
-    labels = ["Leerlauf", *(f"Stützpunkt {n}" for n in range(1, 5))]
+    point = N_("Motordrehmoment Stützpunkt {n}")
+    labels = [N_("Motordrehmoment Leerlauf"), *(point for _ in range(4))]
     keys = ["torque_idle", *(f"torque_point{n}" for n in range(1, 5))]
     return [
-        _spec(
-            0x64,
-            key,
-            f"Motordrehmoment {label}",
-            "%",
-            i + 1,
-            _at(i, _torque),
-            _TORQUE,
-        )
+        _spec(0x64, key, label, "%", i + 1, _at(i, _torque), _TORQUE, i or None)
         for i, (key, label) in enumerate(zip(keys, labels, strict=True))
     ]
 
 
 _TABLE = [
-    _spec(0x04, "engine_load", "Berechnete Motorlast", "%", 1, _percent, _PERCENT),
-    _spec(0x05, "coolant_temp", "Kühlmitteltemperatur", "°C", 1, _temperature, _TEMPERATURE),
-    _spec(0x06, "stft_bank1", "Kurzzeit-Kraftstofftrimm Bank 1", "%", 1, _trim, _TRIM),
-    _spec(0x07, "ltft_bank1", "Langzeit-Kraftstofftrimm Bank 1", "%", 1, _trim, _TRIM),
-    _spec(0x08, "stft_bank2", "Kurzzeit-Kraftstofftrimm Bank 2", "%", 1, _trim, _TRIM),
-    _spec(0x09, "ltft_bank2", "Langzeit-Kraftstofftrimm Bank 2", "%", 1, _trim, _TRIM),
+    _spec(0x04, "engine_load", N_("Berechnete Motorlast"), "%", 1, _percent, _PERCENT),
+    _spec(0x05, "coolant_temp", N_("Kühlmitteltemperatur"), "°C", 1, _temperature, _TEMPERATURE),
+    _spec(0x06, "stft_bank1", N_("Kurzzeit-Kraftstofftrimm Bank 1"), "%", 1, _trim, _TRIM),
+    _spec(0x07, "ltft_bank1", N_("Langzeit-Kraftstofftrimm Bank 1"), "%", 1, _trim, _TRIM),
+    _spec(0x08, "stft_bank2", N_("Kurzzeit-Kraftstofftrimm Bank 2"), "%", 1, _trim, _TRIM),
+    _spec(0x09, "ltft_bank2", N_("Langzeit-Kraftstofftrimm Bank 2"), "%", 1, _trim, _TRIM),
     _spec(
         0x0A,
         "fuel_pressure",
-        "Kraftstoffdruck (Überdruck)",
+        N_("Kraftstoffdruck (Überdruck)"),
         "kPa",
         1,
         lambda d: d[0] * 3,
         (0.0, 765.0),
     ),
-    _spec(0x0B, "intake_pressure", "Saugrohrdruck (absolut)", "kPa", 1, _byte, _BYTE),
+    _spec(0x0B, "intake_pressure", N_("Saugrohrdruck (absolut)"), "kPa", 1, _byte, _BYTE),
     _spec(
         0x0C,
         "rpm",
-        "Motordrehzahl",
-        "1/min",
+        N_("Motordrehzahl"),
+        N_("1/min"),
         2,
         lambda d: _word(d) / 4,
         (0.0, 16383.75),
     ),
-    _spec(0x0D, "speed", "Geschwindigkeit", "km/h", 1, _byte, _BYTE),
+    _spec(0x0D, "speed", N_("Geschwindigkeit"), "km/h", 1, _byte, _BYTE),
     _spec(
         0x0E,
         "timing_advance",
-        "Zündzeitpunkt (vor OT, Zylinder 1)",
+        N_("Zündzeitpunkt (vor OT, Zylinder 1)"),
         "°",
         1,
         lambda d: d[0] / 2 - 64,
         (-64.0, 63.5),
     ),
-    _spec(0x0F, "intake_temp", "Ansauglufttemperatur", "°C", 1, _temperature, _TEMPERATURE),
+    _spec(0x0F, "intake_temp", N_("Ansauglufttemperatur"), "°C", 1, _temperature, _TEMPERATURE),
     _spec(
         0x10,
         "maf",
-        "Luftmasse (Luftmassenmesser)",
+        N_("Luftmasse (Luftmassenmesser)"),
         "g/s",
         2,
         lambda d: _word(d) / 100,
         (0.0, 655.35),
     ),
-    _spec(0x11, "throttle", "Drosselklappenstellung", "%", 1, _percent, _PERCENT),
-    _spec(0x1F, "run_time", "Laufzeit seit Motorstart", "s", 2, _word_value, _WORD),
-    _spec(0x21, "distance_with_mil", "Strecke mit Warnleuchte an", "km", 2, _word_value, _WORD),
+    _spec(0x11, "throttle", N_("Drosselklappenstellung"), "%", 1, _percent, _PERCENT),
+    _spec(0x1F, "run_time", N_("Laufzeit seit Motorstart"), "s", 2, _word_value, _WORD),
+    _spec(0x21, "distance_with_mil", N_("Strecke mit Warnleuchte an"), "km", 2, _word_value, _WORD),
     _spec(
         0x22,
         "fuel_rail_pressure_relative",
-        "Kraftstoffverteilerdruck (relativ zum Saugrohr)",
+        N_("Kraftstoffverteilerdruck (relativ zum Saugrohr)"),
         "kPa",
         2,
         lambda d: _word(d) * 0.079,
@@ -316,50 +334,50 @@ _TABLE = [
     _spec(
         0x23,
         "fuel_rail_pressure",
-        "Kraftstoffverteilerdruck (Überdruck)",
+        N_("Kraftstoffverteilerdruck (Überdruck)"),
         "kPa",
         2,
         lambda d: _word(d) * 10,
         (0.0, 655350.0),
     ),
-    _spec(0x2C, "commanded_egr", "AGR-Sollwert", "%", 1, _percent, _PERCENT),
-    _spec(0x2D, "egr_error", "AGR-Abweichung", "%", 1, _trim, _TRIM),
-    _spec(0x2E, "commanded_evap_purge", "Tankentlüftung Sollwert", "%", 1, _percent, _PERCENT),
-    _spec(0x2F, "fuel_level", "Tankfüllstand", "%", 1, _percent, _PERCENT),
-    _spec(0x30, "warmups_since_clear", "Warmläufe seit Löschen", "", 1, _byte, _BYTE),
-    _spec(0x31, "distance_since_clear", "Strecke seit Löschen", "km", 2, _word_value, _WORD),
+    _spec(0x2C, "commanded_egr", N_("AGR-Sollwert"), "%", 1, _percent, _PERCENT),
+    _spec(0x2D, "egr_error", N_("AGR-Abweichung"), "%", 1, _trim, _TRIM),
+    _spec(0x2E, "commanded_evap_purge", N_("Tankentlüftung Sollwert"), "%", 1, _percent, _PERCENT),
+    _spec(0x2F, "fuel_level", N_("Tankfüllstand"), "%", 1, _percent, _PERCENT),
+    _spec(0x30, "warmups_since_clear", N_("Warmläufe seit Löschen"), "", 1, _byte, _BYTE),
+    _spec(0x31, "distance_since_clear", N_("Strecke seit Löschen"), "km", 2, _word_value, _WORD),
     _spec(
         0x32,
         "evap_pressure",
-        "Dampfdruck Tankentlüftung",
+        N_("Dampfdruck Tankentlüftung"),
         "Pa",
         2,
         lambda d: int.from_bytes(d[:2], "big", signed=True) / 4,
         (-8192.0, 8191.75),
     ),
-    _spec(0x33, "baro_pressure", "Luftdruck (absolut)", "kPa", 1, _byte, _BYTE),
+    _spec(0x33, "baro_pressure", N_("Luftdruck (absolut)"), "kPa", 1, _byte, _BYTE),
     *_oxygen_sensors(),
     *(
         _spec(
             pid,
             f"catalyst_temp_{sensor}",
-            f"Katalysatortemperatur {label}",
+            label,
             "°C",
             2,
             lambda d: _word(d) / 10 - 40,
             (-40.0, 6513.5),
         )
         for pid, sensor, label in (
-            (0x3C, "b1s1", "Bank 1, Sensor 1"),
-            (0x3D, "b2s1", "Bank 2, Sensor 1"),
-            (0x3E, "b1s2", "Bank 1, Sensor 2"),
-            (0x3F, "b2s2", "Bank 2, Sensor 2"),
+            (0x3C, "b1s1", N_("Katalysatortemperatur Bank 1, Sensor 1")),
+            (0x3D, "b2s1", N_("Katalysatortemperatur Bank 2, Sensor 1")),
+            (0x3E, "b1s2", N_("Katalysatortemperatur Bank 1, Sensor 2")),
+            (0x3F, "b2s2", N_("Katalysatortemperatur Bank 2, Sensor 2")),
         )
     ),
     _spec(
         0x42,
         "control_voltage",
-        "Steuergerätespannung",
+        N_("Steuergerätespannung"),
         "V",
         2,
         lambda d: _word(d) / 1000,
@@ -368,38 +386,44 @@ _TABLE = [
     _spec(
         0x43,
         "absolute_load",
-        "Absolute Motorlast",
+        N_("Absolute Motorlast"),
         "%",
         2,
         lambda d: _word(d) * 100 / 255,
         (0.0, 25700.0),
     ),
-    _spec(0x44, "commanded_lambda", "Lambda-Sollwert", "Lambda", 2, _lambda, _LAMBDA),
-    _spec(0x45, "relative_throttle", "Relative Drosselklappenstellung", "%", 1, _percent, _PERCENT),
-    _spec(0x46, "ambient_temp", "Umgebungstemperatur", "°C", 1, _temperature, _TEMPERATURE),
-    _spec(0x47, "throttle_b", "Drosselklappenstellung B (absolut)", "%", 1, _percent, _PERCENT),
-    _spec(0x49, "accelerator_pedal_d", "Fahrpedalstellung D", "%", 1, _percent, _PERCENT),
-    _spec(0x4A, "accelerator_pedal_e", "Fahrpedalstellung E", "%", 1, _percent, _PERCENT),
-    _spec(0x4C, "commanded_throttle", "Drosselklappensteller Sollwert", "%", 1, _percent, _PERCENT),
-    _spec(0x4D, "time_with_mil", "Zeit mit Warnleuchte an", "min", 2, _word_value, _WORD),
-    _spec(0x4E, "time_since_clear", "Zeit seit Löschen", "min", 2, _word_value, _WORD),
-    _spec(0x52, "ethanol_percent", "Ethanolanteil im Kraftstoff", "%", 1, _percent, _PERCENT),
+    _spec(0x44, "commanded_lambda", N_("Lambda-Sollwert"), "Lambda", 2, _lambda, _LAMBDA),
+    _spec(
+        0x45, "relative_throttle", N_("Relative Drosselklappenstellung"), "%", 1, _percent, _PERCENT
+    ),
+    _spec(0x46, "ambient_temp", N_("Umgebungstemperatur"), "°C", 1, _temperature, _TEMPERATURE),
+    _spec(0x47, "throttle_b", N_("Drosselklappenstellung B (absolut)"), "%", 1, _percent, _PERCENT),
+    _spec(0x49, "accelerator_pedal_d", N_("Fahrpedalstellung D"), "%", 1, _percent, _PERCENT),
+    _spec(0x4A, "accelerator_pedal_e", N_("Fahrpedalstellung E"), "%", 1, _percent, _PERCENT),
+    _spec(
+        0x4C, "commanded_throttle", N_("Drosselklappensteller Sollwert"), "%", 1, _percent, _PERCENT
+    ),
+    _spec(0x4D, "time_with_mil", N_("Zeit mit Warnleuchte an"), "min", 2, _word_value, _WORD),
+    _spec(0x4E, "time_since_clear", N_("Zeit seit Löschen"), "min", 2, _word_value, _WORD),
+    _spec(0x52, "ethanol_percent", N_("Ethanolanteil im Kraftstoff"), "%", 1, _percent, _PERCENT),
     *_secondary_trims(),
     _spec(
         0x5A,
         "relative_accelerator_pedal",
-        "Relative Fahrpedalstellung",
+        N_("Relative Fahrpedalstellung"),
         "%",
         1,
         _percent,
         _PERCENT,
     ),
-    _spec(0x5B, "hybrid_battery_level", "Ladezustand Hybridbatterie", "%", 1, _percent, _PERCENT),
-    _spec(0x5C, "oil_temp", "Motoröltemperatur", "°C", 1, _temperature, _TEMPERATURE),
+    _spec(
+        0x5B, "hybrid_battery_level", N_("Ladezustand Hybridbatterie"), "%", 1, _percent, _PERCENT
+    ),
+    _spec(0x5C, "oil_temp", N_("Motoröltemperatur"), "°C", 1, _temperature, _TEMPERATURE),
     _spec(
         0x5D,
         "injection_timing",
-        "Einspritzzeitpunkt",
+        N_("Einspritzzeitpunkt"),
         "°",
         2,
         lambda d: _word(d) / 128 - 210,
@@ -408,21 +432,21 @@ _TABLE = [
     _spec(
         0x5E,
         "fuel_rate",
-        "Kraftstoffverbrauch",
+        N_("Kraftstoffverbrauch"),
         "L/h",
         2,
         lambda d: _word(d) / 20,
         (0.0, 3276.75),
     ),
-    _spec(0x61, "demand_torque", "Fahrerwunsch-Drehmoment", "%", 1, _torque, _TORQUE),
-    _spec(0x62, "actual_torque", "Ist-Drehmoment", "%", 1, _torque, _TORQUE),
-    _spec(0x63, "reference_torque", "Bezugsdrehmoment des Motors", "Nm", 2, _word_value, _WORD),
+    _spec(0x61, "demand_torque", N_("Fahrerwunsch-Drehmoment"), "%", 1, _torque, _TORQUE),
+    _spec(0x62, "actual_torque", N_("Ist-Drehmoment"), "%", 1, _torque, _TORQUE),
+    _spec(0x63, "reference_torque", N_("Bezugsdrehmoment des Motors"), "Nm", 2, _word_value, _WORD),
     *_torque_points(),
     # 66/67: Statusbyte A sagt, welche Sensoren es gibt (Bit 0: A bzw. 1, Bit 1: B bzw. 2)
     _spec(
         0x66,
         "maf_a",
-        "Luftmasse Sensor A",
+        N_("Luftmasse Sensor A"),
         "g/s",
         3,
         _if_supported(0, lambda d: _word(d[1:3]) / 32),
@@ -431,7 +455,7 @@ _TABLE = [
     _spec(
         0x66,
         "maf_b",
-        "Luftmasse Sensor B",
+        N_("Luftmasse Sensor B"),
         "g/s",
         5,
         _if_supported(1, lambda d: _word(d[3:5]) / 32),
@@ -440,7 +464,7 @@ _TABLE = [
     _spec(
         0x67,
         "coolant_temp_1",
-        "Kühlmitteltemperatur Sensor 1",
+        N_("Kühlmitteltemperatur Sensor 1"),
         "°C",
         2,
         _if_supported(0, lambda d: d[1] - 40),
@@ -449,7 +473,7 @@ _TABLE = [
     _spec(
         0x67,
         "coolant_temp_2",
-        "Kühlmitteltemperatur Sensor 2",
+        N_("Kühlmitteltemperatur Sensor 2"),
         "°C",
         3,
         _if_supported(1, lambda d: d[2] - 40),
@@ -458,7 +482,7 @@ _TABLE = [
     _spec(
         0xA6,
         "odometer",
-        "Kilometerstand",
+        N_("Kilometerstand"),
         "km",
         4,
         lambda d: int.from_bytes(d[:4], "big") / 10,
@@ -476,7 +500,11 @@ def pid_by_key(key: str) -> PidSpec:
         return PIDS[key]
     except KeyError:
         known = ", ".join(sorted(PIDS))
-        raise KeyError(f"unbekannter Live-Wert {key!r}; bekannt sind: {known}") from None
+        raise KeyError(
+            tr("unbekannter Live-Wert {key}; bekannt sind: {known}").format(
+                key=repr(key), known=known
+            )
+        ) from None
 
 
 # --- unterstützte PIDs (Bitmasken 0100, 0120, …) -----------------------------------
@@ -493,9 +521,11 @@ def parse_supported(base: int, data: bytes) -> set[int]:
     einer ``base``, die kein Vielfaches von 0x20 zwischen 0x00 und 0xE0 ist.
     """
     if base % 0x20 or not 0 <= base <= 0xE0:
-        raise ValueError(f"keine Basis für unterstützte PIDs: {base:#04x}")
+        raise ValueError(tr("keine Basis für unterstützte PIDs: {base:#04x}").format(base=base))
     if len(data) < 4:
-        raise ValueError(f"Bitmaske braucht vier Datenbytes, nicht {len(data)}")
+        raise ValueError(
+            tr("Bitmaske braucht vier Datenbytes, nicht {count}").format(count=len(data))
+        )
     mask = int.from_bytes(data[:4], "big")
     return {base + i + 1 for i in range(32) if mask & (0x80000000 >> i)}
 
@@ -554,7 +584,9 @@ def read_values(elm: Elm327, specs: Sequence[PidSpec]) -> dict[str, float | None
     """
     pids = {spec.pid for spec in specs}
     if len(pids) != 1:
-        raise ValueError(f"read_values braucht Werte genau einer PID, nicht {sorted(pids)}")
+        raise ValueError(
+            tr("read_values braucht Werte genau einer PID, nicht {pids}").format(pids=sorted(pids))
+        )
     (pid,) = pids
     cmd = f"01{pid:02X}"
     values: dict[str, float | None] = {spec.key: None for spec in specs}

@@ -1,6 +1,9 @@
 """Bildschirmfotos der Oberfläche für die Dokumentation erzeugen.
 
-    uv run python tools/docs_screenshots.py [ZIELORDNER]   # Standard: docs/_static/screenshots
+    uv run python tools/docs_screenshots.py [--lang en] [ZIELORDNER]
+
+Standard-Zielordner: ``docs/_static/screenshots`` (Deutsch) bzw.
+``docs/en/_static/screenshots`` (Englisch, für die englische Doku).
 
 Startet den ELM327-emulator mit standardgemäßen Antworten (wie ``tools/emulator.py``),
 öffnet die Oberfläche ohne Bildschirm, verbindet, scannt und speichert jeden Reiter im
@@ -10,6 +13,7 @@ einchecken. Einstellungen und Daten landen in einem temporären Ordner, die echt
 bleiben unberührt.
 """
 
+import argparse
 import os
 import sys
 import tempfile
@@ -40,7 +44,12 @@ from obd_diag.ui.jobs import ThreadPoolRunner  # noqa: E402
 from obd_diag.ui.theme import DesignController  # noqa: E402
 from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel  # noqa: E402
 from obd_diag.ui.viewmodels.live import LiveViewModel  # noqa: E402
-from obd_diag.ui.window import install_translations, load_main_window, set_style  # noqa: E402
+from obd_diag.ui.window import (  # noqa: E402
+    LANGUAGE_KEY,
+    LanguageController,
+    load_main_window,
+    set_style,
+)
 from tests.emulator_patches import (  # noqa: E402
     patch_dtc_count_byte,
     patch_freeze_frame,
@@ -92,7 +101,12 @@ def _grab(window: QQuickWindow, path: Path) -> None:
 
 
 def main() -> int:
-    out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "_static" / "screenshots"
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--lang", choices=("de", "en"), default="de")
+    parser.add_argument("out_dir", nargs="?", type=Path)
+    args = parser.parse_args()
+    docs = ROOT / "docs" if args.lang == "de" else ROOT / "docs" / args.lang
+    out_dir = args.out_dir or docs / "_static" / "screenshots"
     out_dir.mkdir(parents=True, exist_ok=True)
     emulator, port = _start_emulator()
 
@@ -100,14 +114,16 @@ def main() -> int:
     app.setApplicationName("obd-diag")
     app.setApplicationDisplayName("OBD-Diagnose")
     set_style()
-    install_translations(app)
+    settings = QSettings(str(_TMP / "language.conf"), QSettings.Format.IniFormat)
+    settings.setValue(LANGUAGE_KEY, args.lang)
+    language = LanguageController(settings, app)
     runner = ThreadPoolRunner()
     vm = DiagnosisViewModel(serial_backend(), runner)
     live = LiveViewModel(vm.backend, runner, vm)
     design = DesignController(QSettings(str(_TMP / "design.conf"), QSettings.Format.IniFormat))
     design.setProperty("mode", "light")
     engine = QQmlApplicationEngine()
-    load_main_window(engine, vm, design=design, live=live)
+    load_main_window(engine, vm, design=design, live=live, language=language)
     window = engine.rootObjects()[0]
     assert isinstance(window, QQuickWindow)
     window.resize(*SIZE)
