@@ -17,7 +17,11 @@ Zweiter Test (2026-10-10): ``diagnose_order.log`` (Motor aus) und
 ``diagnose_engine_running.log`` (Motor läuft im Stand, ``--save``). Ohne Header kommen die
 Antworten der vier Steuergeräte bei jeder Anfrage anders sortiert; in
 ``diagnose_order.log`` steht auf ``0101`` das Steuergerät ohne Abgasmonitore (Bit B3 = 0)
-vorn, was vorher einen Ottomotor ohne offene Tests ergab.
+vorn, was vorher einen Ottomotor ohne offene Tests ergab. Dazu Live-Daten:
+``live_engine_start.log`` (Motorstart während Live) und ``live_idle.log`` mit der dabei
+aufgezeichneten CSV ``live_idle.csv``, beide ohne FIN und unverändert. Vier Steuergeräte
+melden Drehzahl, Last und Temperatur mit leicht unterschiedlichen Werten (bis 11 1/min,
+2,4 %); ohne Header gilt die erste Antwort.
 """
 
 from pathlib import Path
@@ -26,7 +30,13 @@ import pytest
 
 from obd_diag.protocol.elm327 import Elm327, NoConnectionError
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind
-from obd_diag.services.live import LiveSample, prepare_live, run_live, select_pids
+from obd_diag.services.live import (
+    LiveRecorder,
+    LiveSample,
+    prepare_live,
+    run_live,
+    select_pids,
+)
 from obd_diag.services.readiness import MonitorState
 from obd_diag.services.session import run_diagnosis
 from obd_diag.transport.trace import ReplayTransport, read_trace
@@ -168,3 +178,82 @@ def test_second_test_diagnosis(trace: str, voltage: float) -> None:
     assert vehicle is not None
     assert vehicle.vin == "WDD1770031J000000"
     assert vehicle.model_year is None
+
+
+def _replay_live(name: str, rounds: int, interval: float) -> list[LiveSample]:
+    """Spielt einen Live-Mitschnitt mit simulierter Uhr ab (jede Anfrage dauert 0 s)."""
+    elm = Elm327(ReplayTransport.from_file(TRACES / name))
+    setup = prepare_live(elm)
+    pids = select_pids(setup, None)
+    now = [0.0]
+
+    def sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    samples: list[LiveSample] = []
+    count = run_live(
+        elm,
+        pids,
+        on_sample=samples.append,
+        should_stop=lambda: False,
+        interval=interval,
+        max_samples=rounds,
+        clock=lambda: now[0],
+        sleep=sleep,
+    )
+    assert count == rounds
+    return samples
+
+
+def test_live_engine_start() -> None:
+    """Zündung an, Motor springt in Runde 10 an. ATRV 11,6/11,3 V wird per PID 42
+    (12,4/12,1 V) gegengeprüft, gedrosselt wird nie; Runden alle 2 s."""
+    samples = _replay_live("live_engine_start.log", 24, 2.0)
+    assert [s.elapsed for s in samples] == pytest.approx([2.0 * i for i in range(24)])
+    assert not any(s.throttled for s in samples)
+    assert [s.voltage for s in samples] == pytest.approx([12.381] * 10 + [12.089] * 10 + [13.9] * 4)
+    rpm = [s.values["rpm"] for s in samples]
+    assert rpm[:10] == [0.0] * 10
+    assert rpm[10:13] == [887.0, 883.5, 879.5]  # 0DDC, 0DCE, 0DBE: erste Antwort
+    assert samples[10].values["engine_load"] == pytest.approx(45 * 100 / 255)
+    assert [s.values["control_voltage"] for s in samples[10:15]] == pytest.approx(
+        [12.117, 12.691, 13.399, 14.308, 14.614]  # Lichtmaschine lädt
+    )
+    assert {s.values["speed"] for s in samples} == {0}
+    assert {s.values["coolant_temp"] for s in samples} == {60, 61}
+
+
+def test_live_idle_reproduces_recorded_csv(tmp_path: Path) -> None:
+    """Die CSV vom Auto entsteht aus dem Mitschnitt Wert für Wert neu (Zeitspalte ohne
+    die Millisekunden, die die echte Uhr dazugibt)."""
+    elm = Elm327(ReplayTransport.from_file(TRACES / "live_idle.log"))
+    pids = select_pids(prepare_live(elm), None)
+    now = [0.0]
+
+    def sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    path = tmp_path / "live.csv"
+    with LiveRecorder(path, pids) as recorder:
+        run_live(
+            elm,
+            pids,
+            on_sample=lambda s: None,
+            should_stop=lambda: False,
+            interval=2.0,
+            max_samples=11,
+            recorder=recorder,
+            clock=lambda: now[0],
+            sleep=sleep,
+        )
+
+    def rows(text: str) -> list[list[str]]:
+        return [line.split(";") for line in text.splitlines()]
+
+    expected = rows((TRACES / "live_idle.csv").read_text(encoding="utf-8-sig"))
+    actual = rows(path.read_text(encoding="utf-8-sig"))
+    assert actual[0] == expected[0]
+    assert [r[1:] for r in actual[1:]] == [r[1:] for r in expected[1:]]
+    assert [float(r[0].replace(",", ".")) for r in expected[1:]] == pytest.approx(
+        [float(r[0]) for r in actual[1:]], abs=0.002
+    )

@@ -433,7 +433,8 @@ Zeit (s)  Motordrehzahl (1/min)  Geschwindigkeit (km/h)  Kühlmitteltemperatur (
   steht „-“ (in der CSV eine leere Zelle), die Abfrage läuft weiter. Meldet der Adapter
   drei Runden lang bei jedem Wert einen Busfehler (z. B. Zündung aus), endet sie mit
   einer Fehlermeldung. Die Bordspannung wird jede zehnte Runde gelesen; unter 11,8 V
-  (nach Gegenprobe mit dem Steuergerät) wird nur noch alle 5 s abgefragt.
+  (nach Gegenprobe mit dem Steuergerät) wird nur noch alle 5 s abgefragt und die Spannung
+  jede Runde gemessen, bis sie wieder reicht.
 - **Aufzeichnung:** CSV unter `$XDG_DATA_HOME/obd-diag/recordings/`
   (`live-JJJJMMTT-HHMMSS.csv`) oder in der angegebenen Datei, die nicht überschrieben
   wird. Format wie beim Export: UTF-8 mit BOM, `;`, Dezimalkomma; erste Spalte

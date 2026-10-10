@@ -18,6 +18,9 @@ veröffentlicht) und die Live-Daten aus v0.2.
   per PID 42 gegengeprüft, wenn der Adapter unter 11,8 V misst, bei Mercedes kein
   Modelljahr aus FIN-Stelle 10.
 - `UNABLE TO CONNECT` (Zündung aus) ergibt eine klare Meldung mit Hinweis (#8).
+- Zweiter Test am 2026-10-10 mit Motorstart während Live: Werte stimmen Byte für Byte.
+  Bei Drosselung wegen niedriger Spannung wird die Spannung jetzt jede Runde gemessen,
+  damit die Drosselung nach dem Anlassen gleich endet statt erst nach zehn Runden.
 - Die Mitschnitte laufen als Regressionstest (`tests/verification/test_real_car.py`,
   FIN-Seriennummer geschwärzt).
 - Zweiter Test am 2026-10-10 (Motor aus und im Stand laufend) bestätigt diese Korrekturen
