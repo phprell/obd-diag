@@ -53,6 +53,7 @@ from urllib.parse import quote
 from urllib.request import urlopen
 
 from obd_diag.data.wmi import country_for, manufacturer_for
+from obd_diag.i18n import N_, tr
 from obd_diag.protocol.elm327 import Elm327, ElmError
 from obd_diag.protocol.frames import FrameSequenceError, split_messages
 from obd_diag.protocol.obd import read_with_headers
@@ -80,8 +81,8 @@ def model_year_text(info: VinInfo) -> str | None:
     """z. B. „2026 oder 1996 (aus Stelle 10, ohne Gewähr)“; ``None`` ohne Modelljahr."""
     if info.model_year is None:
         return None
-    years = " oder ".join(str(y) for y in (info.model_year, *info.model_year_alternatives))
-    return f"{years} (aus Stelle 10, ohne Gewähr)"
+    years = tr(" oder ").join(str(y) for y in (info.model_year, *info.model_year_alternatives))
+    return tr("{years} (aus Stelle 10, ohne Gewähr)").format(years=years)
 
 
 def checksum_text(info: VinInfo) -> str:
@@ -91,10 +92,10 @@ def checksum_text(info: VinInfo) -> str:
     wenn sie nicht stimmt, das aber kein Fehler ist (z. B. in Europa).
     """
     if not info.valid:
-        return "nicht prüfbar (FIN ungültig)"
+        return tr("nicht prüfbar (FIN ungültig)")
     if info.checksum_ok is None:
-        return "nicht vorgeschrieben (weicht ab)"
-    return "stimmt" if info.checksum_ok else "stimmt nicht"
+        return tr("nicht vorgeschrieben (weicht ab)")
+    return tr("stimmt") if info.checksum_ok else tr("stimmt nicht")
 
 
 # --- FIN lesen ---
@@ -310,22 +311,23 @@ def decode_vin(vin: str, *, protocol: str | None = None, today: date | None = No
 
 VPIC_URL = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/{vin}?format=json"
 
-# Übernommene vPIC-Felder und ihre deutsche Bezeichnung zur Anzeige. Als Schlüssel in
-# ``VinInfo.online`` bleiben die vPIC-Namen, wie sie der PDF-Bericht erwartet.
+# Übernommene vPIC-Felder und ihre deutsche Bezeichnung zur Anzeige (mit ``tr``
+# übersetzen). Als Schlüssel in ``VinInfo.online`` bleiben die vPIC-Namen, wie sie der
+# PDF-Bericht erwartet.
 VPIC_FIELDS = {
-    "Make": "Hersteller",
-    "Model": "Modell",
-    "ModelYear": "Modelljahr",
-    "Trim": "Ausstattung",
-    "BodyClass": "Karosserie",
-    "EngineCylinders": "Zylinder",
-    "DisplacementL": "Hubraum (l)",
-    "EngineHP": "Leistung (PS, US)",
-    "FuelTypePrimary": "Kraftstoff",
-    "TransmissionStyle": "Getriebe",
-    "DriveType": "Antrieb",
-    "PlantCountry": "Werk-Land",
-    "PlantCity": "Werk-Ort",
+    "Make": N_("Hersteller"),
+    "Model": N_("Modell"),
+    "ModelYear": N_("Modelljahr"),
+    "Trim": N_("Ausstattung"),
+    "BodyClass": N_("Karosserie"),
+    "EngineCylinders": N_("Zylinder"),
+    "DisplacementL": N_("Hubraum (l)"),
+    "EngineHP": N_("Leistung (PS, US)"),
+    "FuelTypePrimary": N_("Kraftstoff"),
+    "TransmissionStyle": N_("Getriebe"),
+    "DriveType": N_("Antrieb"),
+    "PlantCountry": N_("Werk-Land"),
+    "PlantCity": N_("Werk-Ort"),
 }
 
 

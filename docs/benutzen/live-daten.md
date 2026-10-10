@@ -56,6 +56,6 @@ vollständige Liste mit Schlüssel, Formel und Wertebereich steht unter
 
 `--record` schreibt eine CSV unter `~/.local/share/obd-diag/recordings/`
 (`live-JJJJMMTT-HHMMSS.csv`) oder in die angegebene Datei, die nicht überschrieben
-wird. Format wie beim Export: UTF-8 mit BOM, `;` als Trennzeichen, Dezimalkomma;
-erste Spalte `Zeit (s)`, dann je Wert `Name (Einheit)`, zuletzt `Bordspannung (V)`.
+wird. Das Format folgt der Sprache ({doc}`sprache`): UTF-8 mit BOM; auf Deutsch `;` als
+Trennzeichen und Dezimalkomma, auf Englisch `,` und Dezimalpunkt. Erste Spalte `Zeit (s)`, dann je Wert `Name (Einheit)`, zuletzt `Bordspannung (V)`.
 Jede Zeile wird sofort geschrieben, ein Abbruch verliert also nichts.

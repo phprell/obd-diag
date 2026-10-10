@@ -4,8 +4,8 @@ Linux-OBD-II-Diagnose-Tool für ELM327-kompatible Adapter: Kommandozeile und
 PySide6/QML-Oberfläche, Python 3.12+. Repo: github.com/phprell/obd-diag (öffentlich seit 2026-10-09).
 
 Entscheidungen: `docs/adr/` (0001 Schichten, 0002 nur lesend/Freigabeliste, 0003
-Live-Daten). Nutzer-Doku: README.md (u. a. „Sicherheit: was das Tool senden kann“,
-„Erster Test am Auto“, „Live-Daten“).
+Live-Daten, 0004 Online-Erklärungen). Nutzer-Doku: README.md (Englisch) und README.de.md
+(Deutsch; u. a. „Sicherheit: was das Tool senden kann“, „Erster Test am Auto“, „Live-Daten“).
 
 Spezifikation und Roadmap: Claude-Docs-Dokument „OBD-Diagnose – Designvorschlag“
 https://claude.ai/code/artifact/de949a8a-4f58-41b4-a629-6b9d238bdac7 (über den
@@ -26,14 +26,25 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   ganze Dateien von Wal33D/dtc-database, nie Code oder FIN senden).
 - Parser halten sich strikt an SAE J1979 / ISO 15765 / ELM327-Datenblatt; Abweichungen
   des Emulators werden in den Tests korrigiert, nicht im Produktcode.
-- Sprache in UI, Doku, Kommentaren, Commit-Messages: Deutsch. ruff meldet Gedanken-
-  striche (–) in Python-Strings: `:`/`-` nehmen oder gezieltes `noqa: RUF001`.
+- Sprache in Kommentaren, Docstrings, Commit-Messages: Deutsch. Oberfläche, CLI, PDF/CSV
+  und Doku sind zweisprachig (Deutsch/Englisch). ruff meldet Gedankenstriche (–) in
+  Python-Strings: `:`/`-` nehmen oder gezieltes `noqa: RUF001`.
+- **Übersetzungen** (`src/obd_diag/i18n.py`): Quelltexte sind Deutsch und zugleich msgid;
+  Englisch steht in `src/obd_diag/locale/en.po`. Python: `tr("…")`, Mehrzahl `trn`, Texte in
+  Tabellen/Konstanten mit `N_` markieren und bei der Anzeige `tr()`en; nie f-Strings in
+  `tr` (Platzhalter `{name}` + `.format`). QML: `qsTr`. Nach neuen Texten
+  `uv run python tools/translations.py` (aktualisiert en.po; `--todo` zeigt Fehlendes).
+  `tests/unit/test_i18n.py` schlägt fehl bei veraltetem Katalog, fehlender Übersetzung,
+  abweichenden Platzhaltern/`&`-Kürzeln und deutschen Literalen ohne `tr`. Sprache:
+  QSettings `ui/sprache`, erster Start nach Systemsprache (Deutsch nur bei deutschem
+  System, sonst Englisch); CLI `--lang de|en`. Fehlercode-Texte des Katalogs sind deutsch
+  (OBDex), in Sitzungen bleibt die Sprache des Scans.
 
 ## Befehle
 - `uv sync` – Umgebung; danach Katalog bauen: `uv run python tools/build_dtc_db.py`
   (lädt OBDex-YAML von GitHub, ~9 s; `--source DIR` für einen lokalen Klon)
 - `uv run ruff format . && uv run ruff check . && uv run mypy` (strict)
-- `uv run pytest` – ca. 1600 Tests, ~3,5 min (Emulator-Tests und der PID-Vergleich mit
+- `uv run pytest` – ca. 1800 Tests, ~4,5 min (Emulator-Tests und der PID-Vergleich mit
   python-OBD sind langsam).
   **Exit-Code von pytest selbst prüfen**, nicht durch `| tail` (hat schon einmal
   einen roten Stand auf main gebracht).
@@ -42,10 +53,15 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
 - `uv run obd-diag {info,scan,diagnose,vin,clear,live,ports,export} --port … [--trace]`
   (`live --list`, `--pids rpm,speed`, `--interval`, `--duration`, `--record [DATEI.csv]`)
 - `uv run obd-diag-gui`
-- Doku (Sphinx, MyST, Furo; `docs/`): `uv run --group docs sphinx-build -W docs docs/_build`.
+- Doku (Sphinx, MyST, Furo; `docs/`): `uv run --group docs sphinx-build -W docs docs/_build`,
+  Englisch: `uv run --group docs sphinx-build -W docs/en docs/_build/en`. Deutsch liegt in
+  `docs/`, Englisch in `docs/en/` mit denselben Dateipfaden (gemeinsame Konfiguration
+  `docs/conf_common.py`, Sprachumschalter `docs/_templates/language.html`); veröffentlicht
+  unter `/` bzw. `/en/`. `tests/unit/test_docs_i18n.py` verlangt gleiche Seiten und gleichen
+  Aufbau in beiden Bäumen: Änderungen immer in beiden Sprachen.
   Befehls- und PID-Tabellen erzeugt `tools/docs_tables.py` beim Bauen aus
   `command_spec.yaml` bzw. `PIDS`, CLI-Optionen kommen aus `cli.build_parser`. GUI-Bilder:
-  `uv run python tools/docs_screenshots.py` (Emulator, offscreen), danach einchecken.
+  `uv run python tools/docs_screenshots.py [--lang en]` (Emulator, offscreen), danach einchecken.
   Byte-Beispiele der Technik-Seiten prüft `tests/unit/test_docs_examples.py`. CI baut sie bei
   jedem PR (Artefakt „dokumentation“); jeder Push auf main veröffentlicht sie über GitHub
   Pages (https://phprell.github.io/obd-diag/, `.github/workflows/docs.yml`). Das Repo ist

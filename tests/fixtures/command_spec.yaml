@@ -20,7 +20,8 @@
 #   reaches_vehicle    false: stellt nur den Adapter ein; true: geht ans Fahrzeug
 #   writes             true nur für Mode 04 (verändert Daten im Steuergerät)
 #   requires           nur bei writes: der Kontext, in dem der Befehl erlaubt ist
-#   meaning            was der Befehl bewirkt
+#   meaning            was der Befehl bewirkt (meaning_en: dasselbe auf Englisch, für die
+#                      englische Dokumentation; ebenso reason_en bei verbotenen)
 #   source, page, quote
 #   note               optional: Begründung, wo die Quelle allein nicht reicht
 
@@ -30,6 +31,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: Adapter komplett zurücksetzen (wie Strom aus und wieder an)
+    meaning_en: reset the adapter completely (as if power were switched off and on again)
     source: ELM327DSJ
     page: 28
     quote: "complete reset as if power were cycled off and then on again"
@@ -37,6 +39,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: Echo der empfangenen Zeichen aus
+    meaning_en: echo of received characters off
     source: ELM327DSJ
     page: 17
     quote: "These commands control whether or not the characters received on the RS232 port are echoed (retransmitted) back to the host computer."
@@ -44,6 +47,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: kein Zeilenvorschub nach CR
+    meaning_en: no linefeed after CR
     source: ELM327DSJ
     page: 20
     quote: "for AT L0, they will be off."
@@ -51,6 +55,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: keine Leerzeichen in den Antworten
+    meaning_en: no spaces in the responses
     source: ELM327DSJ
     page: 24
     quote: "These commands control whether or not space characters are inserted in the ECU response."
@@ -58,6 +63,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: Header in den Antworten ausblenden
+    meaning_en: hide headers in the responses
     source: ELM327DSJ
     page: 18
     quote: "These commands control whether or not the additional (header) bytes of information are shown in the responses from the vehicle."
@@ -65,6 +71,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: Header in den Antworten anzeigen (Zuordnung je Steuergerät)
+    meaning_en: show headers in the responses (assignment per control unit)
     source: ELM327DSJ
     page: 18
     quote: "may be of interest (especially if you receive multiple responses and wish to determine what modules they were from)."
@@ -72,6 +79,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: Protokoll automatisch suchen (Suche erst mit der nächsten OBD-Anfrage)
+    meaning_en: search the protocol automatically (search only starts with the next OBD request)
     source: ELM327DSJ
     page: 26
     quote: "the AT SP0 command sets the protocol to 0, but does not perform a write to EEPROM."
@@ -79,6 +87,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: Spannung an Pin 2 messen (Bordspannung)
+    meaning_en: measure the voltage at pin 2 (battery voltage)
     source: ELM327DSJ
     page: 24
     quote: "This initiates the reading of the voltage present at pin 2"
@@ -86,6 +95,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: aktuelles Protokoll als Text melden
+    meaning_en: report the current protocol as text
     source: ELM327DSJ
     page: 17
     quote: "The DP command is a convenient means of asking what protocol the IC is currently set to"
@@ -93,6 +103,7 @@ allowed:
     reaches_vehicle: false
     writes: false
     meaning: aktuelles Protokoll als Nummer melden
+    meaning_en: report the current protocol as a number
     source: ELM327DSJ
     page: 17
     quote: "it returns a number which represents the current protocol."
@@ -102,6 +113,7 @@ allowed:
     reaches_vehicle: true
     writes: false
     meaning: "Service $01: aktuellen Wert einer PID lesen (auch 00/20/40 … unterstützte PIDs)"
+    meaning_en: "Service $01: read the current value of a PID (also 00/20/40 … supported PIDs)"
     source: ELM327DSJ
     page: 31
     quote: "01 - show current data"
@@ -109,6 +121,7 @@ allowed:
     reaches_vehicle: true
     writes: false
     meaning: "Service $02: Freeze Frame lesen, PID und Frame-Nummer 00"
+    meaning_en: "Service $02: read the freeze frame, PID and frame number 00"
     source: ELM327DSJ
     page: 31
     quote: "02 - show freeze frame data"
@@ -119,6 +132,7 @@ allowed:
     reaches_vehicle: true
     writes: false
     meaning: "Service $02 ohne Frame-Nummer: Rückfallebene, nur wenn 020200 abgelehnt wird"
+    meaning_en: "Service $02 without frame number: fallback, only if 020200 is rejected"
     source: ELM327DSJ
     page: 31
     quote: "02 - show freeze frame data"
@@ -129,6 +143,7 @@ allowed:
     reaches_vehicle: true
     writes: false
     meaning: "Service $03: gespeicherte Fehlercodes lesen"
+    meaning_en: "Service $03: read stored trouble codes"
     source: ELM327DSJ
     page: 34
     quote: "request the actual trouble codes with a mode 03 request (there is no PID needed)"
@@ -136,6 +151,7 @@ allowed:
     reaches_vehicle: true
     writes: false
     meaning: "Service $07: ausstehende Fehlercodes lesen"
+    meaning_en: "Service $07: read pending trouble codes"
     source: ELM327DSJ
     page: 31
     quote: "07 - show ‘pending’ trouble codes"
@@ -143,6 +159,7 @@ allowed:
     reaches_vehicle: true
     writes: false
     meaning: "Service $0A: permanente Fehlercodes lesen"
+    meaning_en: "Service $0A: read permanent trouble codes"
     source: ELM327DSJ
     page: 31
     quote: "0A - request permanent trouble codes"
@@ -150,6 +167,7 @@ allowed:
     reaches_vehicle: true
     writes: false
     meaning: "Service $09, InfoType 02: FIN lesen (ohne Antwortzahl)"
+    meaning_en: "Service $09, InfoType 02: read the VIN (without response count)"
     source: ELM327DSJ
     page: 32
     quote: "It is obtained with mode 09, PID 02, and should be requested with: >09 02"
@@ -160,6 +178,7 @@ allowed:
     writes: true
     requires: allow_clear
     meaning: "Service $04: Fehlercodes, Freeze Frame und Testergebnisse löschen"
+    meaning_en: "Service $04: clear trouble codes, freeze frame and test results"
     source: ELM327DSJ
     page: 35
     quote: "the SAE specifies that scan tools must verify that a mode 04 is intended (‘Are you sure?’) before actually sending it to the vehicle"
@@ -169,56 +188,67 @@ allowed:
 forbidden:
   - command: ""
     reason: ein einzelnes CR wiederholt den letzten Befehl (nach 04 also erneutes Löschen)
+    reason_en: a lone CR repeats the last command (after 04 that would mean clearing again)
     source: ELM327DSJ
     page: 9
     quote: "the ability to repeat any command (AT or OBD) when only a single carriage return character is received."
   - command: "08"
     reason: "Service $08 steuert Bauteile im Fahrzeug an"
+    reason_en: "Service $08 controls components in the vehicle"
     source: ELM327DSJ
     page: 31
     quote: "08 - special control mode"
   - command: "080100"
     reason: "Service $08 mit Test-ID"
+    reason_en: "Service $08 with test ID"
     source: ELM327DSJ
     page: 31
     quote: "08 - special control mode"
   - command: "09021"
     reason: falsche Antwortzahl bei der FIN-Anfrage
+    reason_en: wrong response count in the VIN request
     source: ELM327DSJ
     page: 32
     quote: "If you should mistakenly send 09 02 1, you might cause problems."
   - command: "ATSP6"
     reason: schreibt sofort ins EEPROM des Adapters
+    reason_en: writes to the adapter's EEPROM immediately
     source: ELM327DSJ
     page: 36
     quote: "The Set Protocol commands cause an immediate write to the internal EEPROM"
   - command: "ATSP00"
     reason: schreibt 0 ins EEPROM des Adapters
+    reason_en: writes 0 to the adapter's EEPROM
     source: ELM327DSJ
     page: 26
     quote: "if you must write 0 to the EEPROM, use command AT SP 00"
   - command: "ATPP0CSV00"
     reason: verändert dauerhaft einen Programmable Parameter (hier die Baudrate)
+    reason_en: permanently changes a programmable parameter (here the baud rate)
     source: ELM327DSJ
     page: 23
     quote: "PP hh SV yy [ Prog. Param. hh: Set the Value to yy ]"
   - command: "ATSH7E0"
     reason: Header setzen, also ein einzelnes Steuergerät statt der OBD-Sammeladresse ansprechen
+    reason_en: sets the header, i.e. addresses a single control unit instead of the OBD functional address
     source: ELM327DSJ
     page: 25
     quote: "particularly if experimenting with physical addressing"
   - command: "ATMA"
     reason: Mithören am Bus, schließt das aktuelle Protokoll
+    reason_en: monitors the bus, closes the current protocol
     source: ELM327DSJ
     page: 21
     quote: "This command places the ELM327 into a bus monitoring mode"
   - command: "ATLP"
     reason: schaltet den Adapter in den Stromsparmodus
+    reason_en: puts the adapter into low power mode
     source: ELM327DSJ
     page: 20
     quote: "This command causes the ELM327 to shut off all but ‘essential services’"
   - command: "ATD"
     reason: setzt alles auf Standard und kann die laufende Sitzung schließen
+    reason_en: resets everything to defaults and can close the running session
     source: ELM327DSJ
     page: 49
     quote: "the ELM327 will close the current session and then change the protocol to the default one"

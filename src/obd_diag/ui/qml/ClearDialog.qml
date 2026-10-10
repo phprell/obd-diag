@@ -8,7 +8,7 @@ Dialog {
 
     required property var vm
 
-    title: "Fehlercodes löschen?"
+    title: qsTr("Fehlercodes löschen?")
     modal: true
     anchors.centerIn: Overlay.overlay
     width: Math.min(560, parent ? parent.width - 48 : 560)
@@ -34,8 +34,8 @@ Dialog {
         Label {
             Layout.fillWidth: true
             text: dialog.vm.uniqueCodes.length === 1
-                  ? "Dieser Code wird im Steuergerät gelöscht:"
-                  : "Diese " + dialog.vm.uniqueCodes.length + " Codes werden im Steuergerät gelöscht:"
+                  ? qsTr("Dieser Code wird im Steuergerät gelöscht:")
+                  : qsTr("Diese %1 Codes werden im Steuergerät gelöscht:").arg(dialog.vm.uniqueCodes.length)
             wrapMode: Text.Wrap
         }
         Flow {
@@ -68,15 +68,13 @@ Dialog {
 
                 Repeater {
                     model: [
-                        "Zündung an, Motor aus, Bordspannung mindestens 11,8 V. Sonst wird nicht gelöscht.",
-                        "Codes und Freeze Frame werden vorher gesichert.",
-                        "Die Bereitschaftstests (Readiness) werden zurückgesetzt: Die "
-                        + "Abgasuntersuchung ist erst nach einigen Fahrzyklen wieder möglich.",
-                        "Permanente Codes löscht das Steuergerät erst selbst, wenn der Fehler "
-                        + "behoben ist" + (dialog.vm.permanentCount > 0
-                                           ? " (hier: " + dialog.vm.permanentCount + ")." : "."),
-                        "Löschen behebt keinen Defekt. Kehrt ein Code zurück, besteht die "
-                        + "Ursache weiter."
+                        qsTr("Zündung an, Motor aus, Bordspannung mindestens 11,8 V. Sonst wird nicht gelöscht."),
+                        qsTr("Codes und Freeze Frame werden vorher gesichert."),
+                        qsTr("Die Bereitschaftstests (Readiness) werden zurückgesetzt: Die Abgasuntersuchung ist erst nach einigen Fahrzyklen wieder möglich."),
+                        dialog.vm.permanentCount > 0
+                            ? qsTr("Permanente Codes löscht das Steuergerät erst selbst, wenn der Fehler behoben ist (hier: %1).").arg(dialog.vm.permanentCount)
+                            : qsTr("Permanente Codes löscht das Steuergerät erst selbst, wenn der Fehler behoben ist."),
+                        qsTr("Löschen behebt keinen Defekt. Kehrt ein Code zurück, besteht die Ursache weiter.")
                     ]
                     delegate: Label {
                         required property string modelData
@@ -93,7 +91,7 @@ Dialog {
             id: confirm
             objectName: "clearConfirm"
             Layout.fillWidth: true
-            text: "Zündung ist an, der Motor ist aus. Ich möchte die Codes löschen."
+            text: qsTr("Zündung ist an, der Motor ist aus. Ich möchte die Codes löschen.")
         }
     }
 
@@ -101,12 +99,12 @@ Dialog {
         padding: 16
         topPadding: 8
         Button {
-            text: "Abbrechen"
+            text: qsTr("Abbrechen")
             DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
         }
         Button {
             objectName: "clearAccept"
-            text: "Fehlercodes löschen"
+            text: qsTr("Fehlercodes löschen")
             enabled: confirm.checked
             DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
         }

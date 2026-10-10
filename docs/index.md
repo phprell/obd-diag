@@ -1,7 +1,8 @@
 # obd-diag
 
 OBD-II-Diagnose für Linux über ELM327-kompatible Adapter, als Kommandozeile und als
-Desktop-Oberfläche. obd-diag liest Fehlercodes und erklärt sie auf Deutsch, zeigt
+Desktop-Oberfläche. obd-diag liest Fehlercodes und erklärt sie auf Deutsch oder
+Englisch, zeigt
 Readiness, Freeze Frame, FIN und Live-Daten und schneidet auf Wunsch die gesamte
 Kommunikation mit dem Adapter mit.
 
@@ -41,6 +42,9 @@ Entscheidung ({doc}`adr/0002-nur-lesend`).
   {doc}`technik/mitschnitt-w177`.
 - **Mitentwickeln:** {doc}`entwickeln/regeln` und {doc}`entwickeln/testen`.
 
+Diese Dokumentation gibt es auf Deutsch und Englisch (Link oben in der Seitenleiste).
+Das Programm selbst spricht beide Sprachen: {doc}`benutzen/sprache`.
+
 ```{toctree}
 :caption: Benutzen
 :maxdepth: 1
@@ -51,6 +55,7 @@ benutzen/adapter
 benutzen/erster-test
 benutzen/oberflaeche
 benutzen/cli
+benutzen/sprache
 benutzen/fehlercodes
 benutzen/fehlercodes-online
 benutzen/live-daten

@@ -7,6 +7,7 @@ from typing import Self
 
 import serial
 
+from obd_diag.i18n import tr
 from obd_diag.transport.base import TransportError, TransportTimeout
 
 # Fehler, die ein verschwundener Adapter auslöst: pyserial meldet sie je nach Aufruf als
@@ -25,7 +26,11 @@ class SerialTransport:
         try:
             self._serial = serial.Serial(self.port, self.baudrate, timeout=1)
         except serial.SerialException as e:
-            raise TransportError(f"{self.port} lässt sich nicht öffnen ({e.strerror or e})") from e
+            raise TransportError(
+                tr("{port} lässt sich nicht öffnen ({reason})").format(
+                    port=self.port, reason=e.strerror or e
+                )
+            ) from e
 
     def close(self) -> None:
         if self._serial is not None:
@@ -53,7 +58,11 @@ class SerialTransport:
         except _IO_ERRORS as e:
             raise self._lost(e) from e
         if not data.endswith(terminator):
-            raise TransportTimeout(f"keine Antwort von {self.port} nach {timeout} s")
+            raise TransportTimeout(
+                tr("keine Antwort von {port} nach {timeout} s").format(
+                    port=self.port, timeout=timeout
+                )
+            )
         return bytes(data)
 
     def _lost(self, error: Exception) -> TransportError:
@@ -65,12 +74,14 @@ class SerialTransport:
         else:
             reason = str(error)
         return TransportError(
-            f"Verbindung zu {self.port} unterbrochen ({reason}). Adapter abgezogen?"
+            tr("Verbindung zu {port} unterbrochen ({reason}). Adapter abgezogen?").format(
+                port=self.port, reason=reason
+            )
         )
 
     def _port(self) -> serial.Serial:
         if self._serial is None:
-            raise TransportError("Transport ist nicht geöffnet")
+            raise TransportError(tr("Transport ist nicht geöffnet"))
         return self._serial
 
     def __enter__(self) -> Self:

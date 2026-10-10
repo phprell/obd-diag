@@ -10,8 +10,9 @@ Fehlercodes, Readiness, Freeze Frame und FIN, nur lesend. Rechts oben steht dann
 Fahrzeug (Hersteller und FIN), darunter fünf Reiter. Unten stehen Adapter, Protokoll
 und Bordspannung (rot bei niedriger Spannung).
 
-Die Bilder auf dieser Seite stammen aus dem Emulator (`tools/docs_screenshots.py`) und
-folgen dem hellen oder dunklen Design dieser Website.
+Die Oberfläche spricht Deutsch und Englisch: *Optionen → Sprache / Language*
+({doc}`sprache`). Die Bilder auf dieser Seite stammen aus dem Emulator
+(`tools/docs_screenshots.py`) und folgen dem hellen oder dunklen Design dieser Website.
 
 ## Fehlercodes
 
@@ -113,6 +114,7 @@ denn am Adapter läuft immer nur eine Aktion ({doc}`live-daten`).
 | Optionen → Fehlercodes online erklären | – | Codes ohne Katalogtext bekommen eine ungeprüfte Kurzerklärung ({doc}`fehlercodes-online`) |
 | Optionen → Adapter-Mitschnitt aufzeichnen | – | jede Aktion schreibt einen Mitschnitt ({doc}`sitzungen`) |
 | Optionen → Design | – | wie das System, hell oder dunkel |
+| Optionen → Sprache / Language | – | Deutsch oder English, gilt sofort ({doc}`sprache`) |
 | Fehlercodes löschen … | – | derzeit gesperrt (grau, der Tooltip nennt den Grund) |
 
 Einstellungen werden je Nutzer unter `~/.config/obd-diag/obd-diag.conf` gespeichert.

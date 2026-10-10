@@ -8,6 +8,7 @@ from typing import Any
 from PySide6.QtCore import Property, QObject, QSettings, QStandardPaths, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices
 
+from obd_diag.i18n import N_, decimal, tr, trn
 from obd_diag.protocol.elm327 import ElmError, NoConnectionError
 from obd_diag.services.clear import (
     CLEAR_DISABLED_MESSAGE,
@@ -33,7 +34,7 @@ from obd_diag.ui.viewmodels.session_parts import (
 DEFAULT_PORT = "/dev/ttyUSB0"
 DEFAULT_BAUD = 38400
 
-LOW_VOLTAGE_WARNING = (
+LOW_VOLTAGE_WARNING = N_(
     "Batteriespannung niedrig: Ergebnisse können unzuverlässig sein. "
     "Vor dem Löschen Batterie laden oder Ladegerät anschließen."
 )
@@ -45,7 +46,7 @@ ONLINE_VIN_KEY = "fin/onlineNachschlagen"
 ONLINE_CODES_KEY = "fehlercodes/onlineNachschlagen"
 TRACE_KEY = "adapter/mitschnitt"
 
-_EXPORT_KINDS = {"pdf": "PDF-Bericht", "csv": "CSV-Datei"}
+_EXPORT_KINDS = {"pdf": N_("PDF-Bericht"), "csv": N_("CSV-Datei")}
 
 
 def user_message(error: Exception) -> str:
@@ -53,16 +54,18 @@ def user_message(error: Exception) -> str:
     if isinstance(error, ClearRefused):
         return str(error)
     if isinstance(error, TransportError):
-        return f"Verbindung fehlgeschlagen: {error}"
+        return tr("Verbindung fehlgeschlagen: {error}").format(error=error)
     if isinstance(error, NoConnectionError):
-        return f"{NoConnectionError.HINT} (Adapter: {error})"
+        return tr("{hint} (Adapter: {error})").format(hint=tr(NoConnectionError.HINT), error=error)
     if isinstance(error, ElmError):
-        return f"Der Adapter meldet einen Fehler: {error}"
+        return tr("Der Adapter meldet einen Fehler: {error}").format(error=error)
     if isinstance(error, ValueError):
-        return f"Unerwartete Antwort vom Fahrzeug: {error}"
+        return tr("Unerwartete Antwort vom Fahrzeug: {error}").format(error=error)
     if isinstance(error, NotImplementedError):
-        return "Diese Funktion ist noch nicht verfügbar."
-    return f"Unerwarteter Fehler ({type(error).__name__}): {error}"
+        return tr("Diese Funktion ist noch nicht verfügbar.")
+    return tr("Unerwarteter Fehler ({kind}): {error}").format(
+        kind=type(error).__name__, error=error
+    )
 
 
 def _file_error(error: Exception) -> str:
@@ -208,16 +211,16 @@ class DiagnosisViewModel(QObject):
         if self._result is None:
             return ""
         if self._result.voltage is None:
-            return "unbekannt"
-        return f"{self._result.voltage:.1f} V".replace(".", ",")
+            return tr("unbekannt")
+        return f"{decimal(self._result.voltage)} V"
 
     @Property(bool, notify=stateChanged)
     def lowVoltage(self) -> bool:
         return self._result is not None and self._result.low_voltage
 
-    @Property(str, constant=True)
+    @Property(str, notify=stateChanged)
     def lowVoltageWarning(self) -> str:
-        return LOW_VOLTAGE_WARNING
+        return tr(LOW_VOLTAGE_WARNING)
 
     @Property(str, notify=stateChanged)
     def connectedPort(self) -> str:
@@ -244,10 +247,10 @@ class DiagnosisViewModel(QObject):
             and bool(self._clearable())
         )
 
-    @Property(str, constant=True)
+    @Property(str, notify=stateChanged)
     def clearDisabledReason(self) -> str:
         """Leer, wenn Löschen freigegeben ist; sonst der Grund für den Tooltip."""
-        return "" if clear_enabled() else CLEAR_DISABLED_MESSAGE
+        return "" if clear_enabled() else tr(CLEAR_DISABLED_MESSAGE)
 
     @Property(str, notify=stateChanged)
     def errorMessage(self) -> str:
@@ -301,7 +304,7 @@ class DiagnosisViewModel(QObject):
         vin = self._session.vehicle if self._session is not None else None
         if vin is None:
             return ""
-        return f"{vin.manufacturer} · {vin.vin}" if vin.manufacturer else vin.vin
+        return f"{tr(vin.manufacturer)} · {vin.vin}" if vin.manufacturer else vin.vin
 
     @Property(dict, notify=stateChanged)
     def readiness(self) -> dict[str, Any]:
@@ -319,10 +322,10 @@ class DiagnosisViewModel(QObject):
 
     @Property(str, notify=stateChanged)
     def createdText(self) -> str:
-        """Zeitpunkt der Diagnose, z. B. „07.10.2026, 14:32“."""
+        """Zeitpunkt der Diagnose, z. B. „07.10.2026, 14:32“ (Englisch „2026-10-07 14:32“)."""
         if self._session is None:
             return ""
-        return f"{self._session.created:%d.%m.%Y, %H:%M}"
+        return self._session.created.strftime(tr("%d.%m.%Y, %H:%M"))
 
     @Property(str, notify=stateChanged)
     def sessionPath(self) -> str:
@@ -346,7 +349,7 @@ class DiagnosisViewModel(QObject):
     def reportBaseName(self) -> str:
         """Vorschlag für den Dateinamen ohne Endung: ``obd-bericht-YYYYmmdd-HHMM``."""
         created = self._session.created if self._session is not None else datetime.now()
-        return f"obd-bericht-{created:%Y%m%d-%H%M}"
+        return tr("obd-bericht-{date}").format(date=f"{created:%Y%m%d-%H%M}")
 
     @Property(str, constant=True)
     def reportFolder(self) -> str:
@@ -425,10 +428,10 @@ class DiagnosisViewModel(QObject):
         if self._busy or self._blocked:
             return
         if not port:
-            self._fail("Bitte einen Port angeben, z. B. /dev/ttyUSB0.")
+            self._fail(tr("Bitte einen Port angeben, z. B. /dev/ttyUSB0."))
             return
         self._port, self._baud = port, baud
-        self._start(f"Verbinde mit {port} und lese Diagnose …")
+        self._start(tr("Verbinde mit {port} und lese Diagnose …").format(port=port))
         self._run_diagnosis(self._scan_done, self._job_failed)
 
     def _run_diagnosis(
@@ -451,7 +454,7 @@ class DiagnosisViewModel(QObject):
         if not self.canClear:
             return
         port, baud = self._port, self._baud
-        self._start("Sichere Codes und Freeze Frame, lösche Fehlercodes …")
+        self._start(tr("Sichere Codes und Freeze Frame, lösche Fehlercodes …"))
         backend = self._backend
         self._runner.run(lambda: backend.clear(port, baud), self._clear_done, self._clear_failed)
 
@@ -463,11 +466,13 @@ class DiagnosisViewModel(QObject):
         try:
             path = self._backend.save_session(self._session)
         except (OSError, ValueError) as e:
-            self._fail(f"Sitzung ließ sich nicht speichern: {_file_error(e)}")
+            self._fail(
+                tr("Sitzung ließ sich nicht speichern: {error}").format(error=_file_error(e))
+            )
             return
         self._saved_path = str(path)
         self._error = ""
-        self._notice = f"Sitzung gespeichert: {path}"
+        self._notice = tr("Sitzung gespeichert: {path}").format(path=path)
         self.stateChanged.emit()
         self.sessionSaved.emit(str(path))
 
@@ -480,11 +485,13 @@ class DiagnosisViewModel(QObject):
         try:
             session = self._backend.load_session(path)
         except (OSError, ValueError) as e:
-            self._fail(f"Sitzung ließ sich nicht öffnen: {_file_error(e)}")
+            self._fail(tr("Sitzung ließ sich nicht öffnen: {error}").format(error=_file_error(e)))
             return
         self._show(session, view_only=True, path=str(path))
         self._error = ""
-        self._notice = f"Gespeicherte Sitzung vom {self.createdText} geöffnet (nur ansehen): {path}"
+        self._notice = tr(
+            "Gespeicherte Sitzung vom {created} geöffnet (nur ansehen): {path}"
+        ).format(created=self.createdText, path=path)
         self.stateChanged.emit()
         self.sessionOpened.emit(str(path))
 
@@ -503,26 +510,42 @@ class DiagnosisViewModel(QObject):
         path = local_path(target.strip())
         if path.suffix.lower() != f".{kind}":
             path = path.with_name(f"{path.name}.{kind}")
-        label = _EXPORT_KINDS[kind]
+        label = tr(_EXPORT_KINDS[kind])
         write = self._backend.export_pdf if kind == "pdf" else self._backend.export_csv
 
         def job() -> Path:
             write(session, path)
             return path
 
-        self._start(f"Schreibe {label} …")
+        self._start(tr("Schreibe {kind} …").format(kind=label))
 
         def done(result: Any) -> None:
             self._finish()
-            self._notice = f"{label} gespeichert: {result}"
+            self._notice = tr("{kind} gespeichert: {path}").format(kind=label, path=result)
             self.stateChanged.emit()
             self.exportFinished.emit(str(result))
 
         def failed(error: Exception) -> None:
             self._finish()
-            self._fail(f"{label} ließ sich nicht schreiben: {_file_error(error)}")
+            self._fail(
+                tr("{kind} ließ sich nicht schreiben: {error}").format(
+                    kind=label, error=_file_error(error)
+                )
+            )
 
         self._runner.run(job, done, failed)
+
+    def retranslate(self) -> None:
+        """Nach einem Sprachwechsel: Listen und abgeleitete Texte neu ausgeben.
+
+        Meldungen, die schon stehen, und Katalogtexte des letzten Scans bleiben in der
+        alten Sprache; der nächste Scan liest sie in der neuen.
+        """
+        self._codes.retranslate()
+        self._monitors.retranslate()
+        self.stateChanged.emit()
+        self.selectionChanged.emit()
+        self.settingsChanged.emit()
 
     @Slot()
     def dismissError(self) -> None:
@@ -570,7 +593,7 @@ class DiagnosisViewModel(QObject):
     def _clear_done(self, result: Any) -> None:
         assert isinstance(result, ClearResult)
         # Weiter beschäftigt: gleich im Anschluss die Diagnose neu lesen
-        self._busy_text = "Fehlercodes gelöscht, lese Diagnose neu …"
+        self._busy_text = tr("Fehlercodes gelöscht, lese Diagnose neu …")
         self.stateChanged.emit()
         self._run_diagnosis(
             lambda session: self._rediagnosis_done(result, session),
@@ -592,24 +615,29 @@ class DiagnosisViewModel(QObject):
         vehicle = self._session.vehicle if self._session is not None else None
         self._show(Session(created=datetime.now().astimezone(), scan=clear.after, vehicle=vehicle))
         self._notice = self._clear_notice(clear, clear.after)
-        self._error = (
-            "Readiness und Freeze Frame ließen sich nach dem Löschen nicht neu lesen ("
-            f"{user_message(error)}). „Erneut scannen“ versuchen."
-        )
+        self._error = tr(
+            "Readiness und Freeze Frame ließen sich nach dem Löschen nicht neu lesen "
+            "({error}). „Erneut scannen“ versuchen."
+        ).format(error=user_message(error))
         self.stateChanged.emit()
         self.clearSucceeded.emit(str(clear.backup_path))
 
     @staticmethod
     def _clear_notice(clear: ClearResult, after: ScanResult) -> str:
-        notice = f"Fehlercodes gelöscht. Sicherung: {Path(clear.backup_path)}"
+        notice = tr("Fehlercodes gelöscht. Sicherung: {path}").format(path=Path(clear.backup_path))
         remaining = [c for c in after.codes if c.kind is DtcKind.PERMANENT]
         if remaining:
-            notice += (
-                f". {len(remaining)} permanente(r) Code(s) bleiben, bis das Steuergerät"
-                " den Fehler in Fahrzyklen selbst als behoben erkennt."
-            )
+            notice += ". " + trn(
+                "{n} permanenter Code bleibt, bis das Steuergerät den Fehler in Fahrzyklen "
+                "selbst als behoben erkennt.",
+                "{n} permanente Codes bleiben, bis das Steuergerät den Fehler in Fahrzyklen "
+                "selbst als behoben erkennt.",
+                len(remaining),
+            ).format(n=len(remaining))
         elif after.codes:
-            notice += f". Weiterhin {len(after.codes)} Code(s) vorhanden."
+            notice += ". " + trn(
+                "Weiterhin {n} Code vorhanden.", "Weiterhin {n} Codes vorhanden.", len(after.codes)
+            ).format(n=len(after.codes))
         return notice
 
     def _clear_failed(self, error: Exception) -> None:
