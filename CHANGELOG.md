@@ -20,6 +20,14 @@ veröffentlicht) und die Live-Daten aus v0.2.
 - `UNABLE TO CONNECT` (Zündung aus) ergibt eine klare Meldung mit Hinweis (#8).
 - Die Mitschnitte laufen als Regressionstest (`tests/verification/test_real_car.py`,
   FIN-Seriennummer geschwärzt).
+- Zweiter Test am 2026-10-10 (Motor aus und im Stand laufend) bestätigt diese Korrekturen
+  und deckt einen Fehler auf: Ohne Header kommen die Antworten der Steuergeräte bei jeder
+  Anfrage anders sortiert, und die Motorart der Readiness kam vom zuerst antwortenden.
+  Stand ein Steuergerät ohne Abgasmonitore vorn, wurde der Diesel als Ottomotor gelesen,
+  der offene Test „Abgassensor“ fehlte und es hieß „Alle Tests abgeschlossen“. Jetzt
+  entscheiden die Steuergeräte mit Abgasmonitoren, unabhängig von der Reihenfolge.
+  Freeze-Frame-Werte, die mehrere Steuergeräte verschieden melden, werden verworfen statt
+  zufällig gewählt.
 
 ### Lesen
 

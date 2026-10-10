@@ -12,6 +12,12 @@ eines einen Freeze Frame hat; der Adapter misst 0,8 V weniger als das Motorsteue
 das erste ``ATZ`` nach dem Einstecken ergibt ``?``; Stelle 10 der FIN ist bei Mercedes
 kein Modelljahr. ``live.log`` (``obd-diag live --record``) enthält keine FIN. Der erste
 Versuch mit Zündung aus endete mit ``UNABLE TO CONNECT``.
+
+Zweiter Test (2026-10-10): ``diagnose_order.log`` (Motor aus) und
+``diagnose_engine_running.log`` (Motor läuft im Stand, ``--save``). Ohne Header kommen die
+Antworten der vier Steuergeräte bei jeder Anfrage anders sortiert; in
+``diagnose_order.log`` steht auf ``0101`` das Steuergerät ohne Abgasmonitore (Bit B3 = 0)
+vorn, was vorher einen Ottomotor ohne offene Tests ergab.
 """
 
 from pathlib import Path
@@ -127,3 +133,38 @@ def test_ignition_off_reports_no_connection_with_hint() -> None:
         run_diagnosis(Elm327(replay), None)
     assert str(error.value) == "0100: UNABLE TO CONNECT"
     assert "Zündung einschalten" in NoConnectionError.HINT
+
+
+@pytest.mark.parametrize(
+    ("trace", "voltage"),
+    [("diagnose_order.log", 12.391), ("diagnose_engine_running.log", 13.9)],
+)
+def test_second_test_diagnosis(trace: str, voltage: float) -> None:
+    session = run_diagnosis(Elm327(ReplayTransport.from_file(TRACES / trace)), None)
+    assert session.scan.voltage == pytest.approx(voltage)
+    assert session.scan.codes == [DiagnosticCode("U1218", DtcKind.STORED)]
+
+    readiness = session.readiness
+    assert readiness is not None
+    assert readiness.compression_ignition  # nicht Otto, auch wenn 00 04 00 00 vorn steht
+    assert readiness.dtc_count == 1
+    assert not readiness.mil_on
+    states = {m.key: m.state for m in readiness.monitors}
+    assert [k for k, s in states.items() if s is MonitorState.INCOMPLETE] == ["exhaust_gas_sensor"]
+    assert states["misfire"] is MonitorState.NOT_SUPPORTED
+    assert not readiness.all_complete
+
+    frame = session.freeze_frame
+    assert frame is not None
+    assert frame.dtc == "U1218"
+    assert frame.values == {
+        "engine_load_pct": 0.0,
+        "coolant_temp_c": 37,
+        "rpm": 0.0,
+        "speed_kmh": 0,
+    }
+
+    vehicle = session.vehicle
+    assert vehicle is not None
+    assert vehicle.vin == "WDD1770031J000000"
+    assert vehicle.model_year is None

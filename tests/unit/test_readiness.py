@@ -1,3 +1,5 @@
+import itertools
+
 import pytest
 
 from obd_diag.protocol.elm327 import Elm327, ElmError
@@ -187,6 +189,34 @@ def test_combine_ignores_other_ignition_type() -> None:
     combined = combine_readiness([engine, other])
     assert not combined.compression_ignition
     assert _states(combined)["catalyst"] is C
+
+
+@pytest.mark.parametrize("order", list(itertools.permutations(range(4))))
+def test_combine_does_not_depend_on_order(order: tuple[int, ...]) -> None:
+    # Mercedes A 180 d (W177), zweiter Test am Auto: ohne Header kommen die vier
+    # Antworten auf 0101 jedes Mal anders sortiert. Stand 00 04 00 00 (Bit B3 = 0, aber
+    # keine motorspezifischen Monitore) vorn, wurde daraus ein Ottomotor ohne Monitore.
+    lines = ["00040000", "000EEB20", "010C0000", "000C0200"]
+    statuses = [decode_readiness(bytes.fromhex(lines[i])) for i in order]
+    combined = combine_readiness(statuses)
+    assert combined.compression_ignition
+    assert combined.dtc_count == 1
+    assert not combined.mil_on
+    states = _states(combined)
+    assert [k for k, s in states.items() if s is I] == ["exhaust_gas_sensor"]
+    assert states["misfire"] is N
+    assert states["components"] is C
+    assert states["nox_scr"] is C
+
+
+def test_combine_continuous_monitors_from_all_ecus() -> None:
+    # Aussetzer, Kraftstoffsystem, Komponenten (Byte B) bedeuten bei beiden Motorarten
+    # dasselbe und zählen deshalb auch bei Steuergeräten mit anderer Kennung.
+    diesel = decode_readiness(bytes((0, 0x0C, 0x01, 0x00)))
+    other = decode_readiness(bytes((0, 0x44, 0x00, 0x00)))  # Komponenten offen
+    combined = combine_readiness([other, diesel])
+    assert combined.compression_ignition
+    assert _states(combined)["components"] is I
 
 
 def test_combine_needs_input() -> None:
