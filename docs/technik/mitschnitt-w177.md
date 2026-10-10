@@ -157,9 +157,12 @@ Monitore ({doc}`dienste`).
 | `01 0C 00 00` | aus | 1 | ja | nur Komponenten |
 
 Das erste ist vermutlich das Motorsteuergerät, das vierte das mit U1218 (es meldet den
-einen Code). obd-diag fasst die vier zusammen (`combine_readiness`): Die Motorart
-kommt von der ersten Zeile, Zeilen mit anderer Motorart zählen für die Monitore nicht
-mit (hier das zweite Steuergerät, dessen Bits C/D anders belegt wären). Je Monitor gilt
+einen Code). Die Reihenfolge der Zeilen sagt allerdings nichts: Ohne Header kommen die
+Antworten bei jeder Anfrage anders sortiert (im zweiten Test stand `00 04 00 00` auch
+vorn). obd-diag fasst die vier zusammen (`combine_readiness`): Die Motorart bestimmen
+die Steuergeräte, die motorspezifische Monitore unterstützen (Byte C nicht 0), hier die
+drei Diesel-Zeilen. Das zweite Steuergerät meldet zwar Bit B3 = 0, hat aber keine
+Monitore in C/D und zählt deshalb nur für die allgemeinen Monitore aus Byte B. Je Monitor gilt
 der schlechteste Stand, die MIL ist an, wenn eines sie meldet, und die Codes werden
 addiert. Ergebnis: Kontrollleuchte aus, ein Code, Diesel, alles abgeschlossen bis auf
 den Abgassensor, Verbrennungsaussetzer nicht unterstützt.

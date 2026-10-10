@@ -444,7 +444,8 @@ Time (s)  Engine speed (rpm)  Speed (km/h)  Coolant temperature (°C)  …  Volt
   shown (an empty cell in the CSV) and the query carries on. If the adapter reports a
   bus error for every value for three rounds (e.g. ignition off), it ends with an error
   message. The battery voltage is read every tenth round; below 11.8 V (after a
-  cross-check with the control unit) values are only queried every 5 s.
+  cross-check with the control unit) values are only queried every 5 s and the voltage
+  is measured every round until it is high enough again.
 - **Recording:** CSV under `$XDG_DATA_HOME/obd-diag/recordings/`
   (`live-YYYYMMDD-HHMMSS.csv`) or in the given file, which is never overwritten. Format
   as for the export: UTF-8 with BOM, in English `,` and a decimal point (in German `;`

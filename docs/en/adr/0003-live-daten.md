@@ -20,7 +20,9 @@ two actions never use the same port. A live run blocks this thread for minutes.
   connection errors abort, as do three consecutive rounds in which every value fails
   with an adapter error (`CAN ERROR`, `UNABLE TO CONNECT` ...: ignition off, bus gone).
   Below 11.8 V battery voltage values are only queried every 5 s to protect the
-  battery; an unreadable voltage does not lift the throttling.
+  battery; an unreadable voltage does not lift the throttling. The voltage is measured
+  every tenth round, every round while throttled (since the second car test: otherwise
+  the throttling stayed for up to 50 s after starting the engine).
 - The PID table (`protocol/pids.py`) has one entry (`PidSpec`) per value; several
   entries can share one PID (oxygen sensors, secondary trim, torque points, status
   byte PIDs `66`/`67`). `decode` gets the first `size` data bytes and may return

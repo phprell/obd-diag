@@ -46,7 +46,9 @@ vollständige Liste mit Schlüssel, Formel und Wertebereich steht unter
 - Die Bordspannung (`ATRV`) wird jede zehnte Runde gelesen. Zeigt der Adapter weniger
   als 11,8 V, wird mit der Steuergerätespannung (PID 42) gegengeprüft: viele Adapter
   messen hinter einer Schutzdiode einige Zehntel Volt zu wenig. Liegt auch sie darunter
-  (oder fehlt sie), wird nur noch alle 5 s abgefragt, um die Batterie zu schonen.
+  (oder fehlt sie), wird nur noch alle 5 s abgefragt, um die Batterie zu schonen. Solange
+  gedrosselt ist, wird die Spannung jede Runde gemessen; reicht sie wieder (Motor
+  angesprungen), geht es sofort im normalen Takt weiter.
 - Meldet der Adapter drei Runden lang bei jedem Wert einen Busfehler (z. B. Zündung
   aus), endet die Abfrage mit einer Fehlermeldung. `NO DATA`, `?` und Ablehnungen
   zählen dabei nicht als Busfehler.

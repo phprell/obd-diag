@@ -157,10 +157,13 @@ general monitors and the engine type (bit 3), C and D the engine-specific monito
 | `01 0C 00 00` | off | 1 | yes | components only |
 
 The first is probably the engine control unit, the fourth the one with U1218 (it
-reports the one code). obd-diag combines the four (`combine_readiness`): the engine
-type comes from the first line, lines with a different engine type do not count for
-the monitors (here the second control unit, whose bits C/D would have a different
-meaning). Per monitor the worst state counts, the MIL is on if one reports it, and the
+reports the one code). The order of the lines means nothing, though: without headers
+the responses come sorted differently for every request (in the second test
+`00 04 00 00` was in front as well). obd-diag combines the four (`combine_readiness`):
+the engine type is decided by the control units that support engine-specific monitors
+(byte C not 0), here the three diesel lines. The second control unit does report bit
+B3 = 0, but has no monitors in C/D and therefore only counts for the general monitors
+from byte B. Per monitor the worst state counts, the MIL is on if one reports it, and the
 codes are added up. Result: check engine light off, one code, diesel, everything
 complete except the exhaust gas sensor, misfire not supported.
 

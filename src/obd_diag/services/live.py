@@ -27,7 +27,7 @@ from obd_diag.transport.trace import new_free_path
 
 DEFAULT_INTERVAL = 1.0  # Sekunden zwischen zwei Abfragerunden
 LOW_VOLTAGE_INTERVAL = 5.0  # Sekunden zwischen Runden bei niedriger Bordspannung
-VOLTAGE_EVERY = 10  # Bordspannung jede n-te Runde lesen (ATRV)
+VOLTAGE_EVERY = 10  # Bordspannung jede n-te Runde lesen (ATRV), gedrosselt jede Runde
 # So viele Runden nacheinander, in denen jeder Wert mit einem Adapterfehler (CAN ERROR,
 # UNABLE TO CONNECT ...) scheitert, beenden die Abfrage: das Fahrzeug ist weg.
 MAX_FAILED_ROUNDS = 3
@@ -253,9 +253,11 @@ def run_live(
 
     Die Bordspannung wird in Runde 0 und jeder ``VOLTAGE_EVERY``-ten Runde gelesen;
     liegt sie unter ``LOW_VOLTAGE``, beginnen Runden nur alle ``LOW_VOLTAGE_INTERVAL``
-    Sekunden (``throttled``). Ist sie einmal nicht lesbar, bleibt die Drosselung, wie
-    sie war (eine schwache Batterie wird davon nicht besser). Runden beginnen im Abstand
-    ``interval`` ab Rundenbeginn; dauert eine Runde länger, folgt die nächste sofort.
+    Sekunden (``throttled``), und sie wird jede Runde gelesen, damit die Drosselung
+    endet, sobald die Spannung wieder reicht (Motor angesprungen). Ist sie einmal nicht
+    lesbar, bleibt die Drosselung, wie sie war (eine schwache Batterie wird davon nicht
+    besser). Runden beginnen im Abstand ``interval`` ab Rundenbeginn; dauert eine Runde
+    länger, folgt die nächste sofort.
     Liefert die Anzahl der Runden.
     """
     groups: dict[int, list[PidSpec]] = {}
@@ -268,7 +270,7 @@ def run_live(
     failed_rounds = 0
     while (max_samples is None or count < max_samples) and not should_stop():
         round_start = clock()
-        if count % VOLTAGE_EVERY == 0:
+        if throttled or count % VOLTAGE_EVERY == 0:
             voltage = _read_voltage(elm)
             if voltage is not None:
                 throttled = voltage < LOW_VOLTAGE

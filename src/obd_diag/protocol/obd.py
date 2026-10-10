@@ -321,27 +321,31 @@ def _freeze_data(
     """Befehl, Antwort, Datenbytes und „Format abgelehnt“ (``7F 02 12``) zu einem PID.
 
     Antwort ``None`` bei ``NO DATA``, Daten ``None``, wenn keine passende Antwort kam.
-    Antworten mehrere Steuergeräte, zählt die erste passende Antwort; bei PID 02 die
-    erste mit einem Code (``00 00`` heißt „kein Freeze Frame gespeichert“, das melden
-    z. B. beim Mercedes W177 drei von vier Steuergeräten vor dem eigentlichen Code).
+    Bei PID 02 zählt die erste Antwort mit einem Code (``00 00`` heißt „kein Freeze
+    Frame gespeichert“, das melden z. B. beim Mercedes W177 drei von vier
+    Steuergeräten). Ohne Header ist die Reihenfolge der Antworten zufällig und keine
+    Antwort einem Steuergerät zuzuordnen; melden bei einem anderen PID mehrere
+    Steuergeräte verschiedene Werte, ist der Wert daher unbekannt (Daten ``None``).
     """
     cmd = _freeze_cmd(pid, frame_byte)
     response = elm.query(cmd)
     if response is None:
         return cmd, None, None, False
     rejected = False
-    found: bytes | None = None
+    found: list[bytes] = []
     for message in _messages(cmd, response):
         data = _freeze_payload(message, pid, size, frame_byte)
         if data is not None:
-            if pid != 0x02 or any(data[:_FREEZE_DTC_SIZE]):
+            if pid == 0x02 and any(data[:_FREEZE_DTC_SIZE]):
                 return cmd, response, data, False
-            if found is None:
-                found = data
+            found.append(data)
         elif message[:3] == b"\x7f\x02\x12":
             rejected = True  # Unterfunktion/Format nicht unterstützt
-    if found is not None:
-        return cmd, response, found, False
+    if pid != 0x02 and len({data[:size] for data in found}) > 1:
+        log.warning("%s: Steuergeräte melden verschiedene Werte, verworfen", cmd)
+        return cmd, response, None, False
+    if found:
+        return cmd, response, found[0], False
     return cmd, response, None, rejected
 
 

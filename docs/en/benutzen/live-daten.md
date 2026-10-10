@@ -46,6 +46,8 @@ formula and value range is in {doc}`../technik/pids`.
   than 11.8 V, it is cross-checked with the control module voltage (PID 42): many
   adapters measure a few tenths of a volt too little behind a protection diode. If that
   is also below (or missing), values are only queried every 5 s to protect the battery.
+  While throttled, the voltage is measured every round; once it is high enough again
+  (engine started), polling continues at the normal rate right away.
 - If the adapter reports a bus error for every value for three rounds (e.g. ignition
   off), the query ends with an error message. `NO DATA`, `?` and rejections do not
   count as bus errors.

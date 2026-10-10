@@ -15,7 +15,7 @@ vor 1.0 kann sich die Bedienung noch ändern.
 - README auf Englisch, deutsche Fassung in README.de.md.
 - Tests verhindern Texte, die nur in einer Sprache vorliegen.
 
-## 0.2.0 – 2026-10-09
+## 0.2.0 – 2026-10-10
 
 Erstes veröffentlichtes Release. Es umfasst den Funktionsumfang v0.1 (nie einzeln
 veröffentlicht) und die Live-Daten aus v0.2.
@@ -30,8 +30,27 @@ veröffentlicht) und die Live-Daten aus v0.2.
   per PID 42 gegengeprüft, wenn der Adapter unter 11,8 V misst, bei Mercedes kein
   Modelljahr aus FIN-Stelle 10.
 - `UNABLE TO CONNECT` (Zündung aus) ergibt eine klare Meldung mit Hinweis (#8).
-- Die Mitschnitte laufen als Regressionstest (`tests/verification/test_real_car.py`,
-  FIN-Seriennummer geschwärzt).
+- Zweiter Test am 2026-10-10 mit Motorstart während Live: Werte stimmen Byte für Byte.
+  Bei Drosselung wegen niedriger Spannung wird die Spannung jetzt jede Runde gemessen,
+  damit die Drosselung nach dem Anlassen gleich endet statt erst nach zehn Runden.
+- Zweiter Test am 2026-10-10 bestätigt diese Korrekturen; Diagnose- und Live-Mitschnitte
+  stimmen Byte für Byte mit J1979.
+- Readiness hängt nicht mehr von der Reihenfolge ab, in der die Steuergeräte antworten.
+  Vorher konnte ein Steuergerät ohne Abgasmonitore den Diesel als Ottomotor ausgeben und
+  „Alle Tests abgeschlossen“ melden, obwohl der Abgassensor-Test offen war (#14).
+  Widersprüchliche Freeze-Frame-Werte mehrerer Steuergeräte werden verworfen.
+- Live-Daten: Nach dem Anlassen endet die Drosselung bei niedriger Spannung sofort,
+  statt bis zu 50 s weiterzulaufen (#15).
+- Die Mitschnitte beider Tests laufen als Regressionstest
+  (`tests/verification/test_real_car.py`, FIN-Seriennummer geschwärzt).
+- Zweiter Test am 2026-10-10 (Motor aus und im Stand laufend) bestätigt diese Korrekturen
+  und deckt einen Fehler auf: Ohne Header kommen die Antworten der Steuergeräte bei jeder
+  Anfrage anders sortiert, und die Motorart der Readiness kam vom zuerst antwortenden.
+  Stand ein Steuergerät ohne Abgasmonitore vorn, wurde der Diesel als Ottomotor gelesen,
+  der offene Test „Abgassensor“ fehlte und es hieß „Alle Tests abgeschlossen“. Jetzt
+  entscheiden die Steuergeräte mit Abgasmonitoren, unabhängig von der Reihenfolge.
+  Freeze-Frame-Werte, die mehrere Steuergeräte verschieden melden, werden verworfen statt
+  zufällig gewählt.
 
 ### Lesen
 
@@ -86,8 +105,10 @@ veröffentlicht) und die Live-Daten aus v0.2.
 
 ### Bekannte Einschränkungen
 
-- Bisher an einem Fahrzeug geprüft. Die Korrekturen aus #7 und #8 sind gegen die
-  Mitschnitte getestet, aber noch nicht in einem zweiten Test am Auto.
+- Bisher an einem Fahrzeug geprüft (zwei Tests am Mercedes W177).
+- Live-Daten nehmen ohne Header die erste gültige Antwort; antworten mehrere
+  Steuergeräte auf dieselbe PID, kann der Wert zwischen ihnen wechseln (am W177
+  höchstens 11 1/min).
 - Nur über USB-Seriell bzw. `/dev/rfcomm*`; Bluetooth LE folgt später.
 - Nur die genormte Abgasdiagnose (OBD-II), keine Steuergeräte wie Airbag oder ABS.
 - PIDs mit Statusbyte (u. a. 70 Ladedruck, 7A–7C Partikelfilter) fehlen noch.

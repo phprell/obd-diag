@@ -205,6 +205,22 @@ def test_freeze_frame_code_from_ecu_that_stored_it() -> None:
     }
 
 
+def test_freeze_frame_conflicting_values_are_dropped() -> None:
+    # Ohne Header ist nicht zu erkennen, welches Steuergerät welchen Wert meldet; die
+    # Reihenfolge wechselt bei jeder Anfrage. Widersprüchliches fehlt lieber.
+    responses = {
+        "020200": "420200D218\r4202000000",
+        "020400": "42040000\r42040000",  # gleich: eindeutig
+        "020500": "4205004D\r42050090",
+        "020C00": "NO DATA",
+        "020D00": "NO DATA",
+    }
+    frame = read_freeze_frame(Elm327(FakeTransport(responses)))
+    assert frame.dtc == "U1218"
+    assert frame.values == {"engine_load_pct": 0.0}
+    assert "020500" not in frame.raw
+
+
 def test_freeze_frame_garbage_is_elm_error() -> None:
     with pytest.raises(ElmError, match=r"^020200: "):
         read_freeze_frame(Elm327(FakeTransport({"020200": "OK"})))

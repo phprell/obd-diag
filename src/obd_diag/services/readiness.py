@@ -155,28 +155,55 @@ def decode_readiness(data: bytes) -> ReadinessStatus:
 _RANK = {MonitorState.NOT_SUPPORTED: 0, MonitorState.COMPLETE: 1, MonitorState.INCOMPLETE: 2}
 
 
+def _supported_specific(status: ReadinessStatus) -> int:
+    """Zahl der unterstützten motorspezifischen Monitore (Byte C)."""
+    specific = status.monitors[len(_CONTINUOUS) :]
+    return sum(m.state is not MonitorState.NOT_SUPPORTED for m in specific)
+
+
+def _ignition_type(statuses: list[ReadinessStatus]) -> bool:
+    """Motorart (``True`` = Diesel) aus den Antworten mehrerer Steuergeräte.
+
+    Die Reihenfolge der Antworten sagt nichts: Ohne Header (``ATH0``) kommen die
+    Zeilen der Steuergeräte bei jeder Anfrage in anderer Reihenfolge (W177, zweiter
+    Test am Auto). Bit B3 zählt nur bei Steuergeräten, die motorspezifische Monitore
+    unterstützen, denn nur für sie sind die Bits C/D belegt; ein Steuergerät mit
+    C = 00 (am W177 eines, das Bit B3 = 0 meldet) entscheidet nichts. Es gewinnt die
+    Motorart mit mehr unterstützten Monitoren, dann die mit mehr Steuergeräten, bei
+    Gleichstand Otto (B3 = 0).
+    """
+
+    def score(diesel: bool) -> tuple[int, int]:
+        group = [s for s in statuses if s.compression_ignition == diesel]
+        return sum(_supported_specific(s) for s in group), len(group)
+
+    return score(True) > score(False)
+
+
 def combine_readiness(statuses: list[ReadinessStatus]) -> ReadinessStatus:
     """Fasst die Antworten mehrerer Steuergeräte zu einem Gesamtstand zusammen.
 
-    Maßgeblich für die Motorart ist das erste Steuergerät (in der Regel das
-    Motorsteuergerät); Steuergeräte mit anderer Motorart-Kennung werden für die
-    Monitore ignoriert, weil ihre Bits C/D dann anders belegt sind. MIL: an, wenn ein
-    Steuergerät sie meldet; Codezahl: Summe (Mode 03 liefert ja auch die Codes aller
-    Steuergeräte). Je Monitor zählt der schlechteste Stand: nicht abgeschlossen vor
-    abgeschlossen vor nicht unterstützt.
+    Das Ergebnis hängt nicht von der Reihenfolge der Antworten ab. Die Motorart kommt
+    aus ``_ignition_type``; Steuergeräte mit anderer Motorart-Kennung zählen nur für
+    die allgemeinen Monitore aus Byte B (Aussetzer, Kraftstoffsystem, Komponenten),
+    weil ihre Bits C/D anders belegt sind. MIL: an, wenn ein Steuergerät sie meldet;
+    Codezahl: Summe (Mode 03 liefert ja auch die Codes aller Steuergeräte). Je Monitor
+    zählt der schlechteste Stand: nicht abgeschlossen vor abgeschlossen vor nicht
+    unterstützt.
     """
     if not statuses:
         raise ValueError(tr("keine Readiness-Antwort"))
-    first = statuses[0]
-    same = [s for s in statuses if s.compression_ignition == first.compression_ignition]
+    diesel = _ignition_type(statuses)
+    same = [s for s in statuses if s.compression_ignition == diesel]
     monitors = []
-    for i, monitor in enumerate(first.monitors):
-        state = max((s.monitors[i].state for s in same), key=_RANK.__getitem__)
+    for i, monitor in enumerate(same[0].monitors):
+        sources = statuses if i < len(_CONTINUOUS) else same
+        state = max((s.monitors[i].state for s in sources), key=_RANK.__getitem__)
         monitors.append(Monitor(monitor.key, monitor.name, state))
     return ReadinessStatus(
         mil_on=any(s.mil_on for s in statuses),
         dtc_count=sum(s.dtc_count for s in statuses),
-        compression_ignition=first.compression_ignition,
+        compression_ignition=diesel,
         monitors=tuple(monitors),
     )
 
