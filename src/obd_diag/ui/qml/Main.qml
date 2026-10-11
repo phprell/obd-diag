@@ -276,6 +276,7 @@ ApplicationWindow {
             Layout.fillHeight: false
             readonly property bool shown: errorBanner.visible || noticeBanner.visible
                                           || voltageBanner.visible || catalogBanner.visible
+                                          || demoBanner.visible
             Layout.fillWidth: true
             Layout.leftMargin: Theme.gap
             Layout.rightMargin: Theme.gap
@@ -283,6 +284,14 @@ ApplicationWindow {
             Layout.bottomMargin: shown ? Theme.gap : 0
             spacing: 6
 
+            Banner {
+                // Demo-Fahrzeug gewählt: Daten stammen nicht vom eigenen Auto
+                id: demoBanner
+                objectName: "demoBanner"
+                Layout.fillWidth: true
+                kind: "info"
+                text: connectionBar.portText.trim() === window.vm.demoPort ? window.vm.demoNotice : ""
+            }
             Banner {
                 id: errorBanner
                 objectName: "errorBanner"

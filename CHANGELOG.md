@@ -14,6 +14,12 @@ vor 1.0 kann sich die Bedienung noch ändern.
   Sprachumschalter; die deutschen Adressen bleiben gleich.
 - README auf Englisch, deutsche Fassung in README.de.md.
 - Tests verhindern Texte, die nur in einer Sprache vorliegen.
+- Demo-Modus: `obd-diag-gui --demo`, Port „demo“ in der Liste oder `obd-diag … --demo`
+  zeigt ein eingebautes Beispielfahrzeug ohne Adapter und ohne Auto. Ein simulierter
+  ELM327 antwortet mit den Mitschnitten des Mercedes A 180 d aus den Tests am Auto
+  (Fehlercode U1218, Readiness, Freeze Frame, FIN, Live-Daten im Leerlauf); ein Hinweis
+  und die Adapterkennung `ELM327 v1.5 (Demo)` zeigen, dass die Daten nicht vom eigenen
+  Auto stammen.
 
 ## 0.2.0 – 2026-10-10
 

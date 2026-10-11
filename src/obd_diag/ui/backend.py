@@ -33,6 +33,7 @@ from obd_diag.services.live import (
 )
 from obd_diag.services.session import Session, load_session, run_diagnosis, save_session
 from obd_diag.services.storage import trace_dir
+from obd_diag.transport.demo import DEMO_DESCRIPTION, DEMO_PORT
 from obd_diag.transport.discovery import PortInfo, list_ports
 from obd_diag.transport.trace import new_trace_path, open_serial
 
@@ -188,6 +189,11 @@ def live_port(
         return LiveResult(count, path)
 
 
+def ports_with_demo() -> list[PortInfo]:
+    """Gefundene Adapter, dahinter immer das Demo-Fahrzeug (``transport/demo.py``)."""
+    return [*list_ports(), PortInfo(DEMO_PORT, tr(DEMO_DESCRIPTION))]
+
+
 def catalog_available() -> bool:
     return DtcCatalog.default() is not None
 
@@ -208,7 +214,7 @@ def serial_backend() -> Backend:
             port, baud, online_vin, online_codes, trace=tracing["enabled"]
         ),
         clear=lambda port, baud: clear_port(port, baud, trace=tracing["enabled"]),
-        list_ports=list_ports,
+        list_ports=ports_with_demo,
         catalog_available=catalog_available,
         set_tracing=set_tracing,
         live=live,

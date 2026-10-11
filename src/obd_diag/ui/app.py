@@ -45,6 +45,9 @@ def main(argv: list[str] | None = None) -> int:
 
     runner = ThreadPoolRunner()
     vm = DiagnosisViewModel(serial_backend(), runner)
+    # ``--demo``: mit dem Demo-Fahrzeug statt eines Adapters starten
+    if "--demo" in (sys.argv if argv is None else argv)[1:]:
+        vm.prefer_demo()
     # Derselbe Runner: Live-Daten und Diagnose teilen sich den einen Worker-Thread
     live = LiveViewModel(vm.backend, runner, vm)
     engine = QQmlApplicationEngine()

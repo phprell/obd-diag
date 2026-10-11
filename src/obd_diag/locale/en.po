@@ -174,6 +174,11 @@ msgid "Keine Fehlercodes gespeichert."
 msgstr "No trouble codes stored."
 
 #: src/obd_diag/cli.py
+#: src/obd_diag/transport/trace.py
+msgid "Demo-Fahrzeug"
+msgstr "Demo vehicle"
+
+#: src/obd_diag/cli.py
 msgid "Fehlercode-Katalog fehlt, Codes werden ohne Beschreibung angezeigt. Erzeugen mit: uv run python tools/build_dtc_db.py"
 msgstr "Trouble code catalog missing, codes are shown without description. Build it with: uv run python tools/build_dtc_db.py"
 
@@ -231,6 +236,10 @@ msgstr "Voltage (V)"
 #: src/obd_diag/cli.py
 msgid "Das Fahrzeug meldet keine bekannten Live-Werte."
 msgstr "The vehicle reports no known live values."
+
+#: src/obd_diag/cli.py
+msgid "Demo-Fahrzeug statt Adapter: Beispieldaten eines Mercedes A 180 d, zum Ausprobieren ohne Auto (gleich wie --port demo)"
+msgstr "Demo vehicle instead of an adapter: sample data from a Mercedes A 180 d, to try things out without a car (same as --port demo)"
 
 #: src/obd_diag/cli.py
 msgid "Adapter-Kommunikation mitschneiden (ohne DATEI: unter $XDG_DATA_HOME/obd-diag/traces); enthält ggf. die FIN"
@@ -2133,6 +2142,22 @@ msgstr " or "
 msgid "{years} (aus Stelle 10, ohne Gewähr)"
 msgstr "{years} (from position 10, without guarantee)"
 
+#: src/obd_diag/transport/demo.py
+msgid "Demo-Fahrzeug ohne Adapter (Mercedes A 180 d)"
+msgstr "Demo vehicle without adapter (Mercedes A 180 d)"
+
+#: src/obd_diag/transport/demo.py
+msgid "Demo-Modus: Die Daten stammen von einem Beispielfahrzeug (Mercedes A 180 d), nicht von einem angeschlossenen Auto."
+msgstr "Demo mode: the data comes from a sample vehicle (Mercedes A 180 d), not from a connected car."
+
+#: src/obd_diag/transport/demo.py
+msgid "Demo-Fahrzeug: Verbindung nicht geöffnet"
+msgstr "Demo vehicle: connection not open"
+
+#: src/obd_diag/transport/demo.py
+msgid "Demo-Fahrzeug: keine Antwort ausstehend"
+msgstr "Demo vehicle: no response pending"
+
 #: src/obd_diag/transport/discovery.py
 msgid "USB-Seriell"
 msgstr "USB serial"
@@ -2471,8 +2496,8 @@ msgid "Serieller Port"
 msgstr "Serial port"
 
 #: src/obd_diag/ui/qml/ConnectionBar.qml
-msgid "Adapter wählen oder Pfad eingeben, z. B. /dev/ttyUSB0 oder /dev/pts/5"
-msgstr "Choose an adapter or enter a path, e.g. /dev/ttyUSB0 or /dev/pts/5"
+msgid "Adapter wählen oder Pfad eingeben, z. B. /dev/ttyUSB0 oder /dev/pts/5; „demo“ zeigt ein Beispielfahrzeug ohne Adapter"
+msgstr "Choose an adapter or enter a path, e.g. /dev/ttyUSB0 or /dev/pts/5; \"demo\" shows a sample vehicle without an adapter"
 
 #: src/obd_diag/ui/qml/ConnectionBar.qml
 msgid "Suchen"
