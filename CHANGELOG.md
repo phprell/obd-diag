@@ -3,10 +3,15 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
-## Unreleased
+## Unveröffentlicht
 
 ### Neu
 
+- Readiness-Assistent: `obd-diag readiness` und in der Oberfläche eine Karte im Reiter
+  *Readiness*. Liest neben dem Stand seit dem Löschen (PID 01) auch den Stand dieser
+  Fahrt (PID 41: abgeschlossen, noch offen, ausgesetzt) und nennt zu jedem offenen Test,
+  welche Fahrt ihn typischerweise abschließt, getrennt für Otto und Diesel. Nur lesende
+  Anfragen (`0101`, `0141`); die Demo kennt sie mit einem erfundenen Beispielwert für PID 41.
 - Sitzungsvergleich: `obd-diag compare ALT.json NEU.json` bzw. in der Oberfläche *Datei →
   Mit Sitzung vergleichen …* zeigt, was sich zwischen zwei gespeicherten Diagnosen
   geändert hat: neue, entfallene und weiterhin vorhandene Fehlercodes, Readiness-Monitore,

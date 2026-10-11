@@ -15,6 +15,11 @@
 ```{automodule} obd_diag.services.readiness
 ```
 
+## `obd_diag.services.readiness_assist`
+
+```{automodule} obd_diag.services.readiness_assist
+```
+
 ## `obd_diag.services.vehicle`
 
 ```{automodule} obd_diag.services.vehicle
