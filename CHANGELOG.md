@@ -3,32 +3,18 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
-## Unreleased
+## 0.2.1 – 2026-10-11
+
+Neu sind Einrichtungs- und Adapter-Check, ein Demo-Modus ohne Auto, die englische
+Oberfläche und fertige Pakete (PyPI, AUR, Flatpak). Am Lesen vom Fahrzeug ändert sich nichts.
+
+### Neu
 
 - Einrichtung prüfen: `obd-diag setup-check` und in der Oberfläche *Optionen →
   Einrichtung prüfen …* (beim ersten Start von selbst). Findet die Adapter, prüft die
   Zugriffsrechte und nennt die nötige Gruppe (`uucp` auf Arch, `dialout` auf
   Debian/Ubuntu) samt Befehl, probiert 38400 und 115200 Baud (nur Adapter-Befehle) und
   erinnert an Zündung und HS-CAN-Schalter. Die Oberfläche übernimmt Port und Baudrate.
-
-- Englische Oberfläche: Sprache unter „Optionen → Sprache / Language“ wählbar, Wechsel
-  sofort ohne Neustart. Beim ersten Start gilt die Systemsprache (Deutsch nur bei
-  deutschem System, sonst Englisch).
-- Kommandozeile, PDF-Bericht und CSV mit `--lang de|en` (Standard: Systemsprache;
-  die Oberfläche exportiert in ihrer Sprache); englische CSV mit Komma und Dezimalpunkt.
-- Dokumentation zusätzlich auf Englisch unter https://phprell.github.io/obd-diag/en/ mit
-  Sprachumschalter; die deutschen Adressen bleiben gleich.
-- README auf Englisch, deutsche Fassung in README.de.md.
-- Tests verhindern Texte, die nur in einer Sprache vorliegen.
-- Fertige Pakete: `pipx install 'obd-diag[gui]'` aus PyPI, AUR-Paket `obd-diag` und
-  Flatpak-Bundle am GitHub-Release. Der Release-Workflow baut und prüft alle drei
-  (auch bei jedem PR) und lädt auf PyPI hoch.
-- Startmenü-Eintrag mit Symbol und AppStream-Daten; bei pipx-Installationen legt
-  `obd-diag-gui --install-desktop` ihn an (`--remove-desktop` entfernt ihn).
-- udev-Regel heißt jetzt `70-obd-diag.rules` und liegt in `src/obd_diag/share/`. Unter
-  der alten Nummer 99 kam das Tag `uaccess` zu spät und wirkte nicht; Gruppe und
-  Dateirechte ändert sie nicht mehr (die Gruppe `uucp` gibt es auf Debian nicht).
-- Das sdist enthält keine Release-Notizen und Arbeitsdateien mehr.
 - Demo-Modus: `obd-diag-gui --demo`, Port „demo“ in der Liste oder `obd-diag … --demo`
   zeigt ein eingebautes Beispielfahrzeug ohne Adapter und ohne Auto. Ein simulierter
   ELM327 antwortet mit den Mitschnitten des Mercedes A 180 d aus den Tests am Auto
@@ -42,6 +28,30 @@ vor 1.0 kann sich die Bedienung noch ändern.
   ob der Adapter voraussichtlich für die UDS-Steuergerätesuche (v0.3) taugt. Neu
   freigegeben sind dafür nur diese lesenden Adapter-Befehle (mit Quelle in
   `command_spec.yaml`); das Fahrzeug wird nicht angesprochen.
+
+### Englisch
+
+- Englische Oberfläche: Sprache unter „Optionen → Sprache / Language“ wählbar, Wechsel
+  sofort ohne Neustart. Beim ersten Start gilt die Systemsprache (Deutsch nur bei
+  deutschem System, sonst Englisch).
+- Kommandozeile, PDF-Bericht und CSV mit `--lang de|en` (Standard: Systemsprache;
+  die Oberfläche exportiert in ihrer Sprache); englische CSV mit Komma und Dezimalpunkt.
+- Dokumentation zusätzlich auf Englisch unter https://phprell.github.io/obd-diag/en/ mit
+  Sprachumschalter; die deutschen Adressen bleiben gleich.
+- README auf Englisch, deutsche Fassung in README.de.md.
+- Tests verhindern Texte, die nur in einer Sprache vorliegen.
+
+### Installation
+
+- Fertige Pakete: `pipx install 'obd-diag[gui]'` aus PyPI, AUR-Paket `obd-diag` und
+  Flatpak-Bundle am GitHub-Release. Der Release-Workflow baut und prüft alle drei
+  (auch bei jedem PR) und lädt auf PyPI hoch.
+- Startmenü-Eintrag mit Symbol und AppStream-Daten; bei pipx-Installationen legt
+  `obd-diag-gui --install-desktop` ihn an (`--remove-desktop` entfernt ihn).
+- udev-Regel heißt jetzt `70-obd-diag.rules` und liegt in `src/obd_diag/share/`. Unter
+  der alten Nummer 99 kam das Tag `uaccess` zu spät und wirkte nicht; Gruppe und
+  Dateirechte ändert sie nicht mehr (die Gruppe `uucp` gibt es auf Debian nicht).
+- Das sdist enthält keine Release-Notizen und Arbeitsdateien mehr.
 
 ## 0.2.0 – 2026-10-10
 
@@ -58,9 +68,6 @@ veröffentlicht) und die Live-Daten aus v0.2.
   per PID 42 gegengeprüft, wenn der Adapter unter 11,8 V misst, bei Mercedes kein
   Modelljahr aus FIN-Stelle 10.
 - `UNABLE TO CONNECT` (Zündung aus) ergibt eine klare Meldung mit Hinweis (#8).
-- Zweiter Test am 2026-10-10 mit Motorstart während Live: Werte stimmen Byte für Byte.
-  Bei Drosselung wegen niedriger Spannung wird die Spannung jetzt jede Runde gemessen,
-  damit die Drosselung nach dem Anlassen gleich endet statt erst nach zehn Runden.
 - Zweiter Test am 2026-10-10 bestätigt diese Korrekturen; Diagnose- und Live-Mitschnitte
   stimmen Byte für Byte mit J1979.
 - Readiness hängt nicht mehr von der Reihenfolge ab, in der die Steuergeräte antworten.
@@ -71,14 +78,6 @@ veröffentlicht) und die Live-Daten aus v0.2.
   statt bis zu 50 s weiterzulaufen (#15).
 - Die Mitschnitte beider Tests laufen als Regressionstest
   (`tests/verification/test_real_car.py`, FIN-Seriennummer geschwärzt).
-- Zweiter Test am 2026-10-10 (Motor aus und im Stand laufend) bestätigt diese Korrekturen
-  und deckt einen Fehler auf: Ohne Header kommen die Antworten der Steuergeräte bei jeder
-  Anfrage anders sortiert, und die Motorart der Readiness kam vom zuerst antwortenden.
-  Stand ein Steuergerät ohne Abgasmonitore vorn, wurde der Diesel als Ottomotor gelesen,
-  der offene Test „Abgassensor“ fehlte und es hieß „Alle Tests abgeschlossen“. Jetzt
-  entscheiden die Steuergeräte mit Abgasmonitoren, unabhängig von der Reihenfolge.
-  Freeze-Frame-Werte, die mehrere Steuergeräte verschieden melden, werden verworfen statt
-  zufällig gewählt.
 
 ### Lesen
 

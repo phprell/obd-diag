@@ -61,6 +61,9 @@
     <category>Utility</category>
   </categories>
   <releases>
+    <release version="0.2.1" date="2026-10-11">
+      <url type="details">https://github.com/phprell/obd-diag/releases/tag/v0.2.1</url>
+    </release>
     <release version="0.2.0" date="2026-10-10">
       <url type="details">https://github.com/phprell/obd-diag/releases/tag/v0.2.0</url>
     </release>
