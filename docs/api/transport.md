@@ -15,6 +15,11 @@
 ```{automodule} obd_diag.transport.discovery
 ```
 
+## `obd_diag.transport.demo`
+
+```{automodule} obd_diag.transport.demo
+```
+
 ## `obd_diag.transport.trace`
 
 ```{automodule} obd_diag.transport.trace

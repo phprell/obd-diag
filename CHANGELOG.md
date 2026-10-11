@@ -29,6 +29,12 @@ vor 1.0 kann sich die Bedienung noch ändern.
   der alten Nummer 99 kam das Tag `uaccess` zu spät und wirkte nicht; Gruppe und
   Dateirechte ändert sie nicht mehr (die Gruppe `uucp` gibt es auf Debian nicht).
 - Das sdist enthält keine Release-Notizen und Arbeitsdateien mehr.
+- Demo-Modus: `obd-diag-gui --demo`, Port „demo“ in der Liste oder `obd-diag … --demo`
+  zeigt ein eingebautes Beispielfahrzeug ohne Adapter und ohne Auto. Ein simulierter
+  ELM327 antwortet mit den Mitschnitten des Mercedes A 180 d aus den Tests am Auto
+  (Fehlercode U1218, Readiness, Freeze Frame, FIN, Live-Daten im Leerlauf); ein Hinweis
+  und die Adapterkennung `ELM327 v1.5 (Demo)` zeigen, dass die Daten nicht vom eigenen
+  Auto stammen.
 
 ## 0.2.0 – 2026-10-10
 

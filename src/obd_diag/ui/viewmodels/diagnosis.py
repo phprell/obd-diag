@@ -21,6 +21,7 @@ from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
 from obd_diag.services.session import Session, default_session_dir
 from obd_diag.services.storage import trace_dir
 from obd_diag.transport import TransportError
+from obd_diag.transport.demo import DEMO_DESCRIPTION, DEMO_NOTICE, DEMO_PORT
 from obd_diag.ui.backend import Backend
 from obd_diag.ui.jobs import JobRunner
 from obd_diag.ui.viewmodels.codes import CodeListModel
@@ -130,6 +131,7 @@ class DiagnosisViewModel(QObject):
         self._notice = ""
         self._selected = -1
         self._port = DEFAULT_PORT
+        self._prefer_demo = False
         self._baud = DEFAULT_BAUD
         self._online_vin = self._settings.value(ONLINE_VIN_KEY, False, type=bool) is True
         self._online_codes = self._settings.value(ONLINE_CODES_KEY, False, type=bool) is True
@@ -171,7 +173,29 @@ class DiagnosisViewModel(QObject):
 
     @Property(str, notify=portsChanged)
     def defaultPort(self) -> str:
-        return self._ports[0]["device"] if self._ports else self._port
+        """Vorauswahl: der erste gefundene Adapter, sonst der zuletzt benutzte Port. Das
+        Demo-Fahrzeug nur auf Wunsch (``prefer_demo``), nie still statt eines Adapters."""
+        if self._prefer_demo:
+            return DEMO_PORT
+        real = [p["device"] for p in self._ports if p["device"] != DEMO_PORT]
+        return real[0] if real else self._port
+
+    @Property(str, constant=True)
+    def demoPort(self) -> str:
+        return DEMO_PORT
+
+    @Property(str, notify=stateChanged)
+    def demoNotice(self) -> str:
+        return tr(DEMO_NOTICE)
+
+    @Property(str, notify=stateChanged)
+    def demoDescription(self) -> str:
+        return tr(DEMO_DESCRIPTION)
+
+    def prefer_demo(self) -> None:
+        """Mit dem Demo-Fahrzeug starten (``obd-diag-gui --demo``)."""
+        self._prefer_demo = True
+        self.portsChanged.emit()
 
     @Property(QObject, constant=True)
     def codes(self) -> CodeListModel:

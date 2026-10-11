@@ -125,6 +125,9 @@ responsive meanwhile.
 
 ## Trying it against the emulator
 
+Without any tool, the demo vehicle works (port "demo", {doc}`demo`). The emulator, on
+the other hand, can report arbitrary trouble codes:
+
 ```sh
 uv run python tools/emulator.py   # shows the pty, e.g. /dev/pts/5
 uv run obd-diag-gui               # enter /dev/pts/5 in the port field, connect

@@ -32,6 +32,9 @@ Ausführliche Dokumentation (Benutzen, Wie es funktioniert, Entwickeln):
   (*Optionen → Sprache / Language*), Kommandozeile (`--lang de|en`), PDF-Bericht, CSV,
   Fehlercode-Texte und Dokumentation. Standard ist die Systemsprache: Deutsch, wenn sie
   Deutsch ist, sonst Englisch.
+- **Demo-Modus** (noch nicht veröffentlicht): `obd-diag-gui --demo` oder
+  `obd-diag … --demo` zeigt ein Beispielfahrzeug (aufgezeichnete Daten des W177) ohne
+  Adapter und ohne Auto.
 - **Am echten Auto getestet** (2026-10-09, Mercedes A 180 d W177, Adapter FORScan
   ELMconfig, CAN 29 Bit/500 kBit/s, vier Steuergeräte): `info`, `diagnose` und `live`
   lesen richtig. Vier Befunde aus dem Test sind behoben (erstes `ATZ` mit `?`, Freeze
@@ -149,7 +152,17 @@ gebaut ist.
 
 ### Ohne Auto testen
 
-Der [ELM327-emulator](https://github.com/Ircama/ELM327-emulator) stellt ein virtuelles
+Am schnellsten geht es mit dem eingebauten Demo-Fahrzeug: ein simulierter ELM327, der mit
+den aufgezeichneten Daten des Mercedes A 180 d aus den Tests am Auto antwortet, ganz ohne
+Adapter.
+
+```sh
+uv run obd-diag-gui --demo           # oder Port „demo“ in der Liste wählen
+uv run obd-diag diagnose --demo      # gleich wie --port demo; auch info, scan, vin, live
+```
+
+Für beliebige Fehlercodes und das Löschen eignet sich der
+[ELM327-emulator](https://github.com/Ircama/ELM327-emulator) stellt ein virtuelles
 serielles Gerät bereit. `tools/emulator.py` startet ihn mit standardgemäßen Antworten
 (der Emulator lässt sonst bei CAN das Zählbyte der Fehlercodes weg und beantwortet den
 Freeze Frame nicht nach SAE J1979, siehe `tests/emulator_patches.py`):
