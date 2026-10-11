@@ -3,10 +3,15 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
-## Unreleased
+## Unveröffentlicht
 
 ### Neu
 
+- Readiness-Assistent: `obd-diag readiness` und in der Oberfläche eine Karte im Reiter
+  *Readiness*. Liest neben dem Stand seit dem Löschen (PID 01) auch den Stand dieser
+  Fahrt (PID 41: abgeschlossen, noch offen, ausgesetzt) und nennt zu jedem offenen Test,
+  welche Fahrt ihn typischerweise abschließt, getrennt für Otto und Diesel. Nur lesende
+  Anfragen (`0101`, `0141`); die Demo kennt sie mit einem erfundenen Beispielwert für PID 41.
 - Batterie- und Anlasstest: `obd-diag battery` bzw. *Optionen → Batterie- und
   Anlasstest …* misst die Ruhespannung, den Einbruch beim Anlassen (Motor startet man
   selbst auf Aufforderung) und die Ladespannung im Leerlauf und bewertet sie mit

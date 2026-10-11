@@ -12,6 +12,7 @@ Sprache aller Ausgaben ein ({doc}`sprache`).
 | `obd-diag adapter` | Adapter-Check: Version, Befehlssatz, UDS-Eignung ({doc}`adapter`) | nichts (nur Adapter-Befehle) |
 | `obd-diag scan` | Fehlercodes lesen | Mode 01, 03, 07, 0A |
 | `obd-diag diagnose` | Fehlercodes, Readiness, Freeze Frame, FIN | Mode 01, 02, 03, 07, 09, 0A |
+| `obd-diag readiness` | Readiness-Assistent: offene Tests seit dem Löschen und in dieser Fahrt ({doc}`readiness`) | Mode 01 |
 | `obd-diag vin` | FIN lesen oder eine eingegebene dekodieren | Mode 09 |
 | `obd-diag live` | Live-Daten anzeigen und aufzeichnen | Mode 01 |
 | `obd-diag battery` | Batterie- und Anlasstest ({doc}`batterie`) | Mode 01 |

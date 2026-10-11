@@ -15,6 +15,11 @@
 ```{automodule} obd_diag.services.readiness
 ```
 
+## `obd_diag.services.readiness_assist`
+
+```{automodule} obd_diag.services.readiness_assist
+```
+
 ## `obd_diag.services.vehicle`
 
 ```{automodule} obd_diag.services.vehicle
@@ -33,4 +38,9 @@
 ## `obd_diag.services.live`
 
 ```{automodule} obd_diag.services.live
+```
+
+## `obd_diag.services.battery`
+
+```{automodule} obd_diag.services.battery
 ```

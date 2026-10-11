@@ -46,6 +46,7 @@ from obd_diag.services import (
     clear,
     diagnostics,
     readiness,
+    readiness_assist,
     session,
     vehicle,
 )
@@ -209,6 +210,12 @@ def test_any_text_is_either_allowed_or_never_sent(cmd: str) -> None:
         ("read_readiness", readiness.read_readiness, ["0101"]),
         ("read_vin", vehicle.read_vin, ["0902"]),
         ("check_adapter", adapter_check.check_adapter, ADAPTER_CHECK),
+        (
+            "read_drive_cycle",
+            lambda e: readiness_assist.read_drive_cycle(e, compression_ignition=False),
+            ["0141"],
+        ),
+        ("check_readiness", readiness_assist.check_readiness, [*INIT, *PROTOCOL, "0101", "0141"]),
         ("scan", lambda e: diagnostics.scan(e, None), SCAN),
         (
             "run_diagnosis",
@@ -279,6 +286,8 @@ def test_battery_test_sends_only_reads() -> None:
         (["scan"], SCAN),
         (["diagnose"], [*SCAN, "0101", *FREEZE, "0902"]),
         (["vin"], [*INIT, *PROTOCOL, "0902"]),
+        (["readiness"], [*INIT, *PROTOCOL, "0101", "0141"]),
+        (["readiness", "--json"], [*INIT, *PROTOCOL, "0101", "0141"]),
     ],
 )
 def test_cli_read_commands_send_exactly(
@@ -310,13 +319,14 @@ _READ_CALLS: list[Callable[[Elm327], object]] = [
     lambda e: e.protocol(),
     adapter_check.check_adapter,
     _battery_test,
+    readiness_assist.check_readiness,
 ]
 
 
 @given(
     st.dictionaries(
         st.sampled_from(
-            [*SCAN, "0101", *FREEZE, "0902", "0202", *ADAPTER_CHECK, "010C", "0105", "0142"]
+            [*SCAN, "0101", "0141", *FREEZE, "0902", "0202", *ADAPTER_CHECK, "010C", "0105", "0142"]
         ),
         _GARBAGE,
     ),

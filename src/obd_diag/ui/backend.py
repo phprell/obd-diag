@@ -33,6 +33,7 @@ from obd_diag.services.live import (
     run_live,
     select_pids,
 )
+from obd_diag.services.readiness_assist import ReadinessCheck, check_readiness
 from obd_diag.services.session import Session, load_session, run_diagnosis, save_session
 from obd_diag.services.storage import trace_dir
 from obd_diag.transport.demo import DEMO_DESCRIPTION, DEMO_PORT
@@ -106,6 +107,10 @@ def _no_battery(*args: Any, **kwargs: Any) -> BatteryTestResult:
     raise NotImplementedError(tr("Der Batterietest ist in diesem Backend nicht verfügbar"))
 
 
+def _no_readiness_check(port: str, baud: int) -> ReadinessCheck:
+    raise NotImplementedError(tr("Der Readiness-Assistent ist in diesem Backend nicht verfügbar"))
+
+
 @dataclass(frozen=True)
 class Backend:
     """Die Aktionen, die das View-Model braucht; Tests setzen eigene Funktionen ein.
@@ -132,6 +137,8 @@ class Backend:
     check_adapter: Callable[[str, int], AdapterReport] = _no_adapter_check
     # Batterie- und Anlasstest (Worker-Thread); siehe ``battery_port``
     battery_test: BatteryFunction = _no_battery
+    # Readiness-Assistent: PID 01 und 41 (Worker-Thread); siehe ``readiness_port``
+    check_readiness: Callable[[str, int], ReadinessCheck] = _no_readiness_check
 
 
 def _trace_path(trace: bool) -> Path | None:
@@ -191,6 +198,12 @@ def battery_port(
     steht dafür zuerst und springt von selbst an."""
     with open_serial(port, baud, _trace_path(trace), engine_start=True) as transport:
         return run_battery_test(Elm327(transport), on_progress=on_progress, should_stop=should_stop)
+
+
+def readiness_port(port: str, baud: int, trace: bool = False) -> ReadinessCheck:
+    """Readiness seit dem Löschen und in dieser Fahrt (PID 01 und 41); nur lesend."""
+    with open_serial(port, baud, _trace_path(trace)) as transport:
+        return check_readiness(Elm327(transport))
 
 
 def live_port(
@@ -270,4 +283,5 @@ def serial_backend() -> Backend:
         live=live,
         check_adapter=lambda port, baud: adapter_port(port, baud, trace=tracing["enabled"]),
         battery_test=battery_test,
+        check_readiness=lambda port, baud: readiness_port(port, baud, trace=tracing["enabled"]),
     )

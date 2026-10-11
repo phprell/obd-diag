@@ -12,6 +12,7 @@ language of all output ({doc}`sprache`).
 | `obd-diag adapter` | adapter check: version, command set, UDS suitability ({doc}`adapter`) | nothing (only adapter commands) |
 | `obd-diag scan` | read trouble codes | Mode 01, 03, 07, 0A |
 | `obd-diag diagnose` | trouble codes, readiness, freeze frame, VIN | Mode 01, 02, 03, 07, 09, 0A |
+| `obd-diag readiness` | readiness assistant: incomplete tests since clearing and during this drive ({doc}`readiness`) | Mode 01 |
 | `obd-diag vin` | read the VIN or decode one that is typed in | Mode 09 |
 | `obd-diag live` | show and record live data | Mode 01 |
 | `obd-diag battery` | battery and cranking test ({doc}`batterie`) | Mode 01 |

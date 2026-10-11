@@ -28,6 +28,7 @@ from obd_diag.services.clear import (
     clearable_codes,
 )
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
+from obd_diag.services.readiness_assist import ReadinessCheck
 from obd_diag.services.session import Session, default_session_dir
 from obd_diag.services.storage import trace_dir
 from obd_diag.transport import TransportError
@@ -38,6 +39,7 @@ from obd_diag.ui.viewmodels.codes import CodeListModel
 from obd_diag.ui.viewmodels.session_parts import (
     MonitorListModel,
     freeze_frame_entry,
+    readiness_assist_entry,
     readiness_entry,
     vehicle_entry,
 )
@@ -137,6 +139,7 @@ class DiagnosisViewModel(QObject):
         self._busy_text = ""
         self._session: Session | None = None
         self._adapter_report: AdapterReport | None = None
+        self._readiness_check: ReadinessCheck | None = None  # gilt nur zur aktuellen Sitzung
         self._view_only = False
         self._saved_path = ""  # gespeichert unter bzw. geöffnet aus
         self._error = ""
@@ -345,6 +348,39 @@ class DiagnosisViewModel(QObject):
     @Property(dict, notify=stateChanged)
     def readiness(self) -> dict[str, Any]:
         return readiness_entry(self._session.readiness if self._session is not None else None)
+
+    @Property(dict, notify=stateChanged)
+    def readinessAssist(self) -> dict[str, Any]:
+        """Offene Tests mit Fahrhinweis; nach ``checkReadiness`` mit Stand dieser Fahrt."""
+        status = self._session.readiness if self._session is not None else None
+        return readiness_assist_entry(status, self._readiness_check)
+
+    @Property(bool, notify=stateChanged)
+    def canCheckReadiness(self) -> bool:
+        """Nur am Port der laufenden Diagnose, nicht bei einer geöffneten Sitzung."""
+        return (
+            self._session is not None
+            and not self._view_only
+            and not self._busy
+            and not self._blocked
+        )
+
+    @Slot()
+    def checkReadiness(self) -> None:
+        """Readiness-Assistent: PID 01 und 41 am zuletzt gescannten Port neu lesen."""
+        if not self.canCheckReadiness:
+            return
+        port, baud = self._port, self._baud
+        self._start(tr("Lese Readiness dieser Fahrt …"))
+        backend = self._backend
+
+        def done(result: Any) -> None:
+            assert isinstance(result, ReadinessCheck)
+            self._finish()
+            self._readiness_check = result
+            self.stateChanged.emit()
+
+        self._runner.run(lambda: backend.check_readiness(port, baud), done, self._job_failed)
 
     @Property(QObject, constant=True)
     def monitors(self) -> MonitorListModel:
@@ -653,6 +689,7 @@ class DiagnosisViewModel(QObject):
 
     def _show(self, session: Session, *, view_only: bool = False, path: str = "") -> None:
         self._session = session
+        self._readiness_check = None
         self._view_only = view_only
         self._saved_path = path
         codes = session.scan.codes
