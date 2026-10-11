@@ -43,7 +43,7 @@ jobs:
             "from obd_diag.data.dtc_catalog import DtcCatalog; assert DtcCatalog.default().lookup('P0420')"
           XDG_DATA_HOME=/tmp/xdg obd-diag-gui --install-desktop
           desktop-file-validate /tmp/xdg/applications/io.github.phprell.obd_diag.desktop
-          grep "^Exec=$HOME/.local/bin/obd-diag-gui$" /tmp/xdg/applications/io.github.phprell.obd_diag.desktop
+          grep "^Exec=$(pipx environment --value PIPX_BIN_DIR)/obd-diag-gui$" /tmp/xdg/applications/io.github.phprell.obd_diag.desktop
           XDG_DATA_HOME=/tmp/xdg obd-diag-gui --remove-desktop
           test ! -e /tmp/xdg/applications/io.github.phprell.obd_diag.desktop
       - uses: actions/upload-artifact@v4
