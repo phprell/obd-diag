@@ -18,6 +18,7 @@ from typing import Self, TextIO
 from obd_diag import __version__
 from obd_diag.i18n import tr
 from obd_diag.transport.base import Transport, TransportError, TransportTimeout
+from obd_diag.transport.demo import DEMO_PORT, DemoTransport
 from obd_diag.transport.serial import SerialTransport
 
 
@@ -141,11 +142,15 @@ class FileTracingTransport(TracingTransport):
 
 
 def open_serial(port: str, baudrate: int, trace: Path | None = None) -> Transport:
-    """Serieller Transport, mit Mitschnitt nach ``trace``, falls angegeben."""
-    transport = SerialTransport(port, baudrate)
+    """Serieller Transport, mit Mitschnitt nach ``trace``, falls angegeben.
+
+    ``DEMO_PORT`` öffnet statt eines Adapters das Demo-Fahrzeug (``transport/demo.py``).
+    """
+    transport: Transport = DemoTransport() if port == DEMO_PORT else SerialTransport(port, baudrate)
     if trace is None:
         return transport
-    return FileTracingTransport(transport, trace, f"{port} {baudrate} Baud")
+    label = tr("Demo-Fahrzeug") if port == DEMO_PORT else f"{port} {baudrate} Baud"
+    return FileTracingTransport(transport, trace, label)
 
 
 def unescape(text: str) -> bytes:

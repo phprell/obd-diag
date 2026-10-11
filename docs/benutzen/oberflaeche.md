@@ -124,6 +124,9 @@ wieder; die Oberfläche bleibt dabei bedienbar.
 
 ## Gegen den Emulator ausprobieren
 
+Ganz ohne Werkzeug geht es mit dem Demo-Fahrzeug (Port „demo“, {doc}`demo`). Der
+Emulator kann dagegen beliebige Fehlercodes melden:
+
 ```sh
 uv run python tools/emulator.py   # zeigt das pty an, z. B. /dev/pts/5
 uv run obd-diag-gui               # /dev/pts/5 ins Port-Feld eintragen, verbinden

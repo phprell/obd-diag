@@ -60,6 +60,7 @@ from obd_diag.services.vehicle import (
     read_vin,
 )
 from obd_diag.transport import Transport, TransportError
+from obd_diag.transport.demo import DEMO_NOTICE, DEMO_PORT, DemoTransport
 from obd_diag.transport.discovery import list_ports
 from obd_diag.transport.serial import SerialTransport
 from obd_diag.transport.trace import FileTracingTransport, new_trace_path
@@ -143,13 +144,20 @@ _AUTO_RECORD = "auto"
 
 
 def _transport(args: argparse.Namespace) -> Transport:
-    """Serieller Transport aus ``--port``/``--baud``, bei ``--trace`` mit Mitschnitt."""
-    transport: Transport = SerialTransport(args.port, args.baud)
+    """Serieller Transport aus ``--port``/``--baud``, bei ``--trace`` mit Mitschnitt;
+    mit ``--demo`` (oder ``--port demo``) das Demo-Fahrzeug statt eines Adapters."""
+    demo = args.demo or args.port == DEMO_PORT
+    transport: Transport
+    if demo:
+        _hint(tr(DEMO_NOTICE))
+        transport, label = DemoTransport(), tr("Demo-Fahrzeug")
+    else:
+        transport, label = SerialTransport(args.port, args.baud), f"{args.port} {args.baud} Baud"
     if args.trace is None:
         return transport
     path = new_trace_path(trace_dir()) if args.trace == _AUTO_TRACE else Path(args.trace)
     print(tr("Mitschnitt: {path}").format(path=path), file=sys.stderr)
-    return FileTracingTransport(transport, path, f"{args.port} {args.baud} Baud")
+    return FileTracingTransport(transport, path, label)
 
 
 def _open_catalog() -> DtcCatalog | None:
@@ -651,6 +659,14 @@ def build_parser() -> argparse.ArgumentParser:
     connection = argparse.ArgumentParser(add_help=False, parents=[common])
     connection.add_argument("--port", default="/dev/ttyUSB0")
     connection.add_argument("--baud", type=int, default=38400)
+    connection.add_argument(
+        "--demo",
+        action="store_true",
+        help=tr(
+            "Demo-Fahrzeug statt Adapter: Beispieldaten eines Mercedes A 180 d, zum "
+            "Ausprobieren ohne Auto (gleich wie --port demo)"
+        ),
+    )
     connection.add_argument(
         "--trace",
         nargs="?",

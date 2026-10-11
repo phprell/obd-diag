@@ -102,7 +102,9 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
 - `transport/` – `base.py` (Protocol, `TransportError`/`TransportTimeout`),
   `serial.py` (pyserial; leert den Eingangspuffer vor jedem Write), `discovery.py`
   (`list_ports`: USB-Seriell + /dev/rfcomm*), `trace.py` (`TracingTransport`,
-  `FileTracingTransport`, `ReplayTransport`, `open_serial`).
+  `FileTracingTransport`, `ReplayTransport`, `open_serial`), `demo.py` (`DemoTransport`:
+  simulierter ELM327 mit den W177-Mitschnitten, Port `demo`, CLI `--demo`,
+  `obd-diag-gui --demo`; nie still vorgewählt, Adapterkennung `ELM327 v1.5 (Demo)`).
 - `protocol/` – `elm327.py` (Befehl senden, Antwort bereinigen: Echo, SEARCHING,
   BUS INIT, Störbytes; `query` gibt `None` bei NO DATA; `query_with_headers`,
   `read_more`, `protocol()` mit CAN-Erkennung), `frames.py` (ISO-TP ohne Header:
