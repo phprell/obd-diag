@@ -7,6 +7,11 @@ vor 1.0 kann sich die Bedienung noch ändern.
 
 ### Neu
 
+- Readiness-Assistent: `obd-diag readiness` und in der Oberfläche eine Karte im Reiter
+  *Readiness*. Liest neben dem Stand seit dem Löschen (PID 01) auch den Stand dieser
+  Fahrt (PID 41: abgeschlossen, noch offen, ausgesetzt) und nennt zu jedem offenen Test,
+  welche Fahrt ihn typischerweise abschließt, getrennt für Otto und Diesel. Nur lesende
+  Anfragen (`0101`, `0141`); die Demo kennt sie mit einem erfundenen Beispielwert für PID 41.
 - Dringlichkeit je Fehlercode in vier Stufen (möglichst nicht weiterfahren, bald in die
   Werkstatt, bei Gelegenheit prüfen, beobachten) mit Begründung: in `scan`/`diagnose`,
   in der Oberfläche (Etikett in der Liste, Begründung im Detail), im PDF-Bericht und als

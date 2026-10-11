@@ -67,6 +67,12 @@ from obd_diag.services.live import (
     select_pids,
 )
 from obd_diag.services.readiness import ALL_COMPLETE_LABEL, AU_NOTE, MonitorState, ReadinessStatus
+from obd_diag.services.readiness_assist import (
+    CYCLE_STATE_LABELS,
+    ReadinessCheck,
+    check_readiness,
+    check_to_dict,
+)
 from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
 from obd_diag.services.setup_check import SetupReport, Status, run_setup_check
 from obd_diag.services.storage import trace_dir
@@ -424,6 +430,67 @@ def _print_readiness(readiness: ReadinessStatus | None) -> None:
     complete = tr("ja") if readiness.all_complete else tr("nein")
     print(f"  {tr(ALL_COMPLETE_LABEL)}: {complete}")
     print("  " + tr("Hinweis: {message}").format(message=tr(AU_NOTE)))
+    if not readiness.all_complete:
+        print("  " + tr("Welche Fahrt die offenen Tests abschließt: obd-diag readiness"))
+
+
+def _print_readiness_check(check: ReadinessCheck) -> None:
+    """Ausgabe von ``obd-diag readiness``: Stand seit dem Löschen und in dieser Fahrt."""
+    _labelled([(tr("Adapter"), check.adapter), (tr("Protokoll"), check.protocol)])
+    print()
+    readiness, cycle = check.readiness, check.drive_cycle
+    if readiness is None:
+        print(tr("Readiness: nicht verfügbar (PID 01 nicht beantwortet)."))
+        return
+    engine = tr("Diesel-Motor") if readiness.compression_ignition else tr("Otto-Motor")
+    print(tr("Readiness-Assistent ({engine}):").format(engine=engine))
+    mil = tr("an") if readiness.mil_on else tr("aus")
+    print("  " + tr("Kontrollleuchte (MIL): {state}").format(state=mil))
+    print("  " + tr("Gemeldete Fehlercodes: {count}").format(count=readiness.dtc_count))
+    rows = []
+    for m in readiness.monitors:
+        since = tr(_MONITOR_STATES[m.state])
+        state = None if cycle is None else cycle.state(m.key)
+        if m.state is MonitorState.NOT_SUPPORTED or state is None:
+            rows.append((tr(m.name), since))
+        else:
+            rows.append((tr(m.name), f"{since:<20} {tr(CYCLE_STATE_LABELS[state])}"))
+    label_width = max(len(label) for label, _ in rows) + 1
+    header = f"{tr('Seit dem Löschen'):<20}"
+    if cycle is not None:
+        header += " " + tr("In dieser Fahrt")
+    print(f"  {'':<{label_width}} {header}")
+    _labelled(rows, "  ")
+    complete = tr("ja") if readiness.all_complete else tr("nein")
+    print(f"  {tr(ALL_COMPLETE_LABEL)}: {complete}")
+    advice = check.advice
+    if advice:
+        print()
+        print(tr("Offene Tests und welche Fahrt sie abschließt:"))
+        for a in advice:
+            title = tr(a.name)
+            if a.cycle is not None:
+                title += (
+                    " ("
+                    + tr("in dieser Fahrt: {state}").format(state=tr(CYCLE_STATE_LABELS[a.cycle]))
+                    + ")"
+                )
+            print("  " + title)
+            print(
+                textwrap.fill(tr(a.hint), width=88, initial_indent="    ", subsequent_indent="    ")
+            )
+    print()
+    for note in [*check.notes, AU_NOTE]:
+        print(textwrap.fill(tr("Hinweis: {message}").format(message=tr(note)), width=88))
+
+
+def _run_readiness(args: argparse.Namespace) -> None:
+    with _transport(args) as transport:
+        check = check_readiness(Elm327(transport))
+    if args.json:
+        print(json.dumps(check_to_dict(check), ensure_ascii=False, indent=2))
+    else:
+        _print_readiness_check(check)
 
 
 def _print_freeze_frame(freeze: FreezeFrame | None) -> None:
@@ -845,6 +912,15 @@ def build_parser() -> argparse.ArgumentParser:
     pdf_help, csv_help = tr("PDF-Bericht"), tr("CSV, eine Zeile pro Fehlercode")
     diagnose_parser.add_argument("--pdf", type=Path, metavar=pdf_metavar, help=pdf_help)
     diagnose_parser.add_argument("--csv", type=Path, metavar=csv_metavar, help=csv_help)
+    readiness_parser = sub.add_parser(
+        "readiness",
+        parents=[connection],
+        help=tr(
+            "Readiness-Assistent: offene Tests seit dem Löschen und in dieser Fahrt "
+            "(PID 01 und 41) mit Hinweisen, welche Fahrt sie abschließt"
+        ),
+    )
+    readiness_parser.add_argument("--json", action="store_true", help=json_help)
     vin_parser = sub.add_parser(
         "vin", parents=[connection], help=tr("FIN lesen (Mode 09) und dekodieren")
     )
@@ -975,6 +1051,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_clear(args)
         elif args.command == "diagnose":
             return _run_diagnose(args)
+        elif args.command == "readiness":
+            _run_readiness(args)
         elif args.command == "vin":
             return _run_vin(args)
         elif args.command == "live":

@@ -33,6 +33,7 @@ from obd_diag.services.live import (
     run_live,
     select_pids,
 )
+from obd_diag.services.readiness_assist import ReadinessCheck, check_readiness
 from obd_diag.services.session import Session, load_session, run_diagnosis, save_session
 from obd_diag.services.storage import trace_dir
 from obd_diag.transport.demo import DEMO_DESCRIPTION, DEMO_PORT
@@ -90,6 +91,10 @@ def _no_adapter_check(port: str, baud: int) -> AdapterReport:
     raise NotImplementedError(tr("Der Adapter-Check ist in diesem Backend nicht verfügbar"))
 
 
+def _no_readiness_check(port: str, baud: int) -> ReadinessCheck:
+    raise NotImplementedError(tr("Der Readiness-Assistent ist in diesem Backend nicht verfügbar"))
+
+
 @dataclass(frozen=True)
 class Backend:
     """Die Aktionen, die das View-Model braucht; Tests setzen eigene Funktionen ein.
@@ -114,6 +119,8 @@ class Backend:
     live: LiveFunction = _no_live
     # Adapter-Check (Worker-Thread); siehe ``adapter_port``
     check_adapter: Callable[[str, int], AdapterReport] = _no_adapter_check
+    # Readiness-Assistent: PID 01 und 41 (Worker-Thread); siehe ``readiness_port``
+    check_readiness: Callable[[str, int], ReadinessCheck] = _no_readiness_check
 
 
 def _trace_path(trace: bool) -> Path | None:
@@ -159,6 +166,12 @@ def adapter_port(port: str, baud: int, trace: bool = False) -> AdapterReport:
     """Adapter-Check: nur Adapter-Befehle, das Fahrzeug wird nicht angesprochen."""
     with open_serial(port, baud, _trace_path(trace)) as transport:
         return check_adapter(Elm327(transport))
+
+
+def readiness_port(port: str, baud: int, trace: bool = False) -> ReadinessCheck:
+    """Readiness seit dem Löschen und in dieser Fahrt (PID 01 und 41); nur lesend."""
+    with open_serial(port, baud, _trace_path(trace)) as transport:
+        return check_readiness(Elm327(transport))
 
 
 def live_port(
@@ -237,4 +250,5 @@ def serial_backend() -> Backend:
         set_tracing=set_tracing,
         live=live,
         check_adapter=lambda port, baud: adapter_port(port, baud, trace=tracing["enabled"]),
+        check_readiness=lambda port, baud: readiness_port(port, baud, trace=tracing["enabled"]),
     )
