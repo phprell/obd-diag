@@ -5,7 +5,7 @@
 # .SRCINFO an das GitHub-Release; von dort ins AUR-Repository kopieren.
 
 pkgname=obd-diag
-pkgver=0.2.0
+pkgver=0.2.1
 pkgrel=1
 pkgdesc='Read-only OBD-II diagnostics for ELM327-compatible adapters (CLI and Qt GUI)'
 arch=(any)
