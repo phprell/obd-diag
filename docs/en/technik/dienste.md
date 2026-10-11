@@ -42,6 +42,12 @@ and so on. obd-diag asks all control units and merges the results.
 If several control units answer, the worst state counts per monitor, the MIL is on if
 one of them reports it, and the code counts are added up.
 
+**Readiness of this drive (PID 41).** Same layout as PID 01, but byte A is reserved and
+the bits only apply to the current drive cycle (since ignition on): the first bit per
+monitor means "enabled during this drive" (0 = suspended or not present), the second
+"not complete during this drive". Which layout C and D have comes from PID 01. Used by
+the readiness assistant ({doc}`../benutzen/readiness`, `services/readiness_assist.py`).
+
 ## Mode 02: freeze frame
 
 When a code is stored, the control unit records some values. obd-diag reads frame 00:
