@@ -121,6 +121,12 @@ def test_pdf_full_session(tmp_path: Path, font: str) -> None:
         "nein, 2 offen",
         "Das ist keine AU-Bewertung",
         "Prüfziffer",
+        "Gebrauchtwagen-Check Ergebnis Auffällig",
+        "Warmläufe seit dem Löschen 3",
+        "Strecke mit Warnleuchte an 12 km",
+        "Fehlercodes vor kurzem gelöscht: erst 3 Warmläufe, 45 km, 80 Minuten",
+        "Permanenter Fehlercode: P0420.",
+        "Faustregel, kein Beweis",
         f"Erstellt mit obd-diag {__version__}; Fehlercode-Texte: OBDex (CC0)",
         "Seite 1 von",
     ):
@@ -193,6 +199,7 @@ def test_pdf_minimal_session(tmp_path: Path, font: str) -> None:
     assert "Keine Fehlercodes gespeichert." in text
     assert "unbekannt" in text  # Bordspannung
     assert "Alle Tests abgeschlossen" not in text
+    assert "Gebrauchtwagen-Check Ergebnis Nicht beurteilbar" in text
     assert "Seite 1 von 1" in text
 
 

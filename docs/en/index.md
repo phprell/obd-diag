@@ -20,6 +20,7 @@ traces from other programs and python-OBD ({doc}`entwickeln/testen`).
 | Read trouble codes (stored, pending, permanent) with plain text | Mode 03, 07, 0A | {doc}`benutzen/fehlercodes` |
 | Explain codes without a catalog text online (optional, unverified) | – | {doc}`benutzen/fehlercodes-online` |
 | Readiness (monitors, check engine light) | Mode 01 PID 01 | {doc}`benutzen/oberflaeche` |
+| Used-car check: were the codes cleared recently? | Mode 01, 0A | {doc}`benutzen/gebrauchtwagen` |
 | Freeze frame for the triggering trouble code | Mode 02 | {doc}`technik/dienste` |
 | Read the VIN and decode it offline | Mode 09 PID 02 | {doc}`technik/fin` |
 | Live data: 116 values from 82 PIDs, CSV recording | Mode 01 | {doc}`benutzen/live-daten` |
@@ -58,6 +59,7 @@ benutzen/cli
 benutzen/sprache
 benutzen/fehlercodes
 benutzen/fehlercodes-online
+benutzen/gebrauchtwagen
 benutzen/live-daten
 benutzen/sitzungen
 benutzen/probleme

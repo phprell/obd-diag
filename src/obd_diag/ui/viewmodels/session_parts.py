@@ -1,4 +1,5 @@
-"""Readiness, Freeze Frame und Fahrzeug einer Sitzung als einfache Werte für QML."""
+"""Readiness, Freeze Frame, Fahrzeug und Gebrauchtwagen-Check einer Sitzung als einfache
+Werte für QML."""
 
 from typing import Any
 
@@ -22,6 +23,9 @@ from obd_diag.services.readiness import (
     MonitorState,
     ReadinessStatus,
 )
+from obd_diag.services.session import Session
+from obd_diag.services.used_car import NOTE as USED_CAR_NOTE
+from obd_diag.services.used_car import assess, counter_rows
 from obd_diag.services.vehicle import VPIC_FIELDS, VinInfo, checksum_text, model_year_text
 
 
@@ -194,4 +198,32 @@ def vehicle_entry(vin: VinInfo | None) -> dict[str, Any]:
             for key, value in vin.online.items()
             if value.strip()
         ],
+    }
+
+
+# --- Gebrauchtwagen-Check ------------------------------------------------------
+
+
+def used_car_entry(session: Session | None) -> dict[str, Any]:
+    """Urteil, Zähler und Befunde; ``{"available": False}`` ohne Sitzung.
+
+    ``countersRead`` ist falsch bei Sitzungen älterer Versionen (Zähler nicht gelesen);
+    permanente Codes und Warnleuchte werden dann trotzdem bewertet.
+    """
+    if session is None:
+        return {"available": False}
+    counters = session.clear_counters
+    check = assess(counters, session.scan, session.readiness)
+    return {
+        "available": True,
+        "verdict": check.verdict.value,
+        "verdictLabel": check.label,
+        "recentlyCleared": check.recently_cleared,
+        "countersRead": counters is not None,
+        "counters": [
+            {"label": label, "value": value}
+            for label, value in (counter_rows(counters) if counters is not None else [])
+        ],
+        "findings": [{"level": f.level.value, "text": f.text} for f in check.findings],
+        "note": tr(USED_CAR_NOTE),
     }

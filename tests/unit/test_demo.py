@@ -17,6 +17,7 @@ from obd_diag.services.diagnostics import DtcKind
 from obd_diag.services.live import LiveSample, prepare_live, run_live, select_pids
 from obd_diag.services.readiness import MonitorState
 from obd_diag.services.session import run_diagnosis
+from obd_diag.services.used_car import ClearCounters
 from obd_diag.transport import TransportTimeout
 from obd_diag.transport.demo import ADAPTER_ID, DEMO_PORT, DemoTransport
 from obd_diag.transport.trace import TracingTransport, open_serial, read_trace
@@ -58,6 +59,9 @@ def test_diagnosis_matches_the_real_car() -> None:
 
     assert session.vehicle is not None
     assert session.vehicle.vin == "WDD1770031J000000"
+
+    # Gebrauchtwagen-Check: 21, 30 und 31 meldet das Auto (Werte erfunden), 4D/4E nicht
+    assert session.clear_counters == ClearCounters(warmups=40, distance_km=3000, mil_distance_km=0)
     assert session.vehicle.manufacturer == "Mercedes-Benz"
 
 

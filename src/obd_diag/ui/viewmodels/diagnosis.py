@@ -39,6 +39,7 @@ from obd_diag.ui.viewmodels.session_parts import (
     MonitorListModel,
     freeze_frame_entry,
     readiness_entry,
+    used_car_entry,
     vehicle_entry,
 )
 
@@ -345,6 +346,10 @@ class DiagnosisViewModel(QObject):
     @Property(dict, notify=stateChanged)
     def readiness(self) -> dict[str, Any]:
         return readiness_entry(self._session.readiness if self._session is not None else None)
+
+    @Property(dict, notify=stateChanged)
+    def usedCar(self) -> dict[str, Any]:
+        return used_car_entry(self._session)
 
     @Property(QObject, constant=True)
     def monitors(self) -> MonitorListModel:
