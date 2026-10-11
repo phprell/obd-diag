@@ -9,7 +9,8 @@ und Tests, die sie von mehreren Seiten prüfen ({doc}`../adr/0002-nur-lesend`).
 durch:
 
 - Adapter-Befehle, die nichts ans Fahrzeug senden: `ATZ`, `ATE0`, `ATL0`, `ATS0`,
-  `ATH0`, `ATH1`, `ATSP0`, `ATRV`, `ATDP`, `ATDPN`;
+  `ATH0`, `ATH1`, `ATSP0`, `ATRV`, `ATDP`, `ATDPN`, für den Adapter-Check dazu nur
+  lesend `ATI`, `AT@1`, `ATPPS`, `ATIGN`, `ATRD`, `ATAMC`;
 - lesende OBD-Anfragen: `01xx`, `02xx` und `02xx00`, `03`, `07`, `0A`, `0902`;
 - `04` (Löschen) nur innerhalb von `with elm.allow_clear()`, und das nutzt nur
   `obd.clear_dtcs`.

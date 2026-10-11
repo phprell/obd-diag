@@ -46,9 +46,11 @@ _WHITESPACE = re.compile(r"\s+")
 # --- Freigabeliste: was überhaupt an Adapter und Fahrzeug gesendet werden darf ---
 
 # Adapter-Befehle (ELM327-Datenblatt); sie stellen nur den Adapter ein und senden
-# nichts ans Fahrzeug. ATSP0 = Protokoll automatisch suchen.
+# nichts ans Fahrzeug. ATSP0 = Protokoll automatisch suchen. Die zweite Zeile liest nur
+# Angaben des Adapters für den Adapter-Check (services/adapter_check.py).
 AT_COMMANDS = frozenset(
     {"ATZ", "ATE0", "ATL0", "ATS0", "ATH0", "ATH1", "ATSP0", "ATRV", "ATDP", "ATDPN"}
+    | {"ATI", "AT@1", "ATPPS", "ATIGN", "ATRD", "ATAMC"}
 )
 # Lesende OBD-Anfragen nach SAE J1979: Mode 01 (aktuelle Daten), Mode 02 (Freeze
 # Frame, mit oder ohne Frame-Nummer 00), Mode 03/07/0A (Fehlercodes), Mode 09 PID 02

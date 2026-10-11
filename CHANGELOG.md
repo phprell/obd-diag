@@ -26,6 +26,13 @@ vor 1.0 kann sich die Bedienung noch ändern.
   (Fehlercode U1218, Readiness, Freeze Frame, FIN, Live-Daten im Leerlauf); ein Hinweis
   und die Adapterkennung `ELM327 v1.5 (Demo)` zeigen, dass die Daten nicht vom eigenen
   Auto stammen.
+- Adapter-Check: `obd-diag adapter` bzw. „Optionen → Adapter prüfen …“ zeigt Kennung,
+  Spannung und welche Befehle aus der Versionsliste des Datenblatts der Adapter
+  wirklich beantwortet (`ATPPS` v1.1, `ATIGN`/`ATRD` v1.4, `ATAMC` v2.0), erkennt daran
+  Nachbauten (eine echte v1.5 gab es nie), nennt geänderte Programmable Parameters und
+  ob der Adapter voraussichtlich für die UDS-Steuergerätesuche (v0.3) taugt. Neu
+  freigegeben sind dafür nur diese lesenden Adapter-Befehle (mit Quelle in
+  `command_spec.yaml`); das Fahrzeug wird nicht angesprochen.
 
 ## 0.2.0 – 2026-10-10
 

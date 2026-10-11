@@ -50,7 +50,7 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   einen roten Stand auf main gebracht).
 - `uv run python tools/emulator.py [--stored P0420,P0300 --pending P0171 --engine-off]`
   – ELM327-emulator mit standardgemäßen Antworten; zeigt das pty (z. B. /dev/pts/5)
-- `uv run obd-diag {info,scan,diagnose,vin,clear,live,ports,export} --port … [--trace]`,
+- `uv run obd-diag {info,adapter,scan,diagnose,vin,clear,live,ports,export} --port … [--trace]`,
   `uv run obd-diag setup-check [--port …]` (Einrichtung: Rechte, Gruppe, Baudrate)
   (`live --list`, `--pids rpm,speed`, `--interval`, `--duration`, `--record [DATEI.csv]`)
 - `uv run obd-diag-gui`
@@ -114,7 +114,8 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   (`PIDS`: Schlüssel → `PidSpec` je Wert, mehrere Werte können eine PID teilen;
   `decode` darf `None` liefern; `read_supported_pids` über alle Steuergeräte,
   `read_values` je PID mit einer Anfrage, `read_value` nur für Tests).
-- `services/` – `diagnostics.py` (`scan`), `clear.py` (Löschen), `readiness.py`,
+- `services/` – `adapter_check.py` (`check_adapter`: Befehlssatz nach Versionsliste des
+  Datenblatts, Urteil Nachbau/UDS), `diagnostics.py` (`scan`), `clear.py` (Löschen), `readiness.py`,
   `vehicle.py` (`read_vin`, `decode_vin`, `lookup_vpic`), `dtc_online.py`
   (`lookup_online`, `search_url`; Herstellerdatei nur laut FIN, Cache je Commit), `session.py`
   (`run_diagnosis`, JSON speichern/laden), `storage.py` (XDG-Pfade, atomares
@@ -133,7 +134,9 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
 
 ## Wichtige Entscheidungen und Fallstricke
 - **Freigabeliste** (`protocol/elm327.py`): `Elm327.command` ist der einzige Weg zum
-  Adapter und lässt nur `AT_COMMANDS` und lesende Anfragen (`01xx`, `02xx[00]`, `03`,
+  Adapter und lässt nur `AT_COMMANDS` (dazu für den Adapter-Check nur lesend `ATI`, `AT@1`,
+  `ATPPS`, `ATIGN`, `ATRD`, `ATAMC`; `@` erlaubt das Leitungsformat der Tests nur in
+  `AT@1`) und lesende Anfragen (`01xx`, `02xx[00]`, `03`,
   `07`, `0A`, `0902`) durch; `04` nur in `with elm.allow_clear()` (nur `clear_dtcs`).
   Sonst `ForbiddenCommandError` (bewusst kein `ElmError`), gesendet wird nichts. Neue
   Befehle dort bewusst freigeben. `tests/unit/test_command_guard.py` prüft Liste,
@@ -219,6 +222,12 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   Zeilenumbrüche. In der CI ist es DejaVu.
 - **Modelljahr** (FIN-Stelle 10) ist außerhalb Nordamerikas mehrdeutig:
   `model_year_alternatives`, Anzeige „2026 oder 1996 (ohne Gewähr)“.
+- **Adapter-Check** (`obd-diag adapter`, GUI Optionen → Adapter prüfen): fragt nach `initialize`
+  `ATI`, `AT@1`, `ATRV`, `ATPPS` (v1.1), `ATIGN`/`ATRD` (v1.4), `ATAMC` (v2.0) mit 3 s
+  Wartezeit ab; `?`/Fehler/keine Antwort = nicht unterstützt, `TransportError` bricht ab.
+  Versionen nach der Versionsliste ELM327DSJ S. 90–91 (keine v1.5, keine v1.4a). Das
+  UDS-Urteil ist ein Schluss aus dem Befehlssatz: `ATSH`/`ATCRA` bleiben bis v0.3
+  gesperrt. Den echten FORScan-Adapter hat der Check noch nicht gesehen.
 - **Readiness**: Urteil heißt „Alle Tests abgeschlossen“, nicht „AU-bereit“ – es gibt
   keine belegbare allgemeine AU-Regel (AU seit 2018 immer mit Endrohrmessung).
   `ReadinessStatus.all_complete`, `ready` ist Alias.

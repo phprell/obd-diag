@@ -300,6 +300,20 @@ lists USB serial adapters (`/dev/ttyUSB*`, `/dev/ttyACM*` and other devices with
 ID) and bound Bluetooth devices (`/dev/rfcomm*`, e.g. after `sudo rfcomm bind 0 <MAC>`).
 Built-in ports (`/dev/ttyS*`) are not listed.
 
+### Checking the adapter
+
+```sh
+obd-diag adapter --port /dev/ttyUSB0          # or Options → Check adapter … in the GUI
+```
+
+shows what the adapter can really do: identification (`ATI`, `AT@1`), voltage, which
+commands from the datasheet's version list it actually answers (`ATPPS` v1.1, `ATIGN`/
+`ATRD` v1.4, `ATAMC` v2.0), whether that matches the reported version (there never was a
+genuine v1.5, so such adapters are clones), changed programmable parameters and whether
+the adapter is likely to work for the UDS control unit search planned for v0.3. Only
+read-only adapter commands are sent, never anything to the vehicle; `--json` for
+machine-readable output.
+
 ### Clearing trouble codes
 
 **Currently disabled** (see above). The tests still check the procedure completely, so
@@ -574,7 +588,7 @@ interface stays responsive meanwhile.
 
 ### Trace (`--trace`)
 
-All commands that use the adapter (`info`, `scan`, `diagnose`, `vin`, `clear`, `live`)
+All commands that use the adapter (`info`, `adapter`, `scan`, `diagnose`, `vin`, `clear`, `live`)
 record every sent and received line with a timestamp when given `--trace`:
 
 ```sh

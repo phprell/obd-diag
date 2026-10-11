@@ -307,6 +307,20 @@ listet USB-Seriell-Adapter (`/dev/ttyUSB*`, `/dev/ttyACM*` und andere Geräte mi
 USB-Kennung) und gebundene Bluetooth-Geräte (`/dev/rfcomm*`, z. B. nach
 `sudo rfcomm bind 0 <MAC>`). Eingebaute Schnittstellen (`/dev/ttyS*`) erscheinen nicht.
 
+### Adapter prüfen
+
+```sh
+obd-diag adapter --port /dev/ttyUSB0          # oder Optionen → Adapter prüfen … in der GUI
+```
+
+zeigt, was der Adapter wirklich kann: Kennung (`ATI`, `AT@1`), Spannung, welche Befehle
+aus der Versionsliste des Datenblatts er tatsächlich beantwortet (`ATPPS` v1.1, `ATIGN`/
+`ATRD` v1.4, `ATAMC` v2.0), ob das zur gemeldeten Version passt (eine echte v1.5 gab es
+nie, solche Adapter sind Nachbauten), geänderte Programmable Parameters und ob der
+Adapter voraussichtlich für die in v0.3 geplante Steuergerätesuche über UDS taugt.
+Gesendet werden nur lesende Adapter-Befehle, nichts ans Fahrzeug; `--json` für
+maschinenlesbare Ausgabe.
+
 ### Fehlercodes löschen
 
 **Derzeit deaktiviert** (siehe oben). Die Tests prüfen den Ablauf trotzdem vollständig,
@@ -587,7 +601,7 @@ wieder; die Oberfläche bleibt dabei bedienbar.
 
 ### Mitschnitt (`--trace`)
 
-Alle Befehle mit Adapter (`info`, `scan`, `diagnose`, `vin`, `clear`, `live`) schneiden mit
+Alle Befehle mit Adapter (`info`, `adapter`, `scan`, `diagnose`, `vin`, `clear`, `live`) schneiden mit
 `--trace` jede gesendete und empfangene Zeile mit Zeitstempel mit:
 
 ```sh

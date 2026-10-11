@@ -113,6 +113,7 @@ denn am Adapter läuft immer nur eine Aktion ({doc}`live-daten`).
 | CSV exportieren … | – | eine Zeile pro Fehlercode |
 | Optionen → Einrichtung prüfen … | – | Adapter, Zugriffsrechte und Baudrate prüfen; öffnet sich beim ersten Start von selbst ({doc}`installation`) |
 | Optionen → Fehlercodes online erklären | – | Codes ohne Katalogtext bekommen eine ungeprüfte Kurzerklärung ({doc}`fehlercodes-online`) |
+| Optionen → Adapter prüfen … | – | Version, Befehlssatz, Spannung und UDS-Eignung des Adapters, ohne das Fahrzeug ({doc}`adapter`) |
 | Optionen → Adapter-Mitschnitt aufzeichnen | – | jede Aktion schreibt einen Mitschnitt ({doc}`sitzungen`) |
 | Optionen → Design | – | wie das System, hell oder dunkel |
 | Optionen → Sprache / Language | – | Deutsch oder English, gilt sofort ({doc}`sprache`) |

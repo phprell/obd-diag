@@ -16,6 +16,17 @@ from obd_diag.i18n import LANGUAGES, N_, set_language, system_language, tr, trn
 from obd_diag.protocol.elm327 import Elm327, ElmError, NoConnectionError
 from obd_diag.protocol.obd import FreezeFrame
 from obd_diag.protocol.pids import PidSpec
+from obd_diag.services.adapter_check import (
+    UDS_NOTE,
+    check_adapter,
+    kind_text,
+    parameters_text,
+    probe_text,
+    report_to_dict,
+    uds_text,
+    version_text,
+    voltage_text,
+)
 from obd_diag.services.clear import (
     CLEAR_DISABLED_MESSAGE,
     ClearRefused,
@@ -196,6 +207,30 @@ def _run_ports() -> None:
     width = max(len(p.device) for p in ports)
     for p in ports:
         print(f"{p.device:<{width}}  {p.description}")
+
+
+def _run_adapter(args: argparse.Namespace) -> None:
+    with _transport(args) as transport:
+        report = check_adapter(Elm327(transport))
+    if args.json:
+        print(json.dumps(report_to_dict(report), ensure_ascii=False, indent=2))
+        return
+    _labelled(
+        [
+            (tr("Adapter"), report.identification),
+            (tr("Beschreibung"), report.description or tr("nicht lesbar (AT@1)")),
+            (tr("Version"), version_text(report)),
+            (tr("Urteil"), kind_text(report)),
+            (tr("Bordspannung"), voltage_text(report)),
+            (tr("Parameter"), parameters_text(report)),
+            (tr("Für UDS (v0.3)"), uds_text(report)),
+        ]
+    )
+    print()
+    print(tr("Geprüfte Befehle:"))
+    _labelled([(r.probe.command, probe_text(r)) for r in report.results], indent="  ")
+    print()
+    _hint(tr(UDS_NOTE), file=sys.stdout)
 
 
 _STATUS_LABELS = {
@@ -683,6 +718,15 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser(
         "info", parents=[connection], help=tr("Adapter-Version und Bordspannung anzeigen")
     )
+    adapter_parser = sub.add_parser(
+        "adapter",
+        parents=[connection],
+        help=tr(
+            "Adapter-Check: Version, Spannung und unterstützte Befehle prüfen, Urteil für "
+            "UDS (nur Adapter-Befehle, das Fahrzeug wird nicht angesprochen)"
+        ),
+    )
+    adapter_parser.add_argument("--json", action="store_true", help=json_help)
     scan_parser = sub.add_parser(
         "scan",
         parents=[connection],
@@ -826,6 +870,8 @@ def main(argv: list[str] | None = None) -> int:
                 adapter = elm.initialize()
                 voltage = f"{elm.voltage():.1f} V"
                 _labelled([(tr("Adapter"), adapter), (tr("Bordspannung"), voltage)])
+        elif args.command == "adapter":
+            _run_adapter(args)
         elif args.command == "scan":
             _run_scan(args)
         elif args.command == "clear":

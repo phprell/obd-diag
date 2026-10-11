@@ -166,6 +166,12 @@ ApplicationWindow {
             }
             MenuSeparator {}
             MenuItem {
+                objectName: "adapterCheckMenuItem"
+                text: qsTr("Adapter prüfen …")
+                enabled: !window.vm.busy && !window.vm.blocked
+                onTriggered: window.vm.checkAdapter(connectionBar.portText, connectionBar.baud)
+            }
+            MenuItem {
                 objectName: "traceMenuItem"
                 text: qsTr("Adapter-Mitschnitt aufzeichnen")
                 checkable: true
@@ -497,6 +503,12 @@ ApplicationWindow {
         vm: window.vm
     }
 
+    AdapterDialog {
+        id: adapterDialog
+        objectName: "adapterDialog"
+        vm: window.vm
+    }
+
     Dialog {
         id: refusedDialog
         objectName: "refusedDialog"
@@ -555,6 +567,9 @@ ApplicationWindow {
 
     Connections {
         target: window.vm
+        function onAdapterChecked() {
+            adapterDialog.open()
+        }
         function onClearRefused(message) {
             refusedDialog.message = message
             refusedDialog.open()

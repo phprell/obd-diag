@@ -20,6 +20,7 @@ from obd_diag.export.report import export_csv, export_pdf
 from obd_diag.i18n import tr
 from obd_diag.protocol.elm327 import Elm327
 from obd_diag.protocol.pids import PidSpec
+from obd_diag.services.adapter_check import AdapterReport, check_adapter
 from obd_diag.services.clear import ClearResult, clear_codes
 from obd_diag.services.live import (
     LiveRecorder,
@@ -83,6 +84,10 @@ def _no_live(*args: Any, **kwargs: Any) -> LiveResult:
     raise NotImplementedError(tr("Live-Daten sind in diesem Backend nicht verfügbar"))
 
 
+def _no_adapter_check(port: str, baud: int) -> AdapterReport:
+    raise NotImplementedError(tr("Der Adapter-Check ist in diesem Backend nicht verfügbar"))
+
+
 @dataclass(frozen=True)
 class Backend:
     """Die Aktionen, die das View-Model braucht; Tests setzen eigene Funktionen ein.
@@ -105,6 +110,8 @@ class Backend:
     set_tracing: Callable[[bool], None] = _no_tracing
     # Live-Daten (blockiert bis zum Stopp, Worker-Thread); siehe ``live_port``
     live: LiveFunction = _no_live
+    # Adapter-Check (Worker-Thread); siehe ``adapter_port``
+    check_adapter: Callable[[str, int], AdapterReport] = _no_adapter_check
 
 
 def _trace_path(trace: bool) -> Path | None:
@@ -144,6 +151,12 @@ def clear_port(port: str, baud: int, lang: str | None = None, trace: bool = Fals
     finally:
         if catalog is not None:
             catalog.close()
+
+
+def adapter_port(port: str, baud: int, trace: bool = False) -> AdapterReport:
+    """Adapter-Check: nur Adapter-Befehle, das Fahrzeug wird nicht angesprochen."""
+    with open_serial(port, baud, _trace_path(trace)) as transport:
+        return check_adapter(Elm327(transport))
 
 
 def live_port(
@@ -218,4 +231,5 @@ def serial_backend() -> Backend:
         catalog_available=catalog_available,
         set_tracing=set_tracing,
         live=live,
+        check_adapter=lambda port, baud: adapter_port(port, baud, trace=tracing["enabled"]),
     )

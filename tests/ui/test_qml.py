@@ -12,7 +12,7 @@ pytest.importorskip("PySide6.QtQuick")
 from PySide6.QtCore import Q_ARG, QMetaObject, QObject
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine, QQmlError
-from PySide6.QtQuick import QQuickWindow
+from PySide6.QtQuick import QQuickItem, QQuickWindow
 from pytestqt.qtbot import QtBot
 
 from obd_diag.services.clear import CLEAR_DISABLED_MESSAGE, ClearRefused
@@ -270,4 +270,18 @@ def test_detail_shows_online_explanation_and_search(
     ui.find("onlineCodesMenuItem").setProperty("checked", True)
     QMetaObject.invokeMethod(ui.find("onlineCodesMenuItem"), "toggled")
     assert ui.vm.property("onlineCodeLookup") is True
+    assert ui.warnings == []
+
+
+def test_adapter_check_opens_dialog(qtbot: QtBot, ui: Ui, fake_backend: FakeBackend) -> None:
+    item = ui.find("adapterCheckMenuItem")
+    assert item.property("enabled") is True
+    QMetaObject.invokeMethod(item, "triggered")
+    dialog = ui.find("adapterDialog")
+    qtbot.waitUntil(lambda: dialog.property("visible") is True)
+    assert fake_backend.calls == [("adapter", "/dev/ttyUSB0", 38400)]
+    rows = ui.find("adapterRows")
+    assert isinstance(rows, QQuickItem)
+    texts = {item.property("text") for item in rows.childItems()}
+    assert {"ELM327 v1.5", "Nachbau, Befehlssatz wie v1.4"} <= texts
     assert ui.warnings == []

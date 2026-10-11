@@ -108,6 +108,59 @@ allowed:
     page: 17
     quote: "it returns a number which represents the current protocol."
 
+  # Nur lesend, für den Adapter-Check; die Version, seit der es den Befehl gibt, steht
+  # in der Versionsliste des Datenblatts (S. 90 bis 91).
+  - command: ATI
+    reaches_vehicle: false
+    writes: false
+    meaning: Kennung und Firmware-Version des Adapters melden
+    meaning_en: report the adapter's identification and firmware version
+    source: ELM327DSJ
+    page: 18
+    quote: "Issuing this command causes the chip to identify itself, by printing the startup product ID string"
+  - command: AT@1
+    reaches_vehicle: false
+    writes: false
+    meaning: Gerätebeschreibung des Adapters melden
+    meaning_en: report the adapter's device description
+    source: ELM327DSJ
+    page: 28
+    quote: "This command displays the device description string."
+  - command: ATPPS
+    reaches_vehicle: false
+    writes: false
+    meaning: Übersicht der Programmable Parameters anzeigen (nur lesen, seit v1.1)
+    meaning_en: show the summary of the programmable parameters (read only, since v1.1)
+    source: ELM327DSJ
+    page: 23
+    quote: "The complete range of current Programmable Parameters are displayed with this command"
+  - command: ATIGN
+    reaches_vehicle: false
+    writes: false
+    meaning: Pegel am Zündungseingang (Pin 15) lesen (seit v1.4)
+    meaning_en: read the level at the ignition input (pin 15) (since v1.4)
+    source: ELM327DSJ
+    page: 19
+    quote: "This command reads the signal level at pin 15."
+  - command: ATRD
+    reaches_vehicle: false
+    writes: false
+    meaning: das Byte im Nutzerspeicher lesen (seit v1.4)
+    meaning_en: read the byte in the user memory (since v1.4)
+    source: ELM327DSJ
+    page: 24
+    quote: "The byte value stored with the SD command is retrieved with this command."
+    note: >-
+      Nur lesen; das Gegenstück AT SD (schreiben) bleibt gesperrt.
+  - command: ATAMC
+    reaches_vehicle: false
+    writes: false
+    meaning: Zähler des Aktivitätsmonitors anzeigen (seit v2.0)
+    meaning_en: show the activity monitor count (since v2.0)
+    source: ELM327DSJ
+    page: 12
+    quote: "This count then represents the time since activity was last detected"
+
   # --- OBD-Anfragen ans Fahrzeug (SAE J1979), nur lesend --------------------------------
   - pattern: "01[0-9A-F]{2}"
     reaches_vehicle: true
@@ -252,3 +305,15 @@ forbidden:
     source: ELM327DSJ
     page: 49
     quote: "the ELM327 will close the current session and then change the protocol to the default one"
+  - command: "ATSD00"
+    reason: schreibt ein Byte in den dauerhaften Nutzerspeicher des Adapters
+    reason_en: writes a byte to the adapter's non-volatile user memory
+    source: ELM327DSJ
+    page: 24
+    quote: "The ELM327 is able to save one byte of information for you in a special nonvolatile memory location"
+  - command: "AT@3OBDDIAG00000"
+    reason: schreibt die Gerätekennung, das geht nur ein einziges Mal
+    reason_en: writes the device identifier, which can only be done once
+    source: ELM327DSJ
+    page: 28
+    quote: "once written to memory, they can not be changed (ie you may only use the @3 command one time)"
