@@ -43,6 +43,13 @@ Ergebnisse.
 Antworten mehrere Steuergeräte, zählt je Monitor der schlechteste Stand, die MIL ist
 an, wenn eines sie meldet, und die Codezahlen werden addiert.
 
+**Readiness dieser Fahrt (PID 41).** Gleicher Aufbau wie PID 01, aber Byte A ist
+reserviert, und die Bits gelten nur für den laufenden Fahrzyklus (seit Zündung an): das
+erste Bit je Monitor heißt „in dieser Fahrt freigegeben“ (0 = ausgesetzt oder nicht
+vorhanden), das zweite „in dieser Fahrt nicht abgeschlossen“. Welche Belegung C und D
+haben, kommt aus PID 01. Nutzt der Readiness-Assistent ({doc}`../benutzen/readiness`,
+`services/readiness_assist.py`).
+
 ## Mode 02: Freeze Frame
 
 Beim Speichern eines Codes hält das Steuergerät einige Messwerte fest. obd-diag liest

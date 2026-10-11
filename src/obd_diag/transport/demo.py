@@ -9,7 +9,7 @@ Steuergeräte, ein gespeicherter Code (U1218) mit Freeze Frame, ein offener Read
 Runden der Reihe nach durch und beginnen danach von vorn.
 
 Nicht aufgezeichnet, aber vom Auto als unterstützt gemeldet und von obd-diag lesbar sind
-die PIDs 21, 30, 31, 49, 66, 68, 6C, 6D, 70 und 85; dafür stehen hier erfundene,
+die PIDs 21, 30, 31, 41, 49, 66, 68, 6C, 6D, 70 und 85; dafür stehen hier erfundene,
 plausible Beispielwerte (Leerlauf, warmer Motor).
 Auch die Steuergeräte-Adressen (nur mit ``ATH1`` sichtbar) sind angenommen; die
 Mitschnitte sind ohne Header entstanden.
@@ -80,6 +80,9 @@ _STATIC: dict[str, Reply] = {
     "0131": ("41310BB8", None, None, None),
     "0149": ("414926", None, None, None),
     "0166": (None, "41660101400000", None, None),
+    # Readiness dieser Fahrt (PID 41, nur das Motorsteuergerät meldet sie laut 0140):
+    # Abgassensor und NMHC-Katalysator noch offen, NOx-Nachbehandlung ausgesetzt
+    "0141": ("41410006E921", None, None, None),
     # Erfundene Beispielwerte (nicht aufgezeichnet): Ansaugluft 21 und 40 °C, Drossel-
     # klappe Soll 100 % und Ist 94,9 %, Raildruck Soll 28000 und Ist 27950 kPa bei 30 °C,
     # Ladedruck Soll 101 und Ist 100 kPa, AdBlue 0,01 L/h, Tank 70,2 %, keine NOx-Warnung

@@ -7,6 +7,11 @@ vor 1.0 kann sich die Bedienung noch ändern.
 
 ### Neu
 
+- Readiness-Assistent: `obd-diag readiness` und in der Oberfläche eine Karte im Reiter
+  *Readiness*. Liest neben dem Stand seit dem Löschen (PID 01) auch den Stand dieser
+  Fahrt (PID 41: abgeschlossen, noch offen, ausgesetzt) und nennt zu jedem offenen Test,
+  welche Fahrt ihn typischerweise abschließt, getrennt für Otto und Diesel. Nur lesende
+  Anfragen (`0101`, `0141`); die Demo kennt sie mit einem erfundenen Beispielwert für PID 41.
 - Live-Daten: 24 weitere Werte aus den PIDs `68` (Ansauglufttemperatur je Sensor),
   `6C` (Drosselklappensteller A/B), `6D` (Raildruck Soll/Ist und Temperatur), `70`
   (Ladedruck Soll/Ist) und `85` (AdBlue: Verbrauch, Bedarf, Tankfüllstand, Laufzeit mit

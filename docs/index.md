@@ -22,6 +22,7 @@ python-OBD geprüft ({doc}`entwickeln/testen`).
 | Fehlercodes lesen (gespeichert, ausstehend, permanent) mit Klartext | Mode 03, 07, 0A | {doc}`benutzen/fehlercodes` |
 | Codes ohne Katalogtext online erklären (optional, ungeprüft) | – | {doc}`benutzen/fehlercodes-online` |
 | Readiness (Monitore, Motorkontrollleuchte) | Mode 01 PID 01 | {doc}`benutzen/oberflaeche` |
+| Readiness-Assistent: offene Tests dieser Fahrt, welche Fahrt sie abschließt | Mode 01 PID 01, 41 | {doc}`benutzen/readiness` |
 | Freeze Frame zum auslösenden Fehlercode | Mode 02 | {doc}`technik/dienste` |
 | FIN lesen und offline dekodieren | Mode 09 PID 02 | {doc}`technik/fin` |
 | Live-Daten: 140 Werte aus 87 PIDs, CSV-Aufzeichnung | Mode 01 | {doc}`benutzen/live-daten` |
@@ -60,6 +61,7 @@ benutzen/cli
 benutzen/sprache
 benutzen/fehlercodes
 benutzen/fehlercodes-online
+benutzen/readiness
 benutzen/live-daten
 benutzen/sitzungen
 benutzen/probleme
