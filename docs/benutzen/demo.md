@@ -39,7 +39,8 @@ Mitschnitten dieser Tests:
 
 Nicht aufgezeichnet sind die Werte zu PID 21, 30, 31, 49 und 66 (Strecke mit
 Warnleuchte, Warmläufe und Strecke seit dem Löschen, Fahrpedal, Luftmasse). Das Auto
-meldet sie als unterstützt; im Demo-Modus stehen dort erfundene, plausible Werte.
+meldet sie als unterstützt; im Demo-Modus stehen dort erfundene, plausible Werte. Der
+Gebrauchtwagen-Check ist deshalb „unauffällig“ (40 Warmläufe und 3000 km seit dem Löschen).
 
 ```{image} ../_static/screenshots/demo-live-daten-light.png
 :alt: Live-Daten im Demo-Modus: Drehzahl um 860/min, Kühlmittel 62 °C

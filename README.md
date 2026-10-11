@@ -36,6 +36,8 @@ Full documentation (usage, how it works, development):
   it is German, otherwise English.
 - **Demo mode** (not released yet): `obd-diag-gui --demo` or `obd-diag … --demo`
   shows a sample vehicle (recorded data of the W177) without adapter or car.
+- **Used-car check** (not released yet): `obd-diag used-car`, the “Used car” tab and a
+  section in the PDF show whether the trouble codes were cleared recently.
 - **Tested on a real car** (2026-10-09, Mercedes A 180 d W177, adapter FORScan
   ELMconfig, CAN 29 bit/500 kbit/s, four control units): `info`, `diagnose` and `live`
   read correctly. Four findings from the test are fixed (first `ATZ` with `?`, freeze
@@ -409,11 +411,26 @@ obd-diag diagnose --port /dev/ttyUSB0 --online-vin      # also look up the VIN a
    speed, speed. Without a stored code it is empty and shown as “none stored”.
 4. VIN (mode 09 PID 02, CAN multi-frame or older protocols with five lines) and its
    offline decoding.
+5. Counters for the used-car check (mode 01 PID 30, 31, 4E, 21, 4D), see below.
 
 If the vehicle does not answer readiness, freeze frame or VIN (or answers unusably),
 only that part is missing. `--save` stores the session as described below, `--pdf` and
 `--csv` export directly (like `obd-diag export`). With `--json` stdout stays pure JSON;
 paths of saved files go to stderr.
+
+### Used-car check
+
+```sh
+obd-diag used-car --port /dev/ttyUSB0           # verdict, counters, findings
+obd-diag used-car --port /dev/ttyUSB0 --json
+```
+
+When the trouble codes are cleared, the control unit resets warm-ups (PID 30), distance
+(31) and time (4E) since clearing as well as distance (21) and time (4D) with the MIL on
+to zero. “Suspicious” means: fewer than 10 warm-ups, 200 km or 300 minutes since
+clearing, MIL on or on since then, or permanent codes (mode 0A). A rule of thumb, not
+proof: a workshop or a battery change also resets the counters. `diagnose` and the user
+interface (“Used car” tab) include the check.
 
 ### VIN
 
@@ -545,7 +562,7 @@ without it a headless installation (e.g. on a Raspberry Pi) stays small.
 Choose port and baud rate at the top (the list shows adapters that were found, a path
 can also be typed in) and press “Connect & Scan”. This reads trouble codes, readiness,
 freeze frame and VIN in one pass (read-only). The vehicle (manufacturer and VIN) then
-appears at the top right, below it five tabs:
+appears at the top right, below it six tabs:
 
 - **Trouble codes**: on the left the codes grouped into stored, pending and permanent,
   on the right the explanation of the selected code with causes, symptoms and cost
@@ -557,6 +574,8 @@ appears at the top right, below it five tabs:
   load, coolant temperature, engine speed, speed).
 - **Vehicle**: VIN, manufacturer, country, model year, check digit; optionally details
   from NHTSA vPIC (model, engine …).
+- **Used car**: whether the trouble codes were cleared recently, with findings and the
+  counters since clearing.
 - **Live data**: choose values (the ones the vehicle supports appear after the first
   start), interval 0.5/1/2 s, “Record (CSV)”, then Start. One tile per value with the
   current value, smallest/largest value seen and a curve of the last 120 values; the
