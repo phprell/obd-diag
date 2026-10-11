@@ -13,10 +13,13 @@ import pytest
 from obd_diag.protocol.dtc_decode import decode_dtc, parse_dtc_messages, parse_dtc_response
 from obd_diag.protocol.frames import FrameSequenceError, split_messages
 from obd_diag.protocol.headers import HeaderFormat, header_format, parse_header_response
+from obd_diag.protocol.monitor_tests import TestStatus, parse_results
 from obd_diag.protocol.pids import PIDS, parse_supported
+from obd_diag.protocol.vehicle_info import parse_cvns
 from obd_diag.services.readiness import MonitorState, combine_readiness, decode_readiness
 from obd_diag.services.vehicle import parse_vin_response
 from tests.command_spec import load_spec
+from tests.fakes import can_lines
 from tools.docs_tables import command_tables, formula, pid_table, write_tables
 
 DOCS = Path(__file__).resolve().parents[2] / "docs"
@@ -216,3 +219,18 @@ def test_real_car_readiness() -> None:
     open_monitors = [m.key for m in combined.monitors if m.state is MonitorState.INCOMPLETE]
     assert open_monitors == ["exhaust_gas_sensor"]
     assert combined.monitors[0].state is MonitorState.NOT_SUPPORTED  # Aussetzer
+
+
+def test_mode_06_example() -> None:
+    example = "4621 80 24 0064 0000 00C8"
+    assert example in _page("dienste.md")
+    (message,) = parse_header_response(can_lines("7E8", example.replace(" ", "")))
+    (result,) = parse_results(message, 0x21)
+    assert (result.tid, result.uasid) == (0x80, 0x24)
+    assert (result.value, result.minimum, result.maximum) == (100, 0, 200)
+    assert result.status is TestStatus.PASSED
+
+
+def test_mode_09_example() -> None:
+    assert "4906019F3E61C2" in _page("dienste.md")
+    assert parse_cvns(parse_header_response(can_lines("7E8", "4906019F3E61C2"))) == ("9F3E61C2",)

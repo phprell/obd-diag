@@ -10,8 +10,10 @@ dem Mode plus `40` (`01` → `41`), eine Ablehnung mit `7F` ({doc}`antwortformat
 | 02 | `02 <PID> 00` | `42 <PID> 00 <Daten>` | Freeze Frame 00 | `protocol/obd.py` |
 | 03 | `03` | `43 [Zahl] <Codes>` | gespeicherte Fehlercodes | `protocol/obd.py`, `dtc_decode.py` |
 | 04 | `04` | `44` | Fehlercodes löschen (gesperrt) | `protocol/obd.py`, `services/clear.py` |
+| 06 | `06 <MID>` | `46 <MID> <TID> <Einheit> <Wert> <Min> <Max> …` | Testergebnisse (nur CAN) | `protocol/monitor_tests.py` |
 | 07 | `07` | `47 [Zahl] <Codes>` | ausstehende Fehlercodes | wie 03 |
 | 09 | `0902` | `49 02 01 <17 Zeichen>` | FIN | `services/vehicle.py` |
+| 09 | `0900`, `0904`, `0906`, `0908`, `090A`, `090B` | `49 <Typ> <Zahl> <Daten>` | Steuergeräte-Informationen | `protocol/vehicle_info.py` |
 | 0A | `0A` | `4A [Zahl] <Codes>` | permanente Fehlercodes | wie 03 |
 
 Die Zahl der Codes steht nur bei CAN in der Antwort ({doc}`antwortformate`).
@@ -95,6 +97,27 @@ Codes bleiben. Nach SAE muss ein Diagnosegerät vorher nachfragen (Datenblatt S.
 Mode 04 ist gesperrt und nur über den Ablauf unter {doc}`../benutzen/fehlercodes`
 erreichbar; die Absicherung beschreibt {doc}`sicherheit`.
 
+## Mode 06: Testergebnisse
+
+`0600` liefert wie `0100` eine Bitmaske der unterstützten Monitor-IDs (MID) `01` bis
+`20`, `0620` die nächsten usw. Für jede gesetzte MID fragt obd-diag `06 <MID>` ab. Bei
+CAN besteht die Antwort aus Blöcken zu 9 Bytes, einer je Test:
+
+```text
+4621 80 24 0064 0000 00C8
+```
+
+`46 21`: Antwort für MID 21 (Katalysator Bank 1); `80`: Test-ID (ab `80` vom Hersteller
+festgelegt); `24`: Einheit und Skalierung (UASID 24: Anzahl, Faktor 1); dann Wert `0064`
+= 100, Minimum `0000` = 0 und Maximum `00C8` = 200: bestanden. UASIDs ab `80` sind
+vorzeichenbehaftet (Zweierkomplement). Die Tabelle der Einheiten steht in SAE J1979
+Anhang E; obd-diag kennt dieselben wie python-OBD. Ältere Protokolle antworten in einem
+anderen Format ohne UASID; obd-diag liest Mode 06 dort nicht.
+
+Mode 06 und Mode 09 (außer der FIN) liest obd-diag mit eingeschalteten Headern
+(`ATH1`, danach wieder `ATH0`), damit jeder Wert dem richtigen Steuergerät zugeordnet
+wird.
+
 ## Mode 09: FIN
 
 `0902` liefert die Fahrzeug-Identifizierungsnummer, bei CAN mehrteilig:
@@ -111,3 +134,19 @@ ASCII-Zeichen **WVWZZZ1KZ6W123456**. Ältere Protokolle liefern fünf Zeilen
 `49 02 <1–5> <4 Bytes>`, die erste vorn mit `00` aufgefüllt. Die Anfrage heißt genau
 `0902`; `09021` (mit falscher Antwortzahl) kann laut Datenblatt Probleme machen und ist
 verboten. Die Dekodierung beschreibt {doc}`fin`.
+
+## Mode 09: Steuergeräte
+
+`0900` liefert je Steuergerät eine Bitmaske der unterstützten InfoTypes. obd-diag fragt
+davon nur `04` (Kalibrierungs-IDs, je 16 ASCII-Zeichen), `06` (CVN, je 4 Bytes), `08`
+bzw. `0B` (Überwachungszähler Otto bzw. Diesel, je 2 Bytes) und `0A` (Name, 20
+ASCII-Zeichen) ab. Das Byte nach dem InfoType nennt die Zahl der Datenelemente:
+
+```text
+4906019F3E61C2
+```
+
+`49 06`: Antwort auf InfoType 06; `01`: eine CVN; `9F3E61C2`: die CVN. Die
+Überwachungszähler beginnen mit den Fahrzyklen mit erfüllten Bedingungen und der Zahl
+der Zündungen, danach je Test ein Paar *abgeschlossen*, *Bedingungen erfüllt*. Was
+obd-diag daraus zeigt, beschreibt {doc}`../benutzen/steuergeraete-tests`.

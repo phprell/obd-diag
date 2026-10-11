@@ -25,6 +25,8 @@ python-OBD geprüft ({doc}`entwickeln/testen`).
 | Readiness-Assistent: offene Tests dieser Fahrt, welche Fahrt sie abschließt | Mode 01 PID 01, 41 | {doc}`benutzen/readiness` |
 | Freeze Frame zum auslösenden Fehlercode | Mode 02 | {doc}`technik/dienste` |
 | FIN lesen und offline dekodieren | Mode 09 PID 02 | {doc}`technik/fin` |
+| Steuergeräte: Name, Kalibrierungs-ID, CVN, Überwachungszähler | Mode 09 | {doc}`benutzen/steuergeraete-tests` |
+| Testergebnisse der Eigendiagnosen mit Grenzwerten | Mode 06 | {doc}`benutzen/steuergeraete-tests` |
 | Live-Daten: 116 Werte aus 82 PIDs, CSV-Aufzeichnung | Mode 01 | {doc}`benutzen/live-daten` |
 | Sitzungen speichern, PDF-Bericht, CSV | – | {doc}`benutzen/sitzungen` |
 | Fehlercodes löschen (gesperrt) | Mode 04 | {doc}`benutzen/fehlercodes` |
@@ -62,6 +64,7 @@ benutzen/sprache
 benutzen/fehlercodes
 benutzen/fehlercodes-online
 benutzen/readiness
+benutzen/steuergeraete-tests
 benutzen/live-daten
 benutzen/sitzungen
 benutzen/probleme

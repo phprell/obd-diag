@@ -12,6 +12,13 @@ vor 1.0 kann sich die Bedienung noch ändern.
   Fahrt (PID 41: abgeschlossen, noch offen, ausgesetzt) und nennt zu jedem offenen Test,
   welche Fahrt ihn typischerweise abschließt, getrennt für Otto und Diesel. Nur lesende
   Anfragen (`0101`, `0141`); die Demo kennt sie mit einem erfundenen Beispielwert für PID 41.
+- Steuergeräte und Testergebnisse: `obd-diag ecus` liest je Steuergerät Name,
+  Kalibrierungs-ID, CVN und Überwachungszähler (Mode 09: `0900`, `0904`, `0906`, `0908`,
+  `090A`, `090B`), `obd-diag tests` die Testergebnisse der Eigendiagnosen mit Grenzwerten,
+  Einheit und Urteil (Mode 06, nur CAN). Beides ist Teil von `diagnose`, der Sitzung und
+  des PDF-Berichts; in der Oberfläche stehen die Steuergeräte im Reiter *Fahrzeug*, die
+  Testergebnisse im neuen Reiter *Testergebnisse*. Gelesen wird mit Headern (`ATH1`), damit
+  jeder Wert dem richtigen Steuergerät zugeordnet ist. Die Demo zeigt erfundene Beispielwerte.
 
 ## 0.2.1 – 2026-10-11
 
