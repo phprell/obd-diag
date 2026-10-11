@@ -17,13 +17,16 @@ import pytest
 
 from obd_diag.data.dtc_catalog import Cause, DtcInfo
 from obd_diag.export.report import export_csv, export_pdf
+from obd_diag.protocol.elm327 import Elm327
 from obd_diag.protocol.obd import FreezeFrame
+from obd_diag.services.adapter_check import AdapterReport, check_adapter
 from obd_diag.services.clear import ClearResult
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
 from obd_diag.services.readiness import MonitorState
 from obd_diag.services.session import Session
 from obd_diag.transport.discovery import PortInfo
 from obd_diag.ui.backend import Backend
+from tests.fakes import ADAPTER_V15, FakeTransport
 from tests.samples import CREATED
 
 P0420 = DtcInfo(
@@ -138,6 +141,10 @@ class FakeBackend:
         self.session = after_clear(self.session, result.after)
         return result
 
+    def check_adapter(self, port: str, baud: int) -> AdapterReport:
+        self.calls.append(("adapter", port, baud))
+        return check_adapter(Elm327(FakeTransport(ADAPTER_V15)))
+
     def list_ports(self) -> list[PortInfo]:
         if self.ports is None:
             raise NotImplementedError
@@ -163,6 +170,7 @@ class FakeBackend:
             export_pdf=self.export_pdf,
             export_csv=self.export_csv,
             set_tracing=self.tracing.append,
+            check_adapter=self.check_adapter,
         )
 
 

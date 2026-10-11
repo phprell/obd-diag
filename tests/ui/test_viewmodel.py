@@ -294,3 +294,33 @@ def test_model_online_and_search_roles() -> None:
     assert unknown["onlineSource"].endswith("volkswagen_codes.txt")
     assert unknown["onlineUrl"] == ONLINE_P1234.url
     assert unknown["searchUrl"] == "https://duckduckgo.com/?q=P1234+Volkswagen"
+
+
+def test_adapter_check(qtbot: QtBot, fake_backend: FakeBackend) -> None:
+    vm = _vm(fake_backend)
+    assert vm.property("adapterCheck") == {}
+    with qtbot.waitSignal(vm.adapterChecked, timeout=1000):
+        vm.checkAdapter(" /dev/ttyUSB0 ", 115200)
+    assert fake_backend.calls == [("adapter", "/dev/ttyUSB0", 115200)]
+    assert not vm.property("busy")
+    check = vm.property("adapterCheck")
+    rows = {row["label"]: row["value"] for row in check["rows"]}
+    assert rows["Adapter"] == "ELM327 v1.5"
+    assert rows["Urteil"] == "Nachbau, Befehlssatz wie v1.4"
+    assert rows["Für UDS (v0.3)"].startswith("voraussichtlich ja")
+    assert check["commands"][-1] == {
+        "command": "ATAMC",
+        "text": "nein (seit v2.0: Aktivitätszähler)",
+        "supported": False,
+    }
+    assert "ATSH" in check["note"]
+    assert not vm.property("hasResult")  # keine Diagnose, die Sitzung bleibt leer
+
+
+def test_adapter_check_needs_a_port_and_a_free_adapter(fake_backend: FakeBackend) -> None:
+    vm = _vm(fake_backend)
+    vm.checkAdapter("  ", 38400)
+    assert "Port" in vm.property("errorMessage")
+    vm.set_blocked(True)
+    vm.checkAdapter("/dev/ttyUSB0", 38400)
+    assert fake_backend.calls == []

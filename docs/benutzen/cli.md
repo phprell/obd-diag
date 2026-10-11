@@ -9,6 +9,7 @@ Sprache aller Ausgaben ein ({doc}`sprache`).
 | --- | --- | --- |
 | `obd-diag ports` | Adapter auflisten | nichts |
 | `obd-diag info` | Adapter-Kennung und Bordspannung | nichts (nur Adapter-Befehle) |
+| `obd-diag adapter` | Adapter-Check: Version, Befehlssatz, UDS-Eignung ({doc}`adapter`) | nichts (nur Adapter-Befehle) |
 | `obd-diag scan` | Fehlercodes lesen | Mode 01, 03, 07, 0A |
 | `obd-diag diagnose` | Fehlercodes, Readiness, Freeze Frame, FIN | Mode 01, 02, 03, 07, 09, 0A |
 | `obd-diag vin` | FIN lesen oder eine eingegebene dekodieren | Mode 09 |
@@ -19,6 +20,7 @@ Sprache aller Ausgaben ein ({doc}`sprache`).
 ## Beispiele
 
 ```sh
+obd-diag adapter --port /dev/ttyUSB0               # was kann der Adapter wirklich?
 obd-diag scan --port /dev/ttyUSB0                  # Tabelle, Sprache wie das System
 obd-diag scan --port /dev/ttyUSB0 --lang en --json # englisch, maschinenlesbar
 obd-diag diagnose --port /dev/ttyUSB0 --save --pdf bericht.pdf

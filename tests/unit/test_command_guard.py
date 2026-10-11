@@ -12,6 +12,9 @@ aus dem Code abgeschrieben:
 - ``03``/``07``/``0A``: gespeicherte/ausstehende/permanente Codes, ohne Parameter.
 - ``0902``: FIN (Service $09, InfoType 02).
 - ``04``: Löschen (Service $04), der einzige schreibende Befehl.
+- Adapter-Check: ``ATI`` Kennung, ``AT@1`` Beschreibung, ``ATRV``, ``ATPPS``
+  Parameterübersicht, ``ATIGN`` Zündungseingang, ``ATRD`` Nutzerspeicher lesen,
+  ``ATAMC`` Aktivitätszähler; alles Adapter-Befehle, die nur lesen (S. 12 bis 28).
 """
 
 import contextlib
@@ -35,7 +38,7 @@ from obd_diag.protocol.elm327 import (
     ForbiddenCommandError,
     is_read_only,
 )
-from obd_diag.services import clear, diagnostics, readiness, session, vehicle
+from obd_diag.services import adapter_check, clear, diagnostics, readiness, session, vehicle
 from obd_diag.services.clear import ClearRefused
 from obd_diag.transport import TransportError
 from tests.fakes import CAN_CAR_ENGINE_OFF, CAN_CAR_FULL, CLEARED, FakeTransport
@@ -46,9 +49,11 @@ DTCS = ["03", "07", "0A"]
 SCAN = [*INIT, "ATRV", *PROTOCOL, *DTCS]
 FREEZE = ["020200", "020400", "020500", "020C00", "020D00"]
 PRECONDITIONS = ["0100", "ATRV", "010C"]
+ADAPTER_CHECK = [*INIT, "ATI", "AT@1", "ATRV", "ATPPS", "ATIGN", "ATRD", "ATAMC"]
 
-# Genau so sieht ein Befehl auf der Leitung aus: ASCII, Großbuchstaben/Ziffern, ein CR.
-WIRE = re.compile(rb"[0-9A-Z]+\r")
+# Genau so sieht ein Befehl auf der Leitung aus: ASCII, Großbuchstaben/Ziffern, ein CR;
+# „@“ nur in AT@1 (Datenblatt S. 28).
+WIRE = re.compile(rb"(?:[0-9A-Z]+|AT@1)\r")
 
 
 class WireCheckingTransport(FakeTransport):
@@ -118,7 +123,8 @@ def test_read_only_commands_are_allowed(cmd: str) -> None:
         "ATMA",  # Bus mithören
         "ATSH7E0",  # Header setzen: anderes Steuergerät
         "ATWS",
-        "ATI",
+        "ATSD00",  # Nutzerspeicher beschreiben (ATRD liest ihn nur)
+        "AT@2",  # Gerätekennung: nicht freigegeben, nur AT@1
         "atz",  # Kleinschreibung
         "01 00",  # Leerzeichen
         "0100\r04",  # zweiter Befehl hinter einem CR
@@ -190,6 +196,7 @@ def test_any_text_is_either_allowed_or_never_sent(cmd: str) -> None:
         ("read_freeze_frame", obd.read_freeze_frame, FREEZE),
         ("read_readiness", readiness.read_readiness, ["0101"]),
         ("read_vin", vehicle.read_vin, ["0902"]),
+        ("check_adapter", adapter_check.check_adapter, ADAPTER_CHECK),
         ("scan", lambda e: diagnostics.scan(e, None), SCAN),
         (
             "run_diagnosis",
@@ -241,6 +248,8 @@ def test_refused_clear_sends_only_reads(tmp_path: Path) -> None:
     ("argv", "expected"),
     [
         (["info"], [*INIT, "ATRV"]),
+        (["adapter"], ADAPTER_CHECK),
+        (["adapter", "--json"], ADAPTER_CHECK),
         (["scan"], SCAN),
         (["diagnose"], [*SCAN, "0101", *FREEZE, "0902"]),
         (["vin"], [*INIT, *PROTOCOL, "0902"]),
@@ -273,11 +282,14 @@ _READ_CALLS: list[Callable[[Elm327], object]] = [
     lambda e: readiness.read_readiness(e),
     lambda e: obd.read_freeze_frame(e),
     lambda e: e.protocol(),
+    adapter_check.check_adapter,
 ]
 
 
 @given(
-    st.dictionaries(st.sampled_from([*SCAN, "0101", *FREEZE, "0902", "0202"]), _GARBAGE),
+    st.dictionaries(
+        st.sampled_from([*SCAN, "0101", *FREEZE, "0902", "0202", *ADAPTER_CHECK]), _GARBAGE
+    ),
     st.sampled_from(range(len(_READ_CALLS))),
 )
 def test_read_paths_never_write_even_on_broken_answers(broken: dict[str, str], which: int) -> None:

@@ -81,7 +81,12 @@ msgid "Permanent"
 msgstr "Permanent"
 
 #: src/obd_diag/cli.py
+msgid "Geprüfte Befehle:"
+msgstr "Commands checked:"
+
+#: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/adapter_check.py
 msgid "ja"
 msgstr "yes"
 
@@ -131,6 +136,7 @@ msgstr "Petrol engine"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/adapter_check.py
 msgid "nein"
 msgstr "no"
 
@@ -241,6 +247,10 @@ msgid "Adapter-Version und Bordspannung anzeigen"
 msgstr "show adapter version and battery voltage"
 
 #: src/obd_diag/cli.py
+msgid "Adapter-Check: Version, Spannung und unterstützte Befehle prüfen, Urteil für UDS (nur Adapter-Befehle, das Fahrzeug wird nicht angesprochen)"
+msgstr "adapter check: test version, voltage and supported commands, verdict for UDS (adapter commands only, the vehicle is not addressed)"
+
+#: src/obd_diag/cli.py
 msgid "Fehlercodes lesen (gespeichert, ausstehend, permanent)"
 msgstr "read trouble codes (stored, pending, permanent)"
 
@@ -318,6 +328,7 @@ msgstr "Note: {message}"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Adapter"
 msgstr "Adapter"
 
@@ -328,12 +339,39 @@ msgstr "Protocol"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Bordspannung"
 msgstr "Battery voltage"
 
 #: src/obd_diag/cli.py
 msgid "Mitschnitt: {path}"
 msgstr "Trace: {path}"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Beschreibung"
+msgstr "Description"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Version"
+msgstr "Version"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Urteil"
+msgstr "Verdict"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Parameter"
+msgstr "Parameters"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Für UDS (v0.3)"
+msgstr "For UDS (v0.3)"
 
 #: src/obd_diag/cli.py
 msgid "Folgende Fehlercodes werden im Steuergerät gelöscht:"
@@ -402,6 +440,11 @@ msgstr "(no description in the catalog)"
 #: src/obd_diag/cli.py
 msgid "Warnung: {message}"
 msgstr "Warning: {message}"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "nicht lesbar (AT@1)"
+msgstr "not readable (AT@1)"
 
 #: src/obd_diag/cli.py
 msgid "Keine gespeicherten oder ausstehenden Fehlercodes, es wird nichts gelöscht."
@@ -1227,10 +1270,6 @@ msgid "Titel"
 msgstr "Title"
 
 #: src/obd_diag/export/report.py
-msgid "Beschreibung"
-msgstr "Description"
-
-#: src/obd_diag/export/report.py
 msgid "Ursachen"
 msgstr "Causes"
 
@@ -1880,6 +1919,118 @@ msgstr "Catalyst temperature bank 2, sensor 2"
 msgid "unbekannter Live-Wert {key}; bekannt sind: {known}"
 msgstr "unknown live value {key}; known values: {known}"
 
+#: src/obd_diag/services/adapter_check.py
+msgid "Geschlossen aus dem Befehlssatz: ATSH und ATCRA selbst sendet der Check nicht, weil sie die Adressierung verstellen. Sicher zeigt es erst die Steuergerätesuche (v0.3)."
+msgstr "Inferred from the command set: the check does not send ATSH and ATCRA themselves because they change the addressing. Only the control unit search (v0.3) will tell for sure."
+
+#: src/obd_diag/services/adapter_check.py
+msgid "eher nicht: der Adapter beherrscht nur Grundbefehle"
+msgstr "probably not: the adapter only supports basic commands"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Kennung"
+msgstr "identification"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Gerätebeschreibung"
+msgstr "device description"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Spannung"
+msgstr "voltage"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Übersicht der Programmable Parameters"
+msgstr "summary of the programmable parameters"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Zündungseingang"
+msgstr "ignition input"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Nutzerspeicher lesen"
+msgstr "read user memory"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Aktivitätszähler"
+msgstr "activity monitor count"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "keine Versionsangabe erkennbar"
+msgstr "no version recognisable"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "unklar: der Adapter nennt keine Version"
+msgstr "unclear: the adapter does not report a version"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "selbst Grundbefehle fehlen"
+msgstr "even basic commands are missing"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "voraussichtlich ja: Befehlssatz ab v1.4, die nötigen Befehle ATSH (ab v1.0) und ATCRA (ab v1.3) sind damit enthalten"
+msgstr "likely yes: command set from v1.4, which includes the required commands ATSH (from v1.0) and ATCRA (from v1.3)"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "nicht lesbar (ATRV)"
+msgstr "not readable (ATRV)"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "nicht lesbar (ATPPS)"
+msgstr "not readable (ATPPS)"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "alle auf Werkseinstellung"
+msgstr "all at factory settings"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "v{version}: steht nicht in der Versionsliste von Elm Electronics, der Adapter ist ein Nachbau"
+msgstr "v{version}: not in Elm Electronics' version list, the adapter is a clone"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Nachbau, {level}"
+msgstr "clone, {level}"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "geändert: {changed}; obd-diag ändert sie nicht, sie können aber Antworten anders formatieren"
+msgstr "changed: {changed}; obd-diag does not change them, but they can format responses differently"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "{state} (seit v{since}: {purpose})"
+msgstr "{state} (since v{since}: {purpose})"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "v{version} (steht in der Versionsliste des Datenblatts)"
+msgstr "v{version} (in the datasheet's version list)"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "v{version} (neuer als das Datenblatt v{datasheet})"
+msgstr "v{version} (newer than datasheet v{datasheet})"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Befehlssatz wie v{level}"
+msgstr "command set like v{level}"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "passt zur gemeldeten Version ({level})"
+msgstr "matches the reported version ({level})"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "Nachbau, {level}; es fehlt {commands}"
+msgstr "clone, {level}; missing {commands}"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "unsicher: belegt ist nur ein Befehlssatz wie v{level}, ATCRA (ab v1.3) fehlt vielleicht"
+msgstr "uncertain: only a command set like v{level} is confirmed, ATCRA (from v1.3) may be missing"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "{voltage}: Adapter steckt vermutlich nicht im Auto"
+msgstr "{voltage}: adapter is probably not plugged into the car"
+
+#: src/obd_diag/services/adapter_check.py
+msgid "{voltage}: niedrig, Batterie laden"
+msgstr "{voltage}: low, charge the battery"
+
 #: src/obd_diag/services/clear.py
 msgid "Löschen ist vorerst deaktiviert: Erst muss das Lesen an einem echten Fahrzeug geprüft sein. Es wurde nichts gesendet."
 msgstr "Clearing is disabled for now: reading must first be verified on a real vehicle. Nothing was sent."
@@ -2186,6 +2337,10 @@ msgstr "Error: the user interface could not be loaded."
 msgid "Live-Daten sind in diesem Backend nicht verfügbar"
 msgstr "Live data is not available in this backend"
 
+#: src/obd_diag/ui/backend.py
+msgid "Der Adapter-Check ist in diesem Backend nicht verfügbar"
+msgstr "The adapter check is not available in this backend"
+
 #: src/obd_diag/ui/viewmodels/codes.py
 msgid "schwierig"
 msgstr "difficult"
@@ -2254,6 +2409,10 @@ msgstr "Readiness and freeze frame could not be read again after clearing ({erro
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Fehlercodes gelöscht. Sicherung: {path}"
 msgstr "Trouble codes cleared. Backup: {path}"
+
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Prüfe den Adapter an {port} …"
+msgstr "Checking the adapter on {port} …"
 
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Verbinde mit {port} und lese Diagnose …"
@@ -2338,6 +2497,14 @@ msgid "{n} Test nicht abgeschlossen: {names}."
 msgid_plural "{n} Tests nicht abgeschlossen: {names}."
 msgstr[0] "{n} test incomplete: {names}."
 msgstr[1] "{n} tests incomplete: {names}."
+
+#: src/obd_diag/ui/qml/AdapterDialog.qml
+msgid "Adapter-Check"
+msgstr "Adapter check"
+
+#: src/obd_diag/ui/qml/AdapterDialog.qml
+msgid "Geprüfte Befehle"
+msgstr "Commands checked"
 
 #: src/obd_diag/ui/qml/Banner.qml
 msgid "Hinweis schließen"
@@ -2668,6 +2835,10 @@ msgstr "Look up VIN online (NHTSA)"
 #: src/obd_diag/ui/qml/Main.qml
 msgid "Fehlercodes online erklären"
 msgstr "Explain trouble codes online"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Adapter prüfen …"
+msgstr "Check adapter …"
 
 #: src/obd_diag/ui/qml/Main.qml
 msgid "Adapter-Mitschnitt aufzeichnen"

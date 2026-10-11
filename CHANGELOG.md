@@ -14,6 +14,13 @@ vor 1.0 kann sich die Bedienung noch ändern.
   Sprachumschalter; die deutschen Adressen bleiben gleich.
 - README auf Englisch, deutsche Fassung in README.de.md.
 - Tests verhindern Texte, die nur in einer Sprache vorliegen.
+- Adapter-Check: `obd-diag adapter` bzw. „Optionen → Adapter prüfen …“ zeigt Kennung,
+  Spannung und welche Befehle aus der Versionsliste des Datenblatts der Adapter
+  wirklich beantwortet (`ATPPS` v1.1, `ATIGN`/`ATRD` v1.4, `ATAMC` v2.0), erkennt daran
+  Nachbauten (eine echte v1.5 gab es nie), nennt geänderte Programmable Parameters und
+  ob der Adapter voraussichtlich für die UDS-Steuergerätesuche (v0.3) taugt. Neu
+  freigegeben sind dafür nur diese lesenden Adapter-Befehle (mit Quelle in
+  `command_spec.yaml`); das Fahrzeug wird nicht angesprochen.
 
 ## 0.2.0 – 2026-10-10
 

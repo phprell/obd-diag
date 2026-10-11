@@ -7,10 +7,10 @@ Standard-Zielordner: ``docs/_static/screenshots`` (Deutsch) bzw.
 
 Startet den ELM327-emulator mit standardgemäßen Antworten (wie ``tools/emulator.py``),
 öffnet die Oberfläche ohne Bildschirm, verbindet, scannt und speichert jeden Reiter im
-hellen und im dunklen Design als PNG. Für Live-Daten läuft eine kurze Abfrage. Die
-Bilder sind damit reproduzierbar; nach Änderungen an der Oberfläche neu erzeugen und
-einchecken. Einstellungen und Daten landen in einem temporären Ordner, die echten
-bleiben unberührt.
+hellen und im dunklen Design als PNG. Für Live-Daten läuft eine kurze Abfrage, zuletzt
+der Adapter-Check (Dialog, nur hell). Die Bilder sind damit reproduzierbar; nach
+Änderungen an der Oberfläche neu erzeugen und einchecken. Einstellungen und Daten
+landen in einem temporären Ordner, die echten bleiben unberührt.
 """
 
 import argparse
@@ -154,6 +154,13 @@ def main() -> int:
         _grab(window, out_dir / "live-daten-dark.png")
         live.stop()
         _wait(lambda: not live.property("running"), 30, "Live-Daten beenden")
+
+        # Adapter-Check (Optionen → Adapter prüfen …): Dialog über der Hauptansicht
+        design.setProperty("mode", "light")
+        tabs.setProperty("currentIndex", 0)
+        vm.checkAdapter(port, 38400)
+        _wait(lambda: not vm.property("busy") and bool(vm.property("adapterCheck")), 30, "Adapter")
+        _grab(window, out_dir / "adapter-check-light.png")
     finally:
         live.stop()
         runner.wait()

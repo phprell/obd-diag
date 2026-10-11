@@ -40,11 +40,31 @@ CAN_CAR_FULL = {
     "0902": "014\r0:490201575657\r1:5A5A5A314B5A36\r2:57313233343536",
 }
 
+# Adapter-Check (nur Adapter-Befehle): ein echter ELM327 v2.1 mit den Antwortformaten des
+# Datenblatts (ATI S. 18, AT@1 S. 28, ATPPS S. 68, ATIGN S. 19) und ein Nachbau wie der
+# FORScan-ELMconfig-Adapter, der v1.5 meldet und ATAMC (v2.0) nicht kennt.
+ADAPTER_PPS_DEFAULT = (
+    "00:FF F 01:FF F 02:FF F 03:32 F\r04:01 F 05:FF F 06:F1 F 07:09 F\r"
+    "2C:E0 F 2D:04 F 2E:80 F 2F:0A F"
+)
+ADAPTER_V21 = {
+    "ATZ": "\r\rELM327 v2.1",
+    "ATI": "ELM327 v2.1",
+    "AT@1": "OBDII to RS232 Interpreter",
+    "ATRV": "12.6V",
+    "ATPPS": ADAPTER_PPS_DEFAULT,
+    "ATIGN": "ON",
+    "ATRD": "FF",
+    "ATAMC": "0A",
+}
+ADAPTER_V15 = {**ADAPTER_V21, "ATZ": "ELM327 v1.5", "ATI": "ELM327 v1.5", "ATAMC": "?"}
+
 # Antworten, die nach bestätigtem Mode 04 gelten (``FakeTransport(after_clear=...)``)
 CLEARED = {"03": "4300", "07": "4700", "020200": "4202000000"}
 
 
-WIRE_FORMAT = re.compile(rb"[0-9A-Z]+\r")
+# „@“ nur in AT@1 (Gerätebeschreibung, Datenblatt S. 28)
+WIRE_FORMAT = re.compile(rb"(?:[0-9A-Z]+|AT@1)\r")
 
 
 class FakeTransport:

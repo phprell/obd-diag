@@ -10,6 +10,16 @@ from PySide6.QtGui import QDesktopServices
 
 from obd_diag.i18n import N_, decimal, tr, trn
 from obd_diag.protocol.elm327 import ElmError, NoConnectionError
+from obd_diag.services.adapter_check import (
+    UDS_NOTE,
+    AdapterReport,
+    kind_text,
+    parameters_text,
+    probe_text,
+    uds_text,
+    version_text,
+    voltage_text,
+)
 from obd_diag.services.clear import (
     CLEAR_DISABLED_MESSAGE,
     ClearRefused,
@@ -110,6 +120,7 @@ class DiagnosisViewModel(QObject):
     sessionSaved = Signal(str)
     sessionOpened = Signal(str)
     exportFinished = Signal(str)
+    adapterChecked = Signal()
     jobFailed = Signal(str)
 
     def __init__(self, backend: Backend, runner: JobRunner, parent: QObject | None = None) -> None:
@@ -124,6 +135,7 @@ class DiagnosisViewModel(QObject):
         self._blocked = False
         self._busy_text = ""
         self._session: Session | None = None
+        self._adapter_report: AdapterReport | None = None
         self._view_only = False
         self._saved_path = ""  # gespeichert unter bzw. geöffnet aus
         self._error = ""
@@ -411,6 +423,51 @@ class DiagnosisViewModel(QObject):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
 
     # --- Aktionen ------------------------------------------------------------
+
+    @Property(dict, notify=stateChanged)
+    def adapterCheck(self) -> dict[str, Any]:
+        """Ergebnis des letzten Adapter-Checks für den Dialog; leer, solange keiner lief."""
+        report = self._adapter_report
+        if report is None:
+            return {}
+        rows = [
+            (tr("Adapter"), report.identification),
+            (tr("Beschreibung"), report.description or tr("nicht lesbar (AT@1)")),
+            (tr("Version"), version_text(report)),
+            (tr("Urteil"), kind_text(report)),
+            (tr("Bordspannung"), voltage_text(report)),
+            (tr("Parameter"), parameters_text(report)),
+            (tr("Für UDS (v0.3)"), uds_text(report)),
+        ]
+        return {
+            "rows": [{"label": label, "value": value} for label, value in rows],
+            "commands": [
+                {"command": r.probe.command, "text": probe_text(r), "supported": r.supported}
+                for r in report.results
+            ],
+            "note": tr(UDS_NOTE),
+        }
+
+    @Slot(str, int)
+    def checkAdapter(self, port: str, baud: int) -> None:
+        """Adapter-Check: Version, Spannung und Befehlssatz, ohne das Fahrzeug."""
+        port = port.strip()
+        if self._busy or self._blocked:
+            return
+        if not port:
+            self._fail(tr("Bitte einen Port angeben, z. B. /dev/ttyUSB0."))
+            return
+        self._start(tr("Prüfe den Adapter an {port} …").format(port=port))
+        backend = self._backend
+
+        def done(result: Any) -> None:
+            assert isinstance(result, AdapterReport)
+            self._finish()
+            self._adapter_report = result
+            self.stateChanged.emit()
+            self.adapterChecked.emit()
+
+        self._runner.run(lambda: backend.check_adapter(port, baud), done, self._job_failed)
 
     @Slot()
     def refreshPorts(self) -> None:

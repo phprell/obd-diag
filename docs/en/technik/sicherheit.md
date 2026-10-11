@@ -10,7 +10,8 @@ limit in the code and tests that check it from several sides
 through:
 
 - adapter commands that send nothing to the vehicle: `ATZ`, `ATE0`, `ATL0`, `ATS0`,
-  `ATH0`, `ATH1`, `ATSP0`, `ATRV`, `ATDP`, `ATDPN`;
+  `ATH0`, `ATH1`, `ATSP0`, `ATRV`, `ATDP`, `ATDPN`, plus, read-only for the adapter
+  check, `ATI`, `AT@1`, `ATPPS`, `ATIGN`, `ATRD`, `ATAMC`;
 - read OBD requests: `01xx`, `02xx` and `02xx00`, `03`, `07`, `0A`, `0902`;
 - `04` (clearing) only inside `with elm.allow_clear()`, and only `obd.clear_dtcs`
   uses that.

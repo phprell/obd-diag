@@ -113,6 +113,7 @@ action runs on the adapter at a time ({doc}`live-daten`).
 | Report as PDF … | Ctrl+P | write a PDF report in the background |
 | Export CSV … | – | one row per trouble code |
 | Options → Explain trouble codes online | – | codes without a catalog text get an unverified short explanation ({doc}`fehlercodes-online`) |
+| Options → Check adapter … | – | version, command set, voltage and UDS suitability of the adapter, without the vehicle ({doc}`adapter`) |
 | Options → Record adapter trace | – | every action writes a trace ({doc}`sitzungen`) |
 | Options → Theme | – | like the system, light or dark |
 | Options → Sprache / Language | – | Deutsch or English, applies immediately ({doc}`sprache`) |
