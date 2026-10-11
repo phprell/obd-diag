@@ -6,8 +6,9 @@ uv run obd-diag-gui
 
 Oben Port und Baudrate wählen (die Liste zeigt gefundene Adapter, ein Pfad lässt sich
 auch eintippen) und „Verbinden & Scannen“ drücken. Das liest in einem Durchgang
-Fehlercodes, Readiness, Freeze Frame und FIN, nur lesend. Rechts oben steht dann das
-Fahrzeug (Hersteller und FIN), darunter fünf Reiter. Unten stehen Adapter, Protokoll
+Fehlercodes, Readiness, Freeze Frame, FIN und die Zähler für den Gebrauchtwagen-Check,
+nur lesend. Rechts oben steht dann das
+Fahrzeug (Hersteller und FIN), darunter sechs Reiter. Unten stehen Adapter, Protokoll
 und Bordspannung (rot bei niedriger Spannung).
 
 Die Oberfläche spricht Deutsch und Englisch: *Optionen → Sprache / Language*
@@ -83,6 +84,22 @@ Kühlmitteltemperatur, Drehzahl, Geschwindigkeit.
 FIN, Hersteller, Land, Modelljahr und Prüfziffer ({doc}`../technik/fin`). „FIN online
 nachschlagen (NHTSA)“ (Menü *Optionen* oder hier) ist standardmäßig aus; eingeschaltet
 geht beim nächsten Scan nur die FIN an die US-Behörde NHTSA.
+
+## Gebrauchtwagen
+
+```{image} ../_static/screenshots/gebrauchtwagen-light.png
+:alt: Reiter Gebrauchtwagen: Urteil, Befunde und Zähler seit dem Löschen
+:class: only-light
+```
+
+```{image} ../_static/screenshots/gebrauchtwagen-dark.png
+:alt: Reiter Gebrauchtwagen: Urteil, Befunde und Zähler seit dem Löschen
+:class: only-dark
+```
+
+Ob die Fehlercodes vor kurzem gelöscht wurden: Urteil (auffällig, unauffällig, nicht
+beurteilbar) mit den Befunden und darunter die Zähler seit dem letzten Löschen
+({doc}`gebrauchtwagen`). Der Punkt am Reiter ist orange bei einem Befund.
 
 ## Live-Daten
 

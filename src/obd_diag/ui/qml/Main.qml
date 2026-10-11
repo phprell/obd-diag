@@ -395,6 +395,9 @@ ApplicationWindow {
             VehicleView {
                 vm: window.vm
             }
+            UsedCarView {
+                vm: window.vm
+            }
             LiveView {
                 live: window.liveVm
                 port: connectionBar.portText

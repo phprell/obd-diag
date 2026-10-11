@@ -23,6 +23,7 @@ python-OBD geprüft ({doc}`entwickeln/testen`).
 | Codes ohne Katalogtext online erklären (optional, ungeprüft) | – | {doc}`benutzen/fehlercodes-online` |
 | Readiness (Monitore, Motorkontrollleuchte) | Mode 01 PID 01 | {doc}`benutzen/oberflaeche` |
 | Readiness-Assistent: offene Tests dieser Fahrt, welche Fahrt sie abschließt | Mode 01 PID 01, 41 | {doc}`benutzen/readiness` |
+| Gebrauchtwagen-Check: wurden die Codes vor kurzem gelöscht? | Mode 01, 0A | {doc}`benutzen/gebrauchtwagen` |
 | Freeze Frame zum auslösenden Fehlercode | Mode 02 | {doc}`technik/dienste` |
 | FIN lesen und offline dekodieren | Mode 09 PID 02 | {doc}`technik/fin` |
 | Live-Daten: 116 Werte aus 82 PIDs, CSV-Aufzeichnung | Mode 01 | {doc}`benutzen/live-daten` |
@@ -62,6 +63,7 @@ benutzen/sprache
 benutzen/fehlercodes
 benutzen/fehlercodes-online
 benutzen/readiness
+benutzen/gebrauchtwagen
 benutzen/live-daten
 benutzen/batterie
 benutzen/sitzungen

@@ -11,8 +11,9 @@ language of all output ({doc}`sprache`).
 | `obd-diag info` | adapter identification and battery voltage | nothing (only adapter commands) |
 | `obd-diag adapter` | adapter check: version, command set, UDS suitability ({doc}`adapter`) | nothing (only adapter commands) |
 | `obd-diag scan` | read trouble codes | Mode 01, 03, 07, 0A |
-| `obd-diag diagnose` | trouble codes, readiness, freeze frame, VIN | Mode 01, 02, 03, 07, 09, 0A |
+| `obd-diag diagnose` | trouble codes, readiness, freeze frame, VIN, used-car check | Mode 01, 02, 03, 07, 09, 0A |
 | `obd-diag readiness` | readiness assistant: incomplete tests since clearing and during this drive ({doc}`readiness`) | Mode 01 |
+| `obd-diag used-car` | used-car check: cleared recently? ({doc}`gebrauchtwagen`) | Mode 01, 03, 07, 0A |
 | `obd-diag vin` | read the VIN or decode one that is typed in | Mode 09 |
 | `obd-diag live` | show and record live data | Mode 01 |
 | `obd-diag battery` | battery and cranking test ({doc}`batterie`) | Mode 01 |
@@ -26,6 +27,7 @@ obd-diag adapter --port /dev/ttyUSB0               # what can the adapter really
 obd-diag scan --port /dev/ttyUSB0                  # table, language like the system
 obd-diag scan --port /dev/ttyUSB0 --lang en --json # English, machine-readable
 obd-diag diagnose --port /dev/ttyUSB0 --save --pdf report.pdf
+obd-diag used-car --port /dev/ttyUSB0               # trouble codes cleared recently?
 obd-diag vin WVWZZZ1KZ6W123456                     # decode only, without an adapter
 obd-diag live --port /dev/ttyUSB0 --pids rpm,speed --interval 0.5 --record
 obd-diag export ~/.local/share/obd-diag/sessions/session-20261007-143205.json --pdf report.pdf

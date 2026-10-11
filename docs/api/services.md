@@ -40,6 +40,11 @@
 ```{automodule} obd_diag.services.live
 ```
 
+## `obd_diag.services.used_car`
+
+```{automodule} obd_diag.services.used_car
+```
+
 ## `obd_diag.services.battery`
 
 ```{automodule} obd_diag.services.battery

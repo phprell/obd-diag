@@ -39,7 +39,8 @@ Mitschnitten dieser Tests:
 
 Nicht aufgezeichnet sind die Werte zu PID 21, 30, 31, 49 und 66 (Strecke mit
 Warnleuchte, Warmläufe und Strecke seit dem Löschen, Fahrpedal, Luftmasse). Das Auto
-meldet sie als unterstützt; im Demo-Modus stehen dort erfundene, plausible Werte.
+meldet sie als unterstützt; im Demo-Modus stehen dort erfundene, plausible Werte. Der
+Gebrauchtwagen-Check ist deshalb „unauffällig“ (40 Warmläufe und 3000 km seit dem Löschen).
 
 Für den {doc}`batterie` steht der Motor des Demo-Fahrzeugs zuerst und springt etwa 3 s
 nach der Aufforderung von selbst an. Diese Spannungen sind erfunden, aber an die

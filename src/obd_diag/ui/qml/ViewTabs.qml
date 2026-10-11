@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // Reiter über dem Hauptbereich: Fehlercodes, Readiness, Freeze Frame, Fahrzeug,
-// Live-Daten.
+// Gebrauchtwagen, Live-Daten.
 TabBar {
     id: bar
 
@@ -87,6 +87,12 @@ TabBar {
     ViewTab {
         objectName: "tabVehicle"
         text: qsTr("Fahrzeug")
+    }
+    ViewTab {
+        objectName: "tabUsedCar"
+        text: qsTr("Gebrauchtwagen")
+        dot: bar.vm.usedCar.verdict === "suspicious" ? Theme.warnDot
+             : bar.vm.usedCar.verdict === "inconspicuous" ? Theme.okDot : "transparent"
     }
     ViewTab {
         objectName: "tabLive"
