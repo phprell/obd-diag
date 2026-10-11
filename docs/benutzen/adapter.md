@@ -18,7 +18,8 @@ kommt erst mit v0.3 ({doc}`../entwickeln/roadmap`).
 
 Die Baudrate gilt zwischen Rechner und Adapter, nicht zum Fahrzeug. Standard ist
 38400 Baud (`--baud`); viele USB-Adapter laufen auch oder nur mit 115200. Antwortet
-`obd-diag info` nicht, ist die andere Baudrate der erste Versuch.
+`obd-diag info` nicht, ist die andere Baudrate der erste Versuch; `obd-diag setup-check`
+probiert beide ({doc}`installation`).
 
 ## Adapter finden
 

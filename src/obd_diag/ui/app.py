@@ -27,6 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     from obd_diag.ui.jobs import ThreadPoolRunner
     from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel
     from obd_diag.ui.viewmodels.live import LiveViewModel
+    from obd_diag.ui.viewmodels.setup import SetupViewModel
     from obd_diag.ui.window import create_language, load_main_window, set_style
 
     # Eine schon laufende Anwendung (Tests mit pytest-qt) weiterverwenden; Qt erlaubt
@@ -47,8 +48,10 @@ def main(argv: list[str] | None = None) -> int:
     vm = DiagnosisViewModel(serial_backend(), runner)
     # Derselbe Runner: Live-Daten und Diagnose teilen sich den einen Worker-Thread
     live = LiveViewModel(vm.backend, runner, vm)
+    # Beim ersten Start öffnet sich „Einrichtung prüfen“ von selbst
+    setup = SetupViewModel(runner, vm, show_on_start=SetupViewModel.first_start())
     engine = QQmlApplicationEngine()
-    load_main_window(engine, vm, live=live, language=language)
+    load_main_window(engine, vm, live=live, language=language, setup=setup)
     if not engine.rootObjects():
         print(tr("Fehler: Die Oberfläche ließ sich nicht laden."), file=sys.stderr)
         return 1

@@ -159,6 +159,8 @@ faulty; adapters with a genuine ELM327 or STN chip (e.g. OBDLink) are more relia
 
 Permissions: on Arch the group is called `uucp` (Debian/Ubuntu: `dialout`):
 `sudo usermod -aG uucp $USER`, or install the udev rule from `packaging/`.
+`obd-diag setup-check` checks adapter, permissions and baud rate in one go (the user
+interface does the same on its first start).
 
 ### First test at the car
 

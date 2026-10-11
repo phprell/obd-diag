@@ -15,6 +15,22 @@ msgid "Hinweis: Während der Fahrt nur durch Beifahrer bedienen."
 msgstr "Note: while driving, only a passenger should operate this."
 
 #: src/obd_diag/cli.py
+msgid "OK"
+msgstr "OK"
+
+#: src/obd_diag/cli.py
+msgid "Warnung"
+msgstr "Warning"
+
+#: src/obd_diag/cli.py
+msgid "Fehler"
+msgstr "Error"
+
+#: src/obd_diag/cli.py
+msgid "Hinweis"
+msgstr "Note"
+
+#: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 msgid "abgeschlossen"
 msgstr "complete"
@@ -182,6 +198,14 @@ msgid "Keine Adapter gefunden (USB-Seriell oder /dev/rfcomm*)."
 msgstr "No adapters found (USB serial or /dev/rfcomm*)."
 
 #: src/obd_diag/cli.py
+msgid "Ergebnis: kein nutzbarer Adapter gefunden."
+msgstr "Result: no usable adapter found."
+
+#: src/obd_diag/cli.py
+msgid "Ergebnis: Adapter antwortet, aber nicht alles ist eingerichtet."
+msgstr "Result: the adapter answers, but not everything is set up."
+
+#: src/obd_diag/cli.py
 msgid "Wirklich löschen? Zum Bestätigen \"ja\" eingeben: "
 msgstr "Really clear? Type \"yes\" to confirm: "
 
@@ -301,6 +325,14 @@ msgid "angeschlossene Adapter auflisten"
 msgstr "list connected adapters"
 
 #: src/obd_diag/cli.py
+msgid "Einrichtung prüfen: Adapter finden, Zugriffsrechte und Baudrate (38400, 115200); sendet nur Adapter-Befehle (ATZ ...)"
+msgstr "Check the setup: find adapters, access rights and baud rate (38400, 115200); sends adapter commands only (ATZ ...)"
+
+#: src/obd_diag/cli.py
+msgid "nur diesen Port prüfen (Standard: alle gefundenen Adapter)"
+msgstr "check only this port (default: all adapters found)"
+
+#: src/obd_diag/cli.py
 msgid "gespeicherte Diagnosesitzung (JSON) als PDF-Bericht oder CSV ausgeben"
 msgstr "write a saved diagnosis session (JSON) as a PDF report or CSV"
 
@@ -352,10 +384,6 @@ msgid "FIN nicht verfügbar (Mode 09 nicht unterstützt oder nicht lesbar)."
 msgstr "VIN not available (mode 09 not supported or not readable)."
 
 #: src/obd_diag/cli.py
-msgid "Hinweis"
-msgstr "Note"
-
-#: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 msgid "FIN ungültig (Länge oder Zeichen)"
 msgstr "VIN invalid (length or characters)"
@@ -402,6 +430,10 @@ msgstr "(no description in the catalog)"
 #: src/obd_diag/cli.py
 msgid "Warnung: {message}"
 msgstr "Warning: {message}"
+
+#: src/obd_diag/cli.py
+msgid "Ergebnis: bereit. Weiter mit: {command}"
+msgstr "Result: ready. Continue with: {command}"
 
 #: src/obd_diag/cli.py
 msgid "Keine gespeicherten oder ausstehenden Fehlercodes, es wird nichts gelöscht."
@@ -485,6 +517,10 @@ msgstr "Online, unverified: {text}"
 #: src/obd_diag/export/report.py
 msgid "Quelle: {source}, {url}"
 msgstr "Source: {source}, {url}"
+
+#: src/obd_diag/cli.py
+msgid "Abhilfe: {command}"
+msgstr "Fix: {command}"
 
 #: src/obd_diag/cli.py
 msgid "Bordspannung {voltage:.1f} V unter {minimum:.1f} V, Abfrage nur alle {seconds:g} s."
@@ -2060,6 +2096,122 @@ msgstr "Diagnosis session is incomplete or damaged ({error})."
 msgid "{path}: kein gültiges JSON ({error})."
 msgstr "{path}: not valid JSON ({error})."
 
+#: src/obd_diag/services/setup_check.py
+msgid "Vor dem Verbinden am Auto: Zündung einschalten (der Motor darf aus bleiben). Bei Adaptern mit MS-/HS-CAN-Schalter HS-CAN wählen."
+msgstr "Before connecting to the car: switch the ignition on (the engine may stay off). On adapters with an MS/HS-CAN switch, select HS-CAN."
+
+#: src/obd_diag/services/setup_check.py
+msgid "USB-Adapter einstecken und die Prüfung wiederholen. Bluetooth-Adapter erst koppeln und mit rfcomm bind als /dev/rfcomm0 einbinden."
+msgstr "Plug in the USB adapter and run the check again. Pair Bluetooth adapters first and bind them as /dev/rfcomm0 with rfcomm bind."
+
+#: src/obd_diag/services/setup_check.py
+msgid "Ohne die Gruppe (oder die udev-Regel aus packaging/) darf das Programm den Adapter nicht öffnen. Nach dem Eintragen abmelden und neu anmelden."
+msgstr "Without the group (or the udev rule from packaging/) the program may not open the adapter. Log out and back in after joining."
+
+#: src/obd_diag/services/setup_check.py
+msgid "Nutzer in die Gruppe eintragen, danach abmelden und neu anmelden."
+msgstr "Add the user to the group, then log out and back in."
+
+#: src/obd_diag/services/setup_check.py
+msgid "Kein Adapter gefunden"
+msgstr "No adapter found"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Als root: Zugriff auf alle Geräte"
+msgstr "Running as root: access to all devices"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Abmelden und neu anmelden (oder neu starten), dann gilt die Gruppe."
+msgstr "Log out and back in (or restart), then the group applies."
+
+#: src/obd_diag/services/setup_check.py
+msgid "brltty (Braillezeilen) ist installiert und belegt oft Adapter mit CH340/CH341: falls keine Braillezeile genutzt wird, brltty deinstallieren."
+msgstr "brltty (braille displays) is installed and often claims adapters with CH340/CH341: if you use no braille display, uninstall brltty."
+
+#: src/obd_diag/services/setup_check.py
+msgid "Oberfläche (PySide6) installiert"
+msgstr "User interface (PySide6) installed"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Oberfläche (PySide6) nicht installiert"
+msgstr "User interface (PySide6) not installed"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Die Kommandozeile funktioniert auch ohne."
+msgstr "The command line works without it."
+
+#: src/obd_diag/services/setup_check.py
+msgid "Fehlercode-Katalog vorhanden"
+msgstr "Trouble code catalog present"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Fehlercode-Katalog fehlt"
+msgstr "Trouble code catalog missing"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Fehlercodes werden ohne Beschreibung angezeigt."
+msgstr "Trouble codes are shown without a description."
+
+#: src/obd_diag/services/setup_check.py
+msgid "Nutzer {user} ist nicht in der Gruppe {group}"
+msgstr "User {user} is not in the group {group}"
+
+#: src/obd_diag/services/setup_check.py
+msgid "{port}: kein Zugriff (Gerät gehört der Gruppe {group})"
+msgstr "{port}: no access (the device belongs to the group {group})"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Nutzer {user} ist in der Gruppe {group}"
+msgstr "User {user} is in the group {group}"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Nutzer {user} ist in der Gruppe {group}, aber noch nicht neu angemeldet"
+msgstr "User {user} is in the group {group}, but has not logged in again yet"
+
+#: src/obd_diag/services/setup_check.py
+msgid "{port}: Zugriff erlaubt"
+msgstr "{port}: access allowed"
+
+#: src/obd_diag/services/setup_check.py
+msgid "{port}: Gerät nicht vorhanden"
+msgstr "{port}: device does not exist"
+
+#: src/obd_diag/services/setup_check.py
+msgid "{port}: kein Zugriff"
+msgstr "{port}: no access"
+
+#: src/obd_diag/services/setup_check.py
+msgid "{port}: keine Antwort vom Adapter"
+msgstr "{port}: no answer from the adapter"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Probiert mit {rates} Baud. Adapter neu einstecken; manche Adapter brauchen Strom aus der OBD-Buchse und antworten erst am Auto."
+msgstr "Tried {rates} baud. Plug the adapter in again; some adapters need power from the OBD socket and only answer in the car."
+
+#: src/obd_diag/services/setup_check.py
+msgid "angegeben"
+msgstr "given"
+
+#: src/obd_diag/services/setup_check.py
+msgid "{port}: Antwort, aber nicht wie ein ELM327"
+msgstr "{port}: answers, but not like an ELM327"
+
+#: src/obd_diag/services/setup_check.py
+msgid "Probiert mit {rates} Baud. Ist das ein OBD-Adapter?"
+msgstr "Tried {rates} baud. Is this an OBD adapter?"
+
+#: src/obd_diag/services/setup_check.py
+msgid "{port}: {adapter} antwortet mit {baud} Baud"
+msgstr "{port}: {adapter} answers at {baud} baud"
+
+#: src/obd_diag/services/setup_check.py
+msgid "{port} lässt sich nicht benutzen"
+msgstr "{port} cannot be used"
+
+#: src/obd_diag/services/setup_check.py
+msgid "{error}. Läuft ein anderes Programm mit dem Adapter?"
+msgstr "{error}. Is another program using the adapter?"
+
 #: src/obd_diag/services/storage.py
 #: src/obd_diag/transport/trace.py
 msgid "kein freier Dateiname für {stem} in {directory}"
@@ -2338,6 +2490,30 @@ msgid "{n} Test nicht abgeschlossen: {names}."
 msgid_plural "{n} Tests nicht abgeschlossen: {names}."
 msgstr[0] "{n} test incomplete: {names}."
 msgstr[1] "{n} tests incomplete: {names}."
+
+#: src/obd_diag/ui/viewmodels/setup.py
+msgid "Der Adapter antwortet, aber nicht alles ist eingerichtet."
+msgstr "The adapter answers, but not everything is set up."
+
+#: src/obd_diag/ui/viewmodels/setup.py
+msgid "Prüfe Adapter und Zugriffsrechte …"
+msgstr "Checking adapter and access rights …"
+
+#: src/obd_diag/ui/viewmodels/setup.py
+msgid "Kein nutzbarer Adapter gefunden. Die Punkte unten nennen die Abhilfe."
+msgstr "No usable adapter found. The items below say how to fix it."
+
+#: src/obd_diag/ui/viewmodels/setup.py
+msgid "Erst die laufende Abfrage beenden, dann erneut prüfen."
+msgstr "Finish the running query first, then check again."
+
+#: src/obd_diag/ui/viewmodels/setup.py
+msgid "Prüfung fehlgeschlagen: {error}"
+msgstr "Check failed: {error}"
+
+#: src/obd_diag/ui/viewmodels/setup.py
+msgid "Bereit: {port} mit {baud} Baud."
+msgstr "Ready: {port} at {baud} baud."
 
 #: src/obd_diag/ui/qml/Banner.qml
 msgid "Hinweis schließen"
@@ -2661,6 +2837,10 @@ msgid "&Optionen"
 msgstr "&Options"
 
 #: src/obd_diag/ui/qml/Main.qml
+msgid "Einrichtung prüfen …"
+msgstr "Check setup …"
+
+#: src/obd_diag/ui/qml/Main.qml
 #: src/obd_diag/ui/qml/VehicleView.qml
 msgid "FIN online nachschlagen (NHTSA)"
 msgstr "Look up VIN online (NHTSA)"
@@ -2812,6 +2992,30 @@ msgstr "Monitors"
 #: src/obd_diag/ui/qml/ReadinessView.qml
 msgid "%1 von %2 abgeschlossen"
 msgstr "%1 of %2 complete"
+
+#: src/obd_diag/ui/qml/SetupDialog.qml
+msgid "Einrichtung prüfen"
+msgstr "Check setup"
+
+#: src/obd_diag/ui/qml/SetupDialog.qml
+msgid "Prüft, ob der Adapter gefunden wird, geöffnet werden darf und mit welcher Baudrate er antwortet. Gesendet werden nur Adapter-Befehle, nichts ans Fahrzeug."
+msgstr "Checks whether the adapter is found, may be opened and at which baud rate it answers. Only adapter commands are sent, nothing to the vehicle."
+
+#: src/obd_diag/ui/qml/SetupDialog.qml
+msgid "Erneut prüfen"
+msgstr "Check again"
+
+#: src/obd_diag/ui/qml/SetupDialog.qml
+msgid "Prüfen"
+msgstr "Check"
+
+#: src/obd_diag/ui/qml/SetupDialog.qml
+msgid "Übernehmen"
+msgstr "Apply"
+
+#: src/obd_diag/ui/qml/SetupDialog.qml
+msgid "Schließen"
+msgstr "Close"
 
 #: src/obd_diag/ui/qml/VehicleView.qml
 msgid "Lese Fahrzeug-Identifizierungsnummer …"

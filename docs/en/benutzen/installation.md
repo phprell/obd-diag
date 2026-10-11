@@ -54,3 +54,35 @@ common USB serial chips (FTDI, CH340/CH341, CP210x):
 sudo cp packaging/99-obd-diag.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
+
+## Checking the setup
+
+```sh
+obd-diag setup-check                     # all adapters found
+obd-diag setup-check --port /dev/rfcomm0 # only this port
+```
+
+checks in turn whether the user interface (PySide6) and the trouble code catalog are
+installed, which adapters are connected, whether the user may open them and at which
+baud rate they answer (first 38400, then 115200). Without access, the check names the
+device's group and the command to join it; if the user has joined the group but not
+logged in again yet, it says so. If it finds no adapter and `brltty` is installed, it
+points that out: on Ubuntu, this program for braille displays often claims adapters
+with a CH340 chip.
+
+```
+  OK       User interface (PySide6) installed
+  OK       Trouble code catalog present
+  OK       /dev/ttyUSB0 (USB Serial (QinHeng)): access allowed
+  OK       /dev/ttyUSB0: ELM327 v1.5 answers at 38400 baud
+  Note     Before connecting to the car: switch the ignition on (the engine may stay off). On adapters with an MS/HS-CAN switch, select HS-CAN.
+
+Result: ready. Continue with: obd-diag diagnose --port /dev/ttyUSB0 --baud 38400
+```
+
+Only the adapter commands every command starts with are sent (`ATZ`, `ATE0`, `ATL0`,
+`ATS0`, `ATH0`, `ATSP0`); none of them reaches the vehicle, so the check also works
+without a car. The exit code is 0 when an adapter answers.
+
+The user interface opens the same check by itself on the first start and later under
+*Options → Check setup …*; “Apply” enters port and baud rate at the top.

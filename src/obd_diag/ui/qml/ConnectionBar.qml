@@ -133,6 +133,16 @@ ToolBar {
         }
     }
 
+    // Ergebnis der Einrichtungsprüfung übernehmen (SetupDialog)
+    function setConnection(port, baud) {
+        if (locked)
+            return
+        portBox.editText = port
+        const index = baudBox.indexOfValue(baud)
+        if (index >= 0)
+            baudBox.currentIndex = index
+    }
+
     function scan() {
         if (locked)
             return
