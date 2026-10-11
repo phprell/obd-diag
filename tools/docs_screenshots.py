@@ -13,7 +13,8 @@ reproduzierbar; nach Änderungen an der Oberfläche neu erzeugen und einchecken.
 Einstellungen und Daten landen in einem temporären Ordner, die echten bleiben unberührt.
 
 Mit ``--demo`` statt des Emulators das eingebaute Demo-Fahrzeug (``transport/demo.py``):
-nur Fehlercodes und Live-Daten, als ``demo-*.png`` für die Seite „Ohne Auto ausprobieren“.
+nur Fehlercodes, Testergebnisse (Mode 06) und Live-Daten, als ``demo-*.png`` für die Seiten
+„Ohne Auto ausprobieren“ und „Steuergeräte und Testergebnisse“.
 """
 
 import argparse
@@ -60,7 +61,10 @@ from tests.emulator_patches import (  # noqa: E402
     patch_persistent_clear,
 )
 
-TABS = ("fehlercodes", "readiness", "freeze-frame", "fahrzeug", "live-daten")
+TABS = ("fehlercodes", "readiness", "freeze-frame", "fahrzeug", "live-daten", "testergebnisse")
+# Der Emulator kennt Mode 06 und Mode 09 (außer der FIN) nicht; diese Reiter nur im Demo-Modus
+_EMULATOR_TABS = ("fehlercodes", "readiness", "freeze-frame", "fahrzeug")
+_DEMO_TABS = ("fehlercodes", "testergebnisse")
 SIZE = (1180, 760)
 
 
@@ -115,7 +119,7 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     emulator, port = (None, DEMO_PORT) if args.demo else _start_emulator()
     prefix = "demo-" if args.demo else ""
-    still = ("fehlercodes",) if args.demo else TABS[:-1]
+    still = _DEMO_TABS if args.demo else _EMULATOR_TABS
 
     app = QGuiApplication(sys.argv[:1])
     app.setApplicationName("obd-diag")
@@ -154,7 +158,7 @@ def main() -> int:
 
         # Live-Daten: kurze Abfrage mit den Standardwerten
         design.setProperty("mode", "light")
-        tabs.setProperty("currentIndex", len(TABS) - 1)
+        tabs.setProperty("currentIndex", TABS.index("live-daten"))
         live.start(port, 38400)
         _wait(lambda: bool(live.property("running")), 30, "Live-Daten starten")
         _settle(20)

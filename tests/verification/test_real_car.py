@@ -43,9 +43,28 @@ from obd_diag.transport.trace import ReplayTransport, read_trace
 
 TRACES = Path(__file__).parent.parent / "fixtures" / "traces" / "mercedes_w177"
 
+# Die Diagnose-Mitschnitte enden mit 0902; Mode 09 (0900) und Mode 06 (0600) gab es damals
+# noch nicht. Hier folgen sie als NO DATA, ohne zu behaupten, das Auto hätte so geantwortet.
+_NOT_RECORDED = [
+    (direction, data)
+    for cmd in (b"0900", b"0600")
+    for direction, data in (
+        (">>", b"ATH1\r"),
+        ("<<", b"OK\r\r>"),
+        (">>", cmd + b"\r"),
+        ("<<", b"NO DATA\r\r>"),
+        (">>", b"ATH0\r"),
+        ("<<", b"OK\r\r>"),
+    )
+]
+
+
+def _diagnosis_replay(name: str) -> ReplayTransport:
+    return ReplayTransport([*read_trace(TRACES / name), *_NOT_RECORDED])
+
 
 def test_diagnosis_replays_with_expected_result() -> None:
-    session = run_diagnosis(Elm327(ReplayTransport.from_file(TRACES / "diagnose.log")), None)
+    session = run_diagnosis(Elm327(_diagnosis_replay("diagnose.log")), None)
 
     scan = session.scan
     assert scan.adapter == "ELM327 v1.5"
@@ -150,7 +169,7 @@ def test_ignition_off_reports_no_connection_with_hint() -> None:
     [("diagnose_order.log", 12.391), ("diagnose_engine_running.log", 13.9)],
 )
 def test_second_test_diagnosis(trace: str, voltage: float) -> None:
-    session = run_diagnosis(Elm327(ReplayTransport.from_file(TRACES / trace)), None)
+    session = run_diagnosis(Elm327(_diagnosis_replay(trace)), None)
     assert session.scan.voltage == pytest.approx(voltage)
     assert session.scan.codes == [DiagnosticCode("U1218", DtcKind.STORED)]
 

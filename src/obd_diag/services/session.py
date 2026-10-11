@@ -13,7 +13,14 @@ from obd_diag import __version__
 from obd_diag.data.dtc_catalog import Cause, DtcInfo
 from obd_diag.i18n import tr
 from obd_diag.protocol.elm327 import Elm327, ElmError
+from obd_diag.protocol.monitor_tests import TestResult, read_test_results
 from obd_diag.protocol.obd import FreezeFrame, read_freeze_frame
+from obd_diag.protocol.vehicle_info import (
+    EcuInfo,
+    InUsePerformance,
+    PerformanceCounter,
+    read_ecu_info,
+)
 from obd_diag.services.diagnostics import (
     DiagnosticCode,
     DtcKind,
@@ -38,6 +45,9 @@ class Session:
     readiness: ReadinessStatus | None = None
     freeze_frame: FreezeFrame | None = None
     vehicle: VinInfo | None = None
+    # Mode 09 je Steuergerät und Mode 06; ``None``: nicht unterstützt oder nicht lesbar
+    ecus: tuple[EcuInfo, ...] | None = None
+    tests: tuple[TestResult, ...] | None = None
 
 
 def run_diagnosis(
@@ -48,13 +58,16 @@ def run_diagnosis(
     online_vin_lookup: bool = False,
     online_dtc_lookup: bool = False,
 ) -> Session:
-    """Scan, Readiness, Freeze Frame und FIN in einem Durchgang; nur lesend.
+    """Scan, Readiness, Freeze Frame, FIN, Steuergeräte-Angaben (Mode 09) und
+    Testergebnisse (Mode 06) in einem Durchgang; nur lesend.
 
     Fehlt eine einzelne Angabe (Steuergerät antwortet nicht), bleibt sie ``None``;
     nur ein fehlgeschlagener Scan bricht ab.
 
     Der Scan setzt den Adapter zurück (``ATZ``) und handelt das Protokoll aus; danach
-    folgen Readiness (``0101``), Freeze Frame (``02xx00``) und FIN (``0902``). Ein
+    folgen Readiness (``0101``), Freeze Frame (``02xx00``), FIN (``0902``), Mode 09
+    (``0900`` und die gemeldeten InfoTypes) und Mode 06 (``0600`` … und die gemeldeten
+    MIDs), die beiden letzten mit Headern. Ein
     ``ElmError`` in einem dieser Teile lässt nur diesen Teil leer; Verbindungsfehler
     (``TransportError``) brechen ab. Der Freeze Frame wird immer gelesen, bleibt aber
     ``None``, wenn er weder einen auslösenden Code noch Werte enthält (ohne
@@ -71,13 +84,21 @@ def run_diagnosis(
         freeze = None
     vin = _optional("FIN", read_vin, elm)
     vehicle = None if vin is None else decode_vin(vin, protocol=result.protocol)
+    ecus = _optional("Mode 09", read_ecu_info, elm)
+    tests = _optional("Mode 06", read_test_results, elm)
     if vehicle is not None and online_vin_lookup and vehicle.valid:
         vehicle = dataclasses.replace(vehicle, online=lookup_vpic(vehicle.vin))
     if online_dtc_lookup:
         manufacturer = vehicle.manufacturer if vehicle is not None and vehicle.valid else None
         result = add_online_explanations(result, manufacturer)
     return Session(
-        created=created, scan=result, readiness=readiness, freeze_frame=freeze, vehicle=vehicle
+        created=created,
+        scan=result,
+        readiness=readiness,
+        freeze_frame=freeze,
+        vehicle=vehicle,
+        ecus=None if ecus is None else tuple(ecus),
+        tests=None if tests is None else tuple(tests),
     )
 
 
@@ -121,6 +142,30 @@ def session_to_dict(session: Session) -> dict[str, Any]:
             None if session.freeze_frame is None else dataclasses.asdict(session.freeze_frame)
         ),
         "vehicle": None if session.vehicle is None else dataclasses.asdict(session.vehicle),
+        "ecus": None if session.ecus is None else [_ecu_dict(e) for e in session.ecus],
+        "tests": None if session.tests is None else [_test_dict(t) for t in session.tests],
+    }
+
+
+def _ecu_dict(ecu: EcuInfo) -> dict[str, Any]:
+    data = dataclasses.asdict(ecu)
+    if ecu.performance is not None:
+        for counter, entry in zip(
+            ecu.performance.counters, data["performance"]["counters"], strict=True
+        ):
+            entry["ratio"] = counter.ratio  # nur zur Information, beim Laden neu berechnet
+    return data
+
+
+def _test_dict(test: TestResult) -> dict[str, Any]:
+    # Rohwerte sind maßgeblich; umgerechnete Werte und Urteil nur zur Information
+    return {
+        **dataclasses.asdict(test),
+        "value": test.value,
+        "min": test.minimum,
+        "max": test.maximum,
+        "unit": test.unit,
+        "status": test.status.value,
     }
 
 
@@ -204,6 +249,35 @@ def _vehicle(data: dict[str, Any]) -> VinInfo:
     )
 
 
+def _ecu(data: dict[str, Any]) -> EcuInfo:
+    performance = data.get("performance")
+    return EcuInfo(
+        ecu=str(data["ecu"]),
+        name=data.get("name"),
+        calibration_ids=tuple(str(c) for c in data.get("calibration_ids", ())),
+        cvns=tuple(str(c) for c in data.get("cvns", ())),
+        performance=None
+        if performance is None
+        else InUsePerformance(
+            compression_ignition=bool(performance["compression_ignition"]),
+            obd_conditions=int(performance["obd_conditions"]),
+            ignition_cycles=int(performance["ignition_cycles"]),
+            counters=tuple(
+                PerformanceCounter(str(c["key"]), int(c["completed"]), int(c["conditions"]))
+                for c in performance.get("counters", ())
+            ),
+        ),
+        supported=tuple(int(t) for t in data.get("supported", ())),
+    )
+
+
+def _test(data: dict[str, Any]) -> TestResult:
+    return TestResult(
+        ecu=str(data["ecu"]),
+        **{k: int(data[k]) for k in ("mid", "tid", "uasid", "value_raw", "min_raw", "max_raw")},
+    )
+
+
 def session_from_dict(data: dict[str, Any]) -> Session:
     """Gegenstück zu ``session_to_dict``; ``ValueError`` bei fremden oder kaputten Daten."""
     if not isinstance(data, dict) or data.get("format") != SESSION_FORMAT:
@@ -233,6 +307,9 @@ def session_from_dict(data: dict[str, Any]) -> Session:
             readiness=None if readiness is None else _readiness(readiness),
             freeze_frame=None if freeze is None else _freeze_frame(freeze),
             vehicle=None if vehicle is None else _vehicle(vehicle),
+            # beide fehlen in Sitzungen älterer Versionen
+            ecus=None if data.get("ecus") is None else tuple(_ecu(e) for e in data["ecus"]),
+            tests=None if data.get("tests") is None else tuple(_test(t) for t in data["tests"]),
         )
     except (KeyError, TypeError, ValueError, AttributeError, IndexError) as e:
         raise ValueError(

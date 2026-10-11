@@ -321,6 +321,8 @@ def test_diagnose_table(
         "Freeze Frame (ausgelöst durch P0133):\n"
         "  Kühlmitteltemperatur:  75 °C\n"
         "  Drehzahl:              1726 1/min\n"
+        "\nSteuergeräte (Mode 09): nicht verfügbar.\n"
+        "\nTestergebnisse (Mode 06): nicht verfügbar.\n"
     )
     assert "04" not in full_car[0].sent
     assert not (tmp_path / "data").exists()  # ohne --save wird nichts gespeichert
@@ -354,7 +356,8 @@ def test_diagnose_without_optional_parts(
     out = capsys.readouterr().out
     assert out.startswith("Fahrzeug:\n  FIN nicht verfügbar")
     assert "Readiness: nicht verfügbar (PID 01 nicht beantwortet).\n" in out
-    assert out.endswith("Freeze Frame: keiner gespeichert.\n")
+    assert "Freeze Frame: keiner gespeichert.\n" in out
+    assert out.endswith("Testergebnisse (Mode 06): nicht verfügbar.\n")
 
 
 def test_diagnose_pdf_and_csv(

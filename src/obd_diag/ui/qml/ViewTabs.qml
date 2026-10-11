@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // Reiter über dem Hauptbereich: Fehlercodes, Readiness, Freeze Frame, Fahrzeug,
-// Live-Daten.
+// Live-Daten, Testergebnisse (Mode 06).
 TabBar {
     id: bar
 
@@ -92,5 +92,10 @@ TabBar {
         objectName: "tabLive"
         text: qsTr("Live-Daten")
         dot: bar.live.running ? Theme.okDot : "transparent"  // Abfrage läuft
+    }
+    ViewTab {
+        objectName: "tabTests"
+        text: qsTr("Testergebnisse")
+        badge: bar.vm.testResults.failedCount > 0 ? String(bar.vm.testResults.failedCount) : ""
     }
 }

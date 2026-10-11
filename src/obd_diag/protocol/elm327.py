@@ -53,9 +53,14 @@ AT_COMMANDS = frozenset(
     | {"ATI", "AT@1", "ATPPS", "ATIGN", "ATRD", "ATAMC"}
 )
 # Lesende OBD-Anfragen nach SAE J1979: Mode 01 (aktuelle Daten), Mode 02 (Freeze
-# Frame, mit oder ohne Frame-Nummer 00), Mode 03/07/0A (Fehlercodes), Mode 09 PID 02
-# (FIN). Nur Großbuchstaben, keine Leerzeichen.
-_READ_REQUEST = re.compile(r"01[0-9A-F]{2}|02[0-9A-F]{2}(00)?|03|07|0A|0902")
+# Frame, mit oder ohne Frame-Nummer 00), Mode 03/07/0A (Fehlercodes), Mode 06
+# (Testergebnisse je Monitor-ID), Mode 09 InfoType 00/02/04/06/08/0A/0B (unterstützte
+# InfoTypes, FIN, Kalibrierungs-IDs, CVN, Überwachungszähler, Steuergerätename; die
+# Zähler-InfoTypes 01/03/05/07/09 gibt es nur bei alten Protokollen und braucht niemand).
+# Nur Großbuchstaben, keine Leerzeichen.
+_READ_REQUEST = re.compile(
+    r"01[0-9A-F]{2}|02[0-9A-F]{2}(00)?|03|07|0A|06[0-9A-F]{2}|09(00|02|04|06|08|0A|0B)"
+)
 # Der einzige schreibende Befehl; nur innerhalb von ``Elm327.allow_clear()``.
 CLEAR_COMMAND = "04"
 
@@ -293,9 +298,20 @@ class Elm327:
         Nur für lesende Anfragen gedacht, die wiederholt werden dürfen. Das Ergebnis
         zerlegt ``protocol.headers.parse_header_response``.
         """
+        with self.headers():
+            return self.query(cmd)
+
+    @contextmanager
+    def headers(self) -> Iterator[None]:
+        """Header an (``ATH1``) für den ``with``-Block, danach wieder ``ATH0``.
+
+        Für mehrere Anfragen hintereinander, deren Antworten je Steuergerät zugeordnet
+        werden müssen (Mode 06, Mode 09). Lässt sich ``ATH0`` nicht setzen, folgt ein
+        ``TransportError``: mit Headern würden alle weiteren Antworten falsch gelesen.
+        """
         self.command("ATH1")
         try:
-            return self.query(cmd)
+            yield
         finally:
             try:
                 self.command("ATH0")

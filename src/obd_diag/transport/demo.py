@@ -10,6 +10,9 @@ Runden der Reihe nach durch und beginnen danach von vorn.
 
 Nicht aufgezeichnet, aber vom Auto als unterstützt gemeldet und von obd-diag lesbar sind
 die PIDs 21, 30, 31, 49 und 66; dafür stehen hier erfundene, plausible Beispielwerte.
+Ebenso erfunden sind die Antworten auf Mode 09 (Steuergerätenamen, Kalibrierungs-IDs,
+CVN, Überwachungszähler) und Mode 06 (Testergebnisse): zu beiden gibt es noch keinen
+Mitschnitt vom Auto.
 Auch die Steuergeräte-Adressen (nur mit ``ATH1`` sichtbar) sind angenommen; die
 Mitschnitte sind ohne Header entstanden.
 
@@ -79,6 +82,46 @@ _STATIC: dict[str, Reply] = {
     "0131": ("41310BB8", None, None, None),
     "0149": ("414926", None, None, None),
     "0166": (None, "41660101400000", None, None),
+    # Erfundene Beispielwerte (nicht aufgezeichnet) für Mode 09 und Mode 06; Motor-
+    # (10) und Getriebesteuergerät (18) antworten, Kalibrierungs-IDs und CVN sind
+    # ausgedacht. Unterstützte InfoTypes: Motor 02/04/06/0A/0B, Getriebe 04/06/0A.
+    "0900": ("490054600000", None, "490014400000", None),
+    "0904": (
+        "49040141363531393030363430300000000000",
+        None,
+        "49040141373232393030323030300000000000",
+        None,
+    ),
+    "0906": ("4906019F3E61C2", None, "4906010C55D1E7", None),
+    "090A": (
+        "490A0145434D002D456E67696E65436F6E74726F6C0000",
+        None,
+        "490A0154434D002D5472616E736D697373696F6E43746C",
+        None,
+    ),
+    # Überwachungszähler (Diesel, 18 Werte): 96 Fahrzyklen mit Bedingungen, 240
+    # Zündungen; Abgassensor 0 von 96 abgeschlossen, passend zum offenen Readiness-Test
+    "090B": (
+        "490B12006000F0002800600023006000000000000C00600000006000500060004B0060003C0060",
+        None,
+        None,
+        None,
+    ),
+    # Mode 06 (nur Motor): unterstützte MIDs 01, 21, 31, 85, 98, B0
+    "0600": ("460080000001", None, None, None),
+    "0620": ("462080008001", None, None, None),
+    "0640": ("464000000001", None, None, None),
+    "0660": ("466000000001", None, None, None),
+    "0680": ("468008000101", None, None, None),
+    "06A0": ("46A000010000", None, None, None),
+    # Abgassensor: noch kein Ergebnis (Wert und Grenzen 0), wie der offene Readiness-Test
+    "0601": ("4601800A000000000000", None, None, None),
+    "0621": ("462180240064000000C8", None, None, None),  # Katalysator: 100 (0 bis 200)
+    # AGR: 30,00 g/s (10 bis 50) und 250 ms (0 bis 500)
+    "0631": ("463180270BB803E8138831811000FA000001F4", None, None, None),
+    "0685": ("468580990032FF3800C8", None, None, None),  # Ladedruck: 5,0 kPa (-20 bis 20)
+    "0698": ("4698802F21341B582710", None, None, None),  # SCR: 85 %
+    "06B0": ("46B080170096000001F4", None, None, None),  # DPF: 1,5 kPa
 }
 
 

@@ -42,6 +42,13 @@ from reportlab.platypus import (
 from obd_diag import __version__
 from obd_diag.data.dtc_catalog import DtcInfo
 from obd_diag.i18n import N_, csv_delimiter, language, tr
+from obd_diag.protocol.monitor_tests import (
+    STATUS_LABELS,
+    TestResult,
+    TestStatus,
+    mid_name,
+    tid_name,
+)
 from obd_diag.services.diagnostics import LOW_VOLTAGE, DiagnosticCode, DtcKind
 from obd_diag.services.readiness import ALL_COMPLETE_LABEL, AU_NOTE, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session
@@ -215,6 +222,7 @@ _FALLBACK_CHARS = {
     "≥": ">=",
     "≤": "<=",
     "→": "->",
+    "Ω": "Ohm",
 }
 
 
@@ -798,6 +806,128 @@ class _Builder:
             out.append(self._grid(rows, [_TABLE_WIDTH - 45 * mm, 45 * mm]))
         return out
 
+    def ecus(self, session: Session) -> list[Flowable]:
+        """Mode 09 je Steuergerät: Name, Kalibrierungs-IDs, CVN, Überwachungszähler."""
+        out: list[Flowable] = [self._p(tr("Steuergeräte (Mode 09)"), "h1")]
+        if session.ecus is None:
+            out.append(self._p(tr("Steuergeräte-Angaben nicht verfügbar."), "note"))
+            return out
+        for ecu in session.ecus:
+            title = f"{ecu.name} ({ecu.ecu})" if ecu.name else ecu.ecu
+            block: list[Flowable] = [self._p(title, "h2"), Spacer(1, 2)]
+            rows: list[tuple[str, Any]] = [(tr("Kalibrierungs-ID"), c) for c in ecu.calibration_ids]
+            rows += [(tr("CVN"), c) for c in ecu.cvns]
+            ipt = ecu.performance
+            if ipt is not None:
+                rows.append(
+                    (
+                        tr("Überwachungszähler"),
+                        tr("{cycles} Fahrzyklen, {ignitions} Zündungen").format(
+                            cycles=ipt.obd_conditions, ignitions=ipt.ignition_cycles
+                        ),
+                    )
+                )
+            if rows:
+                block.append(self._kv_table(rows, 40 * mm))
+            if ipt is not None and ipt.counters:
+                block.append(Spacer(1, 4))
+                grid = [
+                    [
+                        self._p(tr("Monitor"), "bold"),
+                        self._p(tr("abgeschlossen / Bedingungen"), "bold"),
+                        self._p(tr("Quote"), "bold"),
+                    ]
+                ]
+                for counter in ipt.counters:
+                    ratio = counter.ratio
+                    grid.append(
+                        [
+                            self._p(tr(counter.name)),
+                            self._p(f"{counter.completed} / {counter.conditions}", "right"),
+                            self._p("" if ratio is None else _number(ratio, 2), "right"),
+                        ]
+                    )
+                block.append(self._grid(grid, [_TABLE_WIDTH - 70 * mm, 45 * mm, 25 * mm]))
+            out.append(KeepTogether(block))
+        out.append(Spacer(1, 4))
+        out.append(
+            self._p(
+                tr(
+                    "Kalibrierungs-ID und CVN kennzeichnen den Software-Stand eines "
+                    "Steuergeräts. Überwachungszähler: wie oft ein Test abgeschlossen wurde "
+                    "und wie oft die Bedingungen dafür gegeben waren."
+                ),
+                "note",
+            )
+        )
+        return out
+
+    def _measure(self, test: TestResult, value: float | None, raw: int) -> str:
+        if value is None:
+            return tr("{raw} (Rohwert)").format(raw=raw)
+        text = _number(value, test.decimals)
+        return f"{text} {test.unit}" if test.unit else text
+
+    def tests(self, session: Session) -> list[Flowable]:
+        """Mode 06: Testergebnisse mit Grenzwerten, je Steuergerät."""
+        out: list[Flowable] = [self._p(tr("Testergebnisse (Mode 06)"), "h1")]
+        if session.tests is None:
+            out.append(self._p(tr("Testergebnisse nicht verfügbar."), "note"))
+            return out
+        names = {e.ecu: e.name for e in session.ecus or () if e.name}
+        colors_by_status = {
+            TestStatus.PASSED: _GOOD,
+            TestStatus.FAILED: _BAD,
+            TestStatus.NO_RESULT: _MUTED,
+        }
+        head = [
+            self._p(tr("Monitor · Test"), "bold"),
+            self._p(tr("Wert"), "bold"),
+            self._p(tr("Grenzen"), "bold"),
+            self._p(tr("Ergebnis"), "bold"),
+        ]
+        for ecu in dict.fromkeys(t.ecu for t in session.tests):
+            title = f"{names[ecu]} ({ecu})" if ecu in names else ecu
+            rows = [head]
+            for test in (t for t in session.tests if t.ecu == ecu):
+                shown = test.status is not TestStatus.NO_RESULT
+                limits = (
+                    tr("{low} bis {high}").format(
+                        low=self._measure(test, test.minimum, test.min_raw),
+                        high=self._measure(test, test.maximum, test.max_raw),
+                    )
+                    if shown
+                    else ""
+                )
+                rows.append(
+                    [
+                        self._p(f"{mid_name(test.mid)} · {tid_name(test.tid)}", "small"),
+                        self._p(
+                            self._measure(test, test.value, test.value_raw) if shown else "",
+                            "small",
+                        ),
+                        self._p(limits, "small"),
+                        self._colored(
+                            tr(STATUS_LABELS[test.status]), colors_by_status[test.status]
+                        ),
+                    ]
+                )
+            out.append(self._p(title, "h2"))
+            out.append(Spacer(1, 2))
+            out.append(self._grid(rows, [_WIDTH - 115 * mm, 30 * mm, 50 * mm, 35 * mm]))
+        out.append(Spacer(1, 4))
+        out.append(
+            self._p(
+                tr(
+                    "Bestanden heißt: Der Messwert liegt innerhalb der Grenzen, die das "
+                    "Steuergerät selbst meldet. Kein Ergebnis: meist ist der Test seit dem letzten "
+                    "Löschen noch nicht gelaufen. Tests ab Nummer 80 legt der Hersteller fest."
+                ),
+                "note",
+            )
+        )
+        return out
+
 
 class _NumberedCanvas(Canvas):
     """Zeichnet die Fußzeile erst am Ende, damit „Seite x von y“ möglich ist."""
@@ -842,7 +972,8 @@ def export_pdf(session: Session, path: Path) -> None:
     Freeze Frame, Readiness. In der eingestellten Sprache, DIN A4.
 
     Reihenfolge: Kopf, Fahrzeug und Verbindung, Kurzübersicht, Readiness,
-    Fehlercodes nach Art, Freeze Frame. Fehlende Angaben stehen als „nicht verfügbar“.
+    Fehlercodes nach Art, Freeze Frame, Steuergeräte (Mode 09), Testergebnisse
+    (Mode 06). Fehlende Angaben stehen als „nicht verfügbar“.
     """
     fonts = _fonts()
     b = _Builder(fonts)
@@ -854,6 +985,8 @@ def export_pdf(session: Session, path: Path) -> None:
         KeepTogether(b.readiness(session.readiness)),
         *b.codes(session),
         KeepTogether(b.freeze_frame(session)),
+        *b.ecus(session),
+        *b.tests(session),
     ]
     doc = BaseDocTemplate(
         str(path),

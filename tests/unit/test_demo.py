@@ -5,6 +5,7 @@ Dienste; verglichen wird mit dem, was die Mitschnitte vom Auto ergeben haben.
 """
 
 import io
+import json
 from pathlib import Path
 
 import pytest
@@ -59,6 +60,24 @@ def test_diagnosis_matches_the_real_car() -> None:
     assert session.vehicle is not None
     assert session.vehicle.vin == "WDD1770031J000000"
     assert session.vehicle.manufacturer == "Mercedes-Benz"
+
+
+def test_demo_answers_mode_09_and_mode_06() -> None:
+    # erfundene Beispielwerte, aber durch Treiber und Parser wie am Auto
+    with DemoTransport() as transport:
+        session = run_diagnosis(Elm327(transport), None)
+    assert session.ecus is not None
+    engine, gearbox = session.ecus
+    assert (engine.ecu, engine.name) == ("18DAF110", "ECM-EngineControl")
+    assert (gearbox.ecu, gearbox.name) == ("18DAF118", "TCM-TransmissionCtl")
+    assert engine.performance is not None and engine.performance.compression_ignition
+    sensor = next(c for c in engine.performance.counters if c.key == "exhaust_gas_sensor")
+    assert sensor.completed == 0  # passt zum offenen Readiness-Test Abgassensor
+    assert session.tests is not None
+    assert len(session.tests) == 7
+    assert {t.ecu for t in session.tests} == {"18DAF110"}
+    assert [t.status.value for t in session.tests].count("no_result") == 1
+    assert all(t.status.value != "failed" for t in session.tests)
 
 
 def test_live_cycles_through_the_recorded_idle_rounds() -> None:
@@ -193,6 +212,44 @@ def test_cli_diagnose_demo(args: list[str], capsys: pytest.CaptureFixture[str]) 
     assert "U1218" in out
     assert "ELM327 v1.5 (Demo)" in out
     assert "Demo-Modus" in err
+
+
+def test_cli_ecus_and_tests_demo(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["--lang", "de", "ecus", "--demo"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("Steuergeräte (Mode 09):\n  18DAF110  ECM-EngineControl\n")
+    assert "Kalibrierungs-ID:" in out and "A6519006400" in out
+    assert "      Abgassensor:" in out and "0 von 96 (0.00)" in out
+    assert cli.main(["--lang", "de", "tests", "--demo"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("Testergebnisse (Mode 06, 7 Tests, davon 0 nicht bestanden):\n")
+    assert (
+        "    Partikelfilter Bank 1 · Herstellertest 80\n"
+        "      1.50 kPa  (Grenzen 0.00 kPa bis 5.00 kPa)  bestanden\n"
+    ) in out
+    assert "    Lambdasonde Bank 1 Sensor 1 · Herstellertest 80\n      kein Ergebnis\n" in out
+
+
+def test_cli_ecus_and_tests_json_demo(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["ecus", "--demo", "--json"]) == 0
+    ecus = json.loads(capsys.readouterr().out)
+    assert [e["ecu"] for e in ecus] == ["18DAF110", "18DAF118"]
+    assert cli.main(["tests", "--demo", "--json"]) == 0
+    tests = json.loads(capsys.readouterr().out)
+    assert tests[1] == {
+        "ecu": "18DAF110",
+        "mid": 0x21,
+        "tid": 0x80,
+        "uasid": 0x24,
+        "value_raw": 100,
+        "min_raw": 0,
+        "max_raw": 200,
+        "value": 100,
+        "min": 0,
+        "max": 200,
+        "unit": "",
+        "status": "passed",
+    }
 
 
 def test_cli_demo_in_english(capsys: pytest.CaptureFixture[str]) -> None:

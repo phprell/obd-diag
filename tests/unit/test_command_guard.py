@@ -11,6 +11,11 @@ aus dem Code abgeschrieben:
 - ``02 PID 00``: Freeze Frame, Frame-Nummer 00 (Service $02).
 - ``03``/``07``/``0A``: gespeicherte/ausstehende/permanente Codes, ohne Parameter.
 - ``0902``: FIN (Service $09, InfoType 02).
+- ``0900``/``0904``/``0906``/``0908``/``090A``/``090B``: unterstützte InfoTypes,
+  Kalibrierungs-IDs, CVN, Überwachungszähler, Steuergerätename (Service $09), mit
+  Headern (``ATH1`` … ``ATH0``), weil mehrere Steuergeräte antworten.
+- ``06 MID``: unterstützte Monitor-IDs (``0600``, ``0620`` …) und Testergebnisse je MID
+  (Service $06), ebenfalls mit Headern.
 - ``04``: Löschen (Service $04), der einzige schreibende Befehl.
 - Adapter-Check: ``ATI`` Kennung, ``AT@1`` Beschreibung, ``ATRV``, ``ATPPS``
   Parameterübersicht, ``ATIGN`` Zündungseingang, ``ATRD`` Nutzerspeicher lesen,
@@ -29,7 +34,7 @@ from hypothesis import strategies as st
 
 from obd_diag import cli
 from obd_diag.data.dtc_catalog import DtcCatalog
-from obd_diag.protocol import obd, pids
+from obd_diag.protocol import monitor_tests, obd, pids, vehicle_info
 from obd_diag.protocol.elm327 import (
     AT_COMMANDS,
     CLEAR_COMMAND,
@@ -41,7 +46,14 @@ from obd_diag.protocol.elm327 import (
 from obd_diag.services import adapter_check, clear, diagnostics, readiness, session, vehicle
 from obd_diag.services.clear import ClearRefused
 from obd_diag.transport import TransportError
-from tests.fakes import CAN_CAR_ENGINE_OFF, CAN_CAR_FULL, CLEARED, FakeTransport
+from tests.fakes import (
+    CAN_CAR_ENGINE_OFF,
+    CAN_CAR_FULL,
+    CLEARED,
+    ECU_INFO_HEADERS,
+    MONITOR_TESTS_HEADERS,
+    FakeTransport,
+)
 
 INIT = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH0", "ATSP0"]
 PROTOCOL = ["0100", "ATDPN", "ATDP"]
@@ -50,6 +62,12 @@ SCAN = [*INIT, "ATRV", *PROTOCOL, *DTCS]
 FREEZE = ["020200", "020400", "020500", "020C00", "020D00"]
 PRECONDITIONS = ["0100", "ATRV", "010C"]
 ADAPTER_CHECK = [*INIT, "ATI", "AT@1", "ATRV", "ATPPS", "ATIGN", "ATRD", "ATAMC"]
+# Mode 09 und Mode 06 in der Diagnose; CAN_CAR_FULL beantwortet beide nicht (Fake: OK)
+ECUS_AND_TESTS = ["ATH1", "0900", "ATH0", "ATH1", "0600", "ATH0"]
+DIAGNOSIS = [*SCAN, "0101", *FREEZE, "0902", *ECUS_AND_TESTS]
+# Mit den Antworten aus ECU_INFO_HEADERS und MONITOR_TESTS_HEADERS (siehe tests/fakes.py)
+ECUS = ["ATH1", "0900", "0904", "0906", "0908", "090A", "ATH0"]
+TESTS = ["ATH1", "0600", "0620", "0601", "0602", "0621", "ATH0"]
 
 # Genau so sieht ein Befehl auf der Leitung aus: ASCII, Großbuchstaben/Ziffern, ein CR;
 # „@“ nur in AT@1 (Datenblatt S. 28).
@@ -95,6 +113,15 @@ def _sent(elm: Elm327) -> list[str]:
         "020C00",
         *DTCS,
         "0902",
+        "0900",
+        "0904",
+        "0906",
+        "0908",
+        "090A",
+        "090B",
+        "0600",
+        "0621",
+        "06E0",
     ],
 )
 def test_read_only_commands_are_allowed(cmd: str) -> None:
@@ -109,10 +136,15 @@ def test_read_only_commands_are_allowed(cmd: str) -> None:
     [
         "04",  # Löschen außerhalb von clear_dtcs
         "05",  # Lambdasonden-Tests (alt)
-        "06",  # Testergebnisse, nicht benötigt
+        "06",  # Testergebnisse ohne Monitor-ID
+        "060",  # unvollständige Monitor-ID
+        "060100",  # mehr als eine Monitor-ID
         "08",
         "0800",  # Service $08: Steuergerät-Komponenten ansteuern
-        "0904",  # Kalibrierungs-ID, nicht benötigt
+        "0901",  # Zähler-InfoType alter Protokolle, nicht benötigt
+        "0905",
+        "090C",  # nicht freigegebener InfoType
+        "09041",  # Antwortzahl angehängt (wie 09021)
         "1003",  # UDS: Diagnosesitzung wechseln
         "1101",  # UDS: Steuergerät-Reset
         "14FFFFFF",  # UDS: Fehlerspeicher löschen
@@ -198,11 +230,7 @@ def test_any_text_is_either_allowed_or_never_sent(cmd: str) -> None:
         ("read_vin", vehicle.read_vin, ["0902"]),
         ("check_adapter", adapter_check.check_adapter, ADAPTER_CHECK),
         ("scan", lambda e: diagnostics.scan(e, None), SCAN),
-        (
-            "run_diagnosis",
-            lambda e: session.run_diagnosis(e, None),
-            [*SCAN, "0101", *FREEZE, "0902"],
-        ),
+        ("run_diagnosis", lambda e: session.run_diagnosis(e, None), DIAGNOSIS),
     ],
 )
 def test_read_function_sends_exactly(name: str, call: object, expected: list[str]) -> None:
@@ -210,6 +238,20 @@ def test_read_function_sends_exactly(name: str, call: object, expected: list[str
     call(elm)  # type: ignore[operator]
     assert _sent(elm) == expected, name
     assert all(is_read_only(c) for c in _sent(elm))
+
+
+def test_mode_09_sends_the_supported_info_types_with_headers() -> None:
+    # 7E8 meldet 02/04/06/08/0A, 7E9 04/06/0A: 0902 liest read_vin, 090B meldet keiner
+    elm = _elm(CAN_CAR_FULL, headers_on=ECU_INFO_HEADERS)
+    vehicle_info.read_ecu_info(elm)
+    assert _sent(elm) == ECUS
+
+
+def test_mode_06_sends_the_supported_monitor_ids_with_headers() -> None:
+    # 0600 meldet 01, 02 und den Bereich 20; 0620 meldet 21 und keinen weiteren Bereich
+    elm = _elm(CAN_CAR_FULL, headers_on=MONITOR_TESTS_HEADERS)
+    monitor_tests.read_test_results(elm)
+    assert _sent(elm) == TESTS
 
 
 def test_preconditions_send_only_reads() -> None:
@@ -251,8 +293,10 @@ def test_refused_clear_sends_only_reads(tmp_path: Path) -> None:
         (["adapter"], ADAPTER_CHECK),
         (["adapter", "--json"], ADAPTER_CHECK),
         (["scan"], SCAN),
-        (["diagnose"], [*SCAN, "0101", *FREEZE, "0902"]),
+        (["diagnose"], [*SCAN, "0101", *FREEZE, "0902", *ECUS, *TESTS]),
         (["vin"], [*INIT, *PROTOCOL, "0902"]),
+        (["ecus"], [*INIT, *PROTOCOL, *ECUS]),
+        (["tests", "--json"], [*INIT, *PROTOCOL, *TESTS]),
     ],
 )
 def test_cli_read_commands_send_exactly(
@@ -261,7 +305,11 @@ def test_cli_read_commands_send_exactly(
     transports: list[WireCheckingTransport] = []
 
     def open_port(port: str, baud: int) -> WireCheckingTransport:
-        transports.append(WireCheckingTransport(CAN_CAR_FULL))
+        transports.append(
+            WireCheckingTransport(
+                CAN_CAR_FULL, headers_on={**ECU_INFO_HEADERS, **MONITOR_TESTS_HEADERS}
+            )
+        )
         return transports[-1]
 
     monkeypatch.setattr(cli, "SerialTransport", open_port)
@@ -281,6 +329,8 @@ _READ_CALLS: list[Callable[[Elm327], object]] = [
     lambda e: vehicle.read_vin(e),
     lambda e: readiness.read_readiness(e),
     lambda e: obd.read_freeze_frame(e),
+    vehicle_info.read_ecu_info,
+    monitor_tests.read_test_results,
     lambda e: e.protocol(),
     adapter_check.check_adapter,
 ]
@@ -288,7 +338,10 @@ _READ_CALLS: list[Callable[[Elm327], object]] = [
 
 @given(
     st.dictionaries(
-        st.sampled_from([*SCAN, "0101", *FREEZE, "0902", "0202", *ADAPTER_CHECK]), _GARBAGE
+        st.sampled_from(
+            [*SCAN, "0101", *FREEZE, "0902", "0202", *ADAPTER_CHECK, "0900", "0600", "ATH0"]
+        ),
+        _GARBAGE,
     ),
     st.sampled_from(range(len(_READ_CALLS))),
 )

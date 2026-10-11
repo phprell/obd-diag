@@ -170,6 +170,14 @@ def test_tabs_show_session_parts(qtbot: QtBot, ui: Ui, fake_backend: FakeBackend
     assert ui.prop("vehicleVin", "text") == "WVWZZZ1KZ6W123456"
     assert ui.prop("vehicleFacts", "count") == 5
     assert ui.prop("vehicleOnline", "count") == 2
+    assert ui.prop("vehicleEcus", "count") == 2  # Motor und Getriebe (Mode 09)
+    _tab(ui, 5)
+    qtbot.waitUntil(lambda: ui.prop("testsSummary", "visible") is True)
+    assert ui.prop("testsSummary", "text") == "1 Test außerhalb der Grenzwerte."
+    assert ui.prop("testGroups", "count") == 1
+    assert ui.prop("tabTests", "badge") == "1"
+    assert ui.prop("testsEmpty", "visible") is False
+    _tab(ui, 3)
     ui.find("onlineVinCheck").setProperty("checked", True)
     QMetaObject.invokeMethod(ui.find("onlineVinCheck"), "toggled")
     assert ui.vm.property("onlineVinLookup") is True
@@ -178,7 +186,8 @@ def test_tabs_show_session_parts(qtbot: QtBot, ui: Ui, fake_backend: FakeBackend
 
 
 @pytest.mark.parametrize(
-    ("index", "name"), [(1, "readinessEmpty"), (2, "freezeEmpty"), (3, "vehicleEmpty")]
+    ("index", "name"),
+    [(1, "readinessEmpty"), (2, "freezeEmpty"), (3, "vehicleEmpty"), (5, "testsEmpty")],
 )
 def test_tabs_empty_states(
     qtbot: QtBot, ui: Ui, fake_backend: FakeBackend, index: int, name: str
