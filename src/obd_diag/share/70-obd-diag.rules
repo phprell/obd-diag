@@ -1,0 +1,12 @@
+# obd-diag: Zugriff auf gängige USB-Seriell-Chips von OBD-Adaptern ohne root.
+# Gibt dem angemeldeten Nutzer (systemd-logind, "uaccess") Zugriff auf den Port; die Gruppe
+# (uucp bzw. dialout) bleibt unverändert. Die Nummer muss unter 73 liegen, sonst wertet
+# 73-seat-late.rules das Tag nicht mehr aus.
+# Installation: sudo install -m 644 70-obd-diag.rules /etc/udev/rules.d/
+#               sudo udevadm control --reload && sudo udevadm trigger
+# FTDI (z. B. OBDLink, hochwertige ELM327)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", TAG+="uaccess"
+# CH340/CH341 (viele günstige ELM327-Klone)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", TAG+="uaccess"
+# Silicon Labs CP210x
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", TAG+="uaccess"

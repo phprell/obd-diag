@@ -244,7 +244,7 @@ def check_group(host: Host, group: str) -> CheckItem:
         Status.ERROR,
         tr("Nutzer {user} ist nicht in der Gruppe {group}").format(user=host.user, group=group),
         tr(
-            "Ohne die Gruppe (oder die udev-Regel aus packaging/) darf das Programm den "
+            "Ohne die Gruppe (oder die udev-Regel 70-obd-diag.rules) darf das Programm den "
             "Adapter nicht öffnen. Nach dem Eintragen abmelden und neu anmelden."
         ),
         add_to_group_command(group),

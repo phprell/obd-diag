@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | v0.1 | trouble codes with plain text, readiness, freeze frame, VIN, safe clearing, sessions, PDF/CSV, trace, user interface | done |
 | v0.2 | live data (116 values from 82 PIDs), CSV recording, tab “Live data”, `obd-diag live` | done, version 0.2.0 ({doc}`aenderungen`) |
+| v0.2.1 | packages (pipx/PyPI, AUR, Flatpak) with start menu entry, setup check, adapter check, demo mode, English user interface | in progress |
 | – | test on a real car (W177, 2026-10-09: reading verified), then enable clearing | clearing waits for approval ({doc}`../benutzen/erster-test`) |
 | v0.3+ | Bluetooth LE, OBDb profiles (mind CC-BY-SA), SocketCAN and UDS with control unit discovery, read-only | planned, only after the test at the car |
 

@@ -1,0 +1,48 @@
+# Maintainer: Philipp Prell <https://github.com/phprell>
+#
+# Vorlage für das AUR-Paket. Der Release-Workflow (.github/workflows/release.yml) setzt
+# pkgver und die Prüfsumme des sdist ein, baut das Paket zur Probe und hängt PKGBUILD und
+# .SRCINFO an das GitHub-Release; von dort ins AUR-Repository kopieren.
+
+pkgname=obd-diag
+pkgver=0.2.0
+pkgrel=1
+pkgdesc='Read-only OBD-II diagnostics for ELM327-compatible adapters (CLI and Qt GUI)'
+arch=(any)
+url='https://github.com/phprell/obd-diag'
+license=(MIT)
+depends=(python python-pyserial python-reportlab pyside6)
+makedepends=(python-build python-installer python-hatchling)
+source=("https://github.com/phprell/obd-diag/releases/download/v$pkgver/obd_diag-$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "obd_diag-$pkgver"
+  # Das sdist enthält den fertigen Fehlercode-Katalog; gebaut wird ohne Netz.
+  python -m build --wheel --no-isolation
+}
+
+check() {
+  cd "obd_diag-$pkgver"
+  local site="$srcdir/check"
+  python -m installer --destdir="$site" dist/*.whl
+  local purelib
+  purelib=$(python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')
+  python -I -c '
+import sys
+sys.path.insert(0, sys.argv[1])
+from obd_diag.data.dtc_catalog import DtcCatalog
+assert DtcCatalog.default().lookup("P0420"), "Fehlercode-Katalog fehlt im Paket"
+' "$site$purelib"
+}
+
+package() {
+  cd "obd_diag-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  local share=src/obd_diag/share id=io.github.phprell.obd_diag
+  install -Dm644 "$share/$id.desktop" -t "$pkgdir/usr/share/applications/"
+  install -Dm644 "$share/$id.metainfo.xml" -t "$pkgdir/usr/share/metainfo/"
+  install -Dm644 "$share/$id.svg" -t "$pkgdir/usr/share/icons/hicolor/scalable/apps/"
+  install -Dm644 "$share/70-obd-diag.rules" -t "$pkgdir/usr/lib/udev/rules.d/"
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+}

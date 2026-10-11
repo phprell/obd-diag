@@ -1,50 +1,80 @@
 name: Release
 
-# Baut bei einem Versions-Tag (v0.2.0 …) sdist und Wheel samt Fehlercode-Katalog und legt
-# daraus ein GitHub-Release an. Die Notizen kommen aus dem passenden Abschnitt von
-# CHANGELOG.md. Bricht ab, wenn Tag, pyproject.toml und obd_diag.__version__ nicht
-# übereinstimmen oder der Abschnitt fehlt.
+# Bei einem Versions-Tag (v0.2.1 …): baut über den Workflow "Pakete" sdist und Wheel samt
+# Fehlercode-Katalog, das AUR-Paket und das Flatpak, legt daraus ein GitHub-Release an und
+# lädt sdist und Wheel auf PyPI hoch. Die Notizen kommen aus dem passenden Abschnitt von
+# CHANGELOG.md. Bricht ab, wenn Tag, pyproject.toml, obd_diag.__version__ und die
+# AppStream-Datei nicht übereinstimmen oder der Abschnitt fehlt.
 
 on:
   push:
     tags: ["v*"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  version:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-        with:
-          python-version: "3.12"
       - name: Version prüfen
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          project=$(uv run --no-project python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          project=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
           module=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/obd_diag/__init__.py)
           echo "Tag $tag, pyproject.toml $project, __version__ $module"
           test "$tag" = "$project" && test "$tag" = "$module"
+          grep -q "<release version=\"$tag\"" src/obd_diag/share/io.github.phprell.obd_diag.metainfo.xml
       - name: Release-Notizen aus CHANGELOG.md
         run: |
           tag="${GITHUB_REF_NAME#v}"
+          # außerhalb des Arbeitsverzeichnisses, sonst landet die Datei im sdist
           awk -v v="$tag" '
             /^## / { if (found) exit; if (index($0, "## " v " ") == 1) { found = 1; next } }
             found { print }
-          ' CHANGELOG.md > notes.md
-          test -s notes.md
-      - run: uv sync --locked
-      - run: uv run python tools/build_dtc_db.py
-      - run: uv build
-      - name: Wheel prüfen
-        run: |
-          uv venv /tmp/wheel
-          uv pip install -p /tmp/wheel dist/*.whl
-          cd /tmp && /tmp/wheel/bin/obd-diag --version
-          /tmp/wheel/bin/python -I -c "from obd_diag.data.dtc_catalog import DtcCatalog; assert DtcCatalog.default().lookup('P0420')"
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          test -s "$RUNNER_TEMP/notes.md"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notes
+          path: ${{ runner.temp }}/notes.md
+
+  pakete:
+    needs: version
+    uses: ./.github/workflows/packaging.yml
+
+  release:
+    needs: pakete
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
       - name: GitHub-Release anlegen
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --title "obd-diag ${GITHUB_REF_NAME#v}" --notes-file notes.md --verify-tag
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd artifacts
+          gh release create "$GITHUB_REF_NAME" dist/* aur/PKGBUILD aur/.SRCINFO flatpak/obd-diag.flatpak \
+            --title "obd-diag ${GITHUB_REF_NAME#v}" --notes-file notes/notes.md --verify-tag
+
+  pypi:
+    # Trusted Publishing: auf pypi.org ist dieses Repository mit Workflow release.yml und
+    # Umgebung "pypi" als Herausgeber eingetragen; ein Token gibt es nicht.
+    needs: release
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/obd-diag/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

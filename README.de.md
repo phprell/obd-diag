@@ -47,6 +47,17 @@ Ausführliche Dokumentation (Benutzen, Wie es funktioniert, Entwickeln):
 - Geplant (v0.3+): Bluetooth LE, Community-Profile, Fehlerspeicher aller
   Steuergeräte über UDS (nur lesend), siehe Designdokument.
 
+## Installation
+
+Ab Version 0.2.1 (Einzelheiten: [Installation](https://phprell.github.io/obd-diag/benutzen/installation.html)):
+
+```sh
+pipx install 'obd-diag[gui]'      # jede Distribution (PyPI); ohne [gui] nur Kommandozeile
+obd-diag-gui --install-desktop    # Startmenü-Eintrag für die pipx-Installation
+yay -S obd-diag                   # Arch Linux (AUR), mit Startmenü-Eintrag und udev-Regel
+flatpak install --user obd-diag.flatpak   # Bundle aus dem GitHub-Release
+```
+
 ## Dokumentation
 
 Die Website (Sphinx mit MyST, Furo und Mermaid) liegt auf Deutsch unter `docs/`, auf
@@ -115,8 +126,12 @@ Die GUI-Tests (`tests/ui`) laufen ohne Bildschirm (`QT_QPA_PLATFORM=offscreen`, 
 
 Release: Version in `pyproject.toml` und `src/obd_diag/__init__.py` setzen, Abschnitt
 `## X.Y.Z – Datum` in `CHANGELOG.md` schreiben, nach dem Merge den Tag `vX.Y.Z` auf
-`main` pushen. `.github/workflows/release.yml` prüft dann Tag und Versionen, baut
-Katalog, sdist und Wheel und legt das GitHub-Release mit dem Changelog-Abschnitt an.
+`main` pushen (die Version auch in die AppStream-Datei
+`src/obd_diag/share/io.github.phprell.obd_diag.metainfo.xml` eintragen).
+`.github/workflows/release.yml` prüft dann Tag und Versionen, baut Katalog, sdist, Wheel,
+AUR-Paket und Flatpak (`.github/workflows/packaging.yml`, auch bei jedem PR), legt das
+GitHub-Release mit dem Changelog-Abschnitt an und lädt auf PyPI hoch. Paketvorlagen:
+`packaging/aur/PKGBUILD`, `packaging/flatpak/`.
 
 ### Fehlercode-Katalog
 
@@ -173,7 +188,8 @@ fehlerhaft; Adapter mit echtem ELM327- oder STN-Chip (z. B. OBDLink) sind
 verlässlicher.
 
 Rechte: unter Arch heißt die Gruppe `uucp` (Debian/Ubuntu: `dialout`):
-`sudo usermod -aG uucp $USER` – oder die udev-Regel aus `packaging/` installieren.
+`sudo usermod -aG uucp $USER` – oder die udev-Regel
+`src/obd_diag/share/70-obd-diag.rules` installieren (das AUR-Paket tut das).
 `obd-diag setup-check` prüft Adapter, Rechte und Baudrate in einem Durchgang (die
 Oberfläche macht das beim ersten Start von selbst).
 

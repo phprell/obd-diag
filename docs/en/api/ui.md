@@ -5,6 +5,11 @@
 ```{automodule} obd_diag.ui.app
 ```
 
+## `obd_diag.desktop`
+
+```{automodule} obd_diag.desktop
+```
+
 ## `obd_diag.ui.window`
 
 ```{automodule} obd_diag.ui.window

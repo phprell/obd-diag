@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- obd-diag: OBD-II-Buchse mit Messkurve -->
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="#1d4ed8"/>
+  <path d="M26 40h76l-8 46H34z" fill="#ffffff"/>
+  <g fill="#1d4ed8">
+    <circle cx="42" cy="54" r="4"/><circle cx="54" cy="54" r="4"/><circle cx="66" cy="54" r="4"/>
+    <circle cx="78" cy="54" r="4"/><circle cx="90" cy="54" r="4"/>
+    <circle cx="46" cy="72" r="4"/><circle cx="58" cy="72" r="4"/><circle cx="70" cy="72" r="4"/>
+    <circle cx="82" cy="72" r="4"/>
+  </g>
+  <path d="M20 104h28l6-10 8 16 6-12h40" fill="none" stroke="#93c5fd" stroke-width="5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

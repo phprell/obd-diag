@@ -2265,8 +2265,8 @@ msgid "USB-Adapter einstecken und die Prüfung wiederholen. Bluetooth-Adapter er
 msgstr "Plug in the USB adapter and run the check again. Pair Bluetooth adapters first and bind them as /dev/rfcomm0 with rfcomm bind."
 
 #: src/obd_diag/services/setup_check.py
-msgid "Ohne die Gruppe (oder die udev-Regel aus packaging/) darf das Programm den Adapter nicht öffnen. Nach dem Eintragen abmelden und neu anmelden."
-msgstr "Without the group (or the udev rule from packaging/) the program may not open the adapter. Log out and back in after joining."
+msgid "Ohne die Gruppe (oder die udev-Regel 70-obd-diag.rules) darf das Programm den Adapter nicht öffnen. Nach dem Eintragen abmelden und neu anmelden."
+msgstr "Without the group (or the udev rule 70-obd-diag.rules) the program may not open the adapter. Log out and back in after joining."
 
 #: src/obd_diag/services/setup_check.py
 msgid "Nutzer in die Gruppe eintragen, danach abmelden und neu anmelden."
@@ -2509,6 +2509,18 @@ msgstr "Error: the user interface needs PySide6. Install it with: pip install 'o
 #: src/obd_diag/ui/app.py
 msgid "Fehler: Die Oberfläche ließ sich nicht laden."
 msgstr "Error: the user interface could not be loaded."
+
+#: src/obd_diag/ui/app.py
+msgid "Kein Startmenü-Eintrag vorhanden."
+msgstr "No start menu entry present."
+
+#: src/obd_diag/ui/app.py
+msgid "Angelegt: {path}"
+msgstr "Created: {path}"
+
+#: src/obd_diag/ui/app.py
+msgid "Entfernt: {path}"
+msgstr "Removed: {path}"
 
 #: src/obd_diag/ui/backend.py
 msgid "Live-Daten sind in diesem Backend nicht verfügbar"
