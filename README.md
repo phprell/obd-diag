@@ -33,6 +33,8 @@ Full documentation (usage, how it works, development):
   (*Options → Sprache / Language*), command line (`--lang en|de`), PDF report, CSV,
   trouble code texts and documentation. The default is the system language: German if
   it is German, otherwise English.
+- **Demo mode** (not released yet): `obd-diag-gui --demo` or `obd-diag … --demo`
+  shows a sample vehicle (recorded data of the W177) without adapter or car.
 - **Tested on a real car** (2026-10-09, Mercedes A 180 d W177, adapter FORScan
   ELMconfig, CAN 29 bit/500 kbit/s, four control units): `info`, `diagnose` and `live`
   read correctly. Four findings from the test are fixed (first `ATZ` with `?`, freeze
@@ -133,7 +135,16 @@ catalog's `meta` table. A test against the real catalog only runs if it is built
 
 ### Testing without a car
 
-The [ELM327-emulator](https://github.com/Ircama/ELM327-emulator) provides a virtual
+The quickest way is the built-in demo vehicle: a simulated ELM327 answering with the
+recorded data of the Mercedes A 180 d from the real-car tests, no adapter needed.
+
+```sh
+uv run obd-diag-gui --demo           # or choose port "demo" in the list
+uv run obd-diag diagnose --demo      # same as --port demo; also info, scan, vin, live
+```
+
+For arbitrary trouble codes and the clearing procedure, the
+[ELM327-emulator](https://github.com/Ircama/ELM327-emulator) provides a virtual
 serial device. `tools/emulator.py` starts it with standard-compliant responses
 (otherwise the emulator leaves out the count byte of trouble codes with CAN and does
 not answer the freeze frame according to SAE J1979, see `tests/emulator_patches.py`):
@@ -159,6 +170,8 @@ faulty; adapters with a genuine ELM327 or STN chip (e.g. OBDLink) are more relia
 
 Permissions: on Arch the group is called `uucp` (Debian/Ubuntu: `dialout`):
 `sudo usermod -aG uucp $USER`, or install the udev rule from `packaging/`.
+`obd-diag setup-check` checks adapter, permissions and baud rate in one go (the user
+interface does the same on its first start).
 
 ### First test at the car
 

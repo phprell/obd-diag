@@ -111,6 +111,7 @@ denn am Adapter läuft immer nur eine Aktion ({doc}`live-daten`).
 | Sitzung öffnen … | Strg+O | gespeicherte Sitzung nur ansehen; Löschen geht dann nicht |
 | Bericht als PDF … | Strg+P | PDF-Bericht im Hintergrund schreiben |
 | CSV exportieren … | – | eine Zeile pro Fehlercode |
+| Optionen → Einrichtung prüfen … | – | Adapter, Zugriffsrechte und Baudrate prüfen; öffnet sich beim ersten Start von selbst ({doc}`installation`) |
 | Optionen → Fehlercodes online erklären | – | Codes ohne Katalogtext bekommen eine ungeprüfte Kurzerklärung ({doc}`fehlercodes-online`) |
 | Optionen → Adapter prüfen … | – | Version, Befehlssatz, Spannung und UDS-Eignung des Adapters, ohne das Fahrzeug ({doc}`adapter`) |
 | Optionen → Adapter-Mitschnitt aufzeichnen | – | jede Aktion schreibt einen Mitschnitt ({doc}`sitzungen`) |
@@ -123,6 +124,9 @@ Jede Aktion öffnet den Port, arbeitet in einem Hintergrund-Thread und schließt
 wieder; die Oberfläche bleibt dabei bedienbar.
 
 ## Gegen den Emulator ausprobieren
+
+Ganz ohne Werkzeug geht es mit dem Demo-Fahrzeug (Port „demo“, {doc}`demo`). Der
+Emulator kann dagegen beliebige Fehlercodes melden:
 
 ```sh
 uv run python tools/emulator.py   # zeigt das pty an, z. B. /dev/pts/5

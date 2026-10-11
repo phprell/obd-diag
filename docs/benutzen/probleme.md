@@ -2,6 +2,7 @@
 
 | Meldung oder Verhalten | Wahrscheinliche Ursache | Was tun |
 | --- | --- | --- |
+| Unklar, ob Adapter, Rechte und Baudrate stimmen | – | `obd-diag setup-check` bzw. *Optionen → Einrichtung prüfen …* ({doc}`installation`) |
 | `obd-diag ports` findet nichts | Adapter nicht eingesteckt, Bluetooth nicht gebunden | `dmesg` prüfen; Bluetooth mit `sudo rfcomm bind 0 <MAC>` |
 | „Permission denied“ beim Öffnen des Ports | Nutzer nicht in `uucp`/`dialout` | {doc}`installation`, Abschnitt Rechte |
 | `info` hängt oder „keine Antwort von …“ | falsche Baudrate | `--baud 115200` bzw. `--baud 38400` versuchen |

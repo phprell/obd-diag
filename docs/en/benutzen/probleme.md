@@ -2,6 +2,7 @@
 
 | Message or behaviour | Probable cause | What to do |
 | --- | --- | --- |
+| Not sure whether adapter, permissions and baud rate are right | – | `obd-diag setup-check` or *Options → Check setup …* ({doc}`installation`) |
 | `obd-diag ports` finds nothing | adapter not plugged in, Bluetooth not bound | check `dmesg`; Bluetooth with `sudo rfcomm bind 0 <MAC>` |
 | “Permission denied” when opening the port | user not in `uucp`/`dialout` | {doc}`installation`, section on permissions |
 | `info` hangs or “no response from …” | wrong baud rate | try `--baud 115200` or `--baud 38400` |

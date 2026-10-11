@@ -5,6 +5,12 @@ vor 1.0 kann sich die Bedienung noch ändern.
 
 ## Unreleased
 
+- Einrichtung prüfen: `obd-diag setup-check` und in der Oberfläche *Optionen →
+  Einrichtung prüfen …* (beim ersten Start von selbst). Findet die Adapter, prüft die
+  Zugriffsrechte und nennt die nötige Gruppe (`uucp` auf Arch, `dialout` auf
+  Debian/Ubuntu) samt Befehl, probiert 38400 und 115200 Baud (nur Adapter-Befehle) und
+  erinnert an Zündung und HS-CAN-Schalter. Die Oberfläche übernimmt Port und Baudrate.
+
 - Englische Oberfläche: Sprache unter „Optionen → Sprache / Language“ wählbar, Wechsel
   sofort ohne Neustart. Beim ersten Start gilt die Systemsprache (Deutsch nur bei
   deutschem System, sonst Englisch).
@@ -14,6 +20,12 @@ vor 1.0 kann sich die Bedienung noch ändern.
   Sprachumschalter; die deutschen Adressen bleiben gleich.
 - README auf Englisch, deutsche Fassung in README.de.md.
 - Tests verhindern Texte, die nur in einer Sprache vorliegen.
+- Demo-Modus: `obd-diag-gui --demo`, Port „demo“ in der Liste oder `obd-diag … --demo`
+  zeigt ein eingebautes Beispielfahrzeug ohne Adapter und ohne Auto. Ein simulierter
+  ELM327 antwortet mit den Mitschnitten des Mercedes A 180 d aus den Tests am Auto
+  (Fehlercode U1218, Readiness, Freeze Frame, FIN, Live-Daten im Leerlauf); ein Hinweis
+  und die Adapterkennung `ELM327 v1.5 (Demo)` zeigen, dass die Daten nicht vom eigenen
+  Auto stammen.
 - Adapter-Check: `obd-diag adapter` bzw. „Optionen → Adapter prüfen …“ zeigt Kennung,
   Spannung und welche Befehle aus der Versionsliste des Datenblatts der Adapter
   wirklich beantwortet (`ATPPS` v1.1, `ATIGN`/`ATRD` v1.4, `ATAMC` v2.0), erkennt daran

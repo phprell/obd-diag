@@ -18,7 +18,8 @@ classic Bluetooth (`/dev/rfcomm*`). Bluetooth LE only comes with v0.3
 
 The baud rate applies between computer and adapter, not to the vehicle. The default is
 38400 baud (`--baud`); many USB adapters also or only work with 115200. If
-`obd-diag info` gets no response, the other baud rate is the first thing to try.
+`obd-diag info` gets no response, the other baud rate is the first thing to try;
+`obd-diag setup-check` tries both ({doc}`installation`).
 
 ## Finding the adapter
 

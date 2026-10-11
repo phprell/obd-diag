@@ -4,6 +4,7 @@ import argparse
 import dataclasses
 import json
 import sys
+import textwrap
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -58,6 +59,7 @@ from obd_diag.services.live import (
 )
 from obd_diag.services.readiness import ALL_COMPLETE_LABEL, AU_NOTE, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
+from obd_diag.services.setup_check import SetupReport, Status, run_setup_check
 from obd_diag.services.storage import trace_dir
 from obd_diag.services.vehicle import (
     VPIC_FIELDS,
@@ -69,6 +71,7 @@ from obd_diag.services.vehicle import (
     read_vin,
 )
 from obd_diag.transport import Transport, TransportError
+from obd_diag.transport.demo import DEMO_NOTICE, DEMO_PORT, DemoTransport
 from obd_diag.transport.discovery import list_ports
 from obd_diag.transport.serial import SerialTransport
 from obd_diag.transport.trace import FileTracingTransport, new_trace_path
@@ -152,13 +155,20 @@ _AUTO_RECORD = "auto"
 
 
 def _transport(args: argparse.Namespace) -> Transport:
-    """Serieller Transport aus ``--port``/``--baud``, bei ``--trace`` mit Mitschnitt."""
-    transport: Transport = SerialTransport(args.port, args.baud)
+    """Serieller Transport aus ``--port``/``--baud``, bei ``--trace`` mit Mitschnitt;
+    mit ``--demo`` (oder ``--port demo``) das Demo-Fahrzeug statt eines Adapters."""
+    demo = args.demo or args.port == DEMO_PORT
+    transport: Transport
+    if demo:
+        _hint(tr(DEMO_NOTICE))
+        transport, label = DemoTransport(), tr("Demo-Fahrzeug")
+    else:
+        transport, label = SerialTransport(args.port, args.baud), f"{args.port} {args.baud} Baud"
     if args.trace is None:
         return transport
     path = new_trace_path(trace_dir()) if args.trace == _AUTO_TRACE else Path(args.trace)
     print(tr("Mitschnitt: {path}").format(path=path), file=sys.stderr)
-    return FileTracingTransport(transport, path, f"{args.port} {args.baud} Baud")
+    return FileTracingTransport(transport, path, label)
 
 
 def _open_catalog() -> DtcCatalog | None:
@@ -221,6 +231,42 @@ def _run_adapter(args: argparse.Namespace) -> None:
     _labelled([(r.probe.command, probe_text(r)) for r in report.results], indent="  ")
     print()
     _hint(tr(UDS_NOTE), file=sys.stdout)
+
+
+_STATUS_LABELS = {
+    Status.OK: N_("OK"),
+    Status.WARNING: N_("Warnung"),
+    Status.ERROR: N_("Fehler"),
+    Status.INFO: N_("Hinweis"),
+}
+
+
+def _print_setup(report: SetupReport) -> None:
+    labels = {status: tr(label) for status, label in _STATUS_LABELS.items()}
+    width = max(len(label) for label in labels.values())
+    indent = " " * (width + 4)
+    for item in report.items:
+        print(f"  {labels[item.status]:<{width}}  {item.title}")
+        if item.detail:
+            print(textwrap.fill(item.detail, 100, initial_indent=indent, subsequent_indent=indent))
+        if item.fix:
+            print(indent + tr("Abhilfe: {command}").format(command=item.fix))
+    print()
+    adapter = report.adapter
+    if adapter is None:
+        print(tr("Ergebnis: kein nutzbarer Adapter gefunden."))
+        return
+    command = f"obd-diag diagnose --port {adapter.port} --baud {adapter.baud}"
+    if report.ok:
+        print(tr("Ergebnis: bereit. Weiter mit: {command}").format(command=command))
+    else:
+        print(tr("Ergebnis: Adapter antwortet, aber nicht alles ist eingerichtet."))
+
+
+def _run_setup_check(args: argparse.Namespace) -> int:
+    report = run_setup_check(args.port)
+    _print_setup(report)
+    return 0 if report.adapter is not None else 1
 
 
 def _confirm() -> bool:
@@ -649,6 +695,14 @@ def build_parser() -> argparse.ArgumentParser:
     connection.add_argument("--port", default="/dev/ttyUSB0")
     connection.add_argument("--baud", type=int, default=38400)
     connection.add_argument(
+        "--demo",
+        action="store_true",
+        help=tr(
+            "Demo-Fahrzeug statt Adapter: Beispieldaten eines Mercedes A 180 d, zum "
+            "Ausprobieren ohne Auto (gleich wie --port demo)"
+        ),
+    )
+    connection.add_argument(
         "--trace",
         nargs="?",
         const=_AUTO_TRACE,
@@ -766,6 +820,17 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     sub.add_parser("ports", parents=[common], help=tr("angeschlossene Adapter auflisten"))
+    setup_parser = sub.add_parser(
+        "setup-check",
+        parents=[common],
+        help=tr(
+            "Einrichtung prüfen: Adapter finden, Zugriffsrechte und Baudrate (38400, 115200); "
+            "sendet nur Adapter-Befehle (ATZ ...)"
+        ),
+    )
+    setup_parser.add_argument(
+        "--port", help=tr("nur diesen Port prüfen (Standard: alle gefundenen Adapter)")
+    )
     export_parser = sub.add_parser(
         "export",
         parents=[common],
@@ -819,6 +884,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_live(args)
         elif args.command == "ports":
             _run_ports()
+        elif args.command == "setup-check":
+            return _run_setup_check(args)
         elif args.command == "export":
             return _run_export(args, args.export_parser)
     except (TransportError, ElmError) as e:

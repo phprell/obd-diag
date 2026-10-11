@@ -1,6 +1,6 @@
 """Bildschirmfotos der Oberfläche für die Dokumentation erzeugen.
 
-    uv run python tools/docs_screenshots.py [--lang en] [ZIELORDNER]
+    uv run python tools/docs_screenshots.py [--lang en] [--demo] [ZIELORDNER]
 
 Standard-Zielordner: ``docs/_static/screenshots`` (Deutsch) bzw.
 ``docs/en/_static/screenshots`` (Englisch, für die englische Doku).
@@ -8,9 +8,12 @@ Standard-Zielordner: ``docs/_static/screenshots`` (Deutsch) bzw.
 Startet den ELM327-emulator mit standardgemäßen Antworten (wie ``tools/emulator.py``),
 öffnet die Oberfläche ohne Bildschirm, verbindet, scannt und speichert jeden Reiter im
 hellen und im dunklen Design als PNG. Für Live-Daten läuft eine kurze Abfrage, zuletzt
-der Adapter-Check (Dialog, nur hell). Die Bilder sind damit reproduzierbar; nach
-Änderungen an der Oberfläche neu erzeugen und einchecken. Einstellungen und Daten
-landen in einem temporären Ordner, die echten bleiben unberührt.
+der Adapter-Check (Dialog, nur hell, nicht mit ``--demo``). Die Bilder sind damit
+reproduzierbar; nach Änderungen an der Oberfläche neu erzeugen und einchecken.
+Einstellungen und Daten landen in einem temporären Ordner, die echten bleiben unberührt.
+
+Mit ``--demo`` statt des Emulators das eingebaute Demo-Fahrzeug (``transport/demo.py``):
+nur Fehlercodes und Live-Daten, als ``demo-*.png`` für die Seite „Ohne Auto ausprobieren“.
 """
 
 import argparse
@@ -39,6 +42,7 @@ from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtQuick import QQuickWindow  # noqa: E402
 
+from obd_diag.transport.demo import DEMO_PORT  # noqa: E402
 from obd_diag.ui.backend import serial_backend  # noqa: E402
 from obd_diag.ui.jobs import ThreadPoolRunner  # noqa: E402
 from obd_diag.ui.theme import DesignController  # noqa: E402
@@ -103,12 +107,15 @@ def _grab(window: QQuickWindow, path: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--lang", choices=("de", "en"), default="de")
+    parser.add_argument("--demo", action="store_true", help="Demo-Fahrzeug statt Emulator")
     parser.add_argument("out_dir", nargs="?", type=Path)
     args = parser.parse_args()
     docs = ROOT / "docs" if args.lang == "de" else ROOT / "docs" / args.lang
     out_dir = args.out_dir or docs / "_static" / "screenshots"
     out_dir.mkdir(parents=True, exist_ok=True)
-    emulator, port = _start_emulator()
+    emulator, port = (None, DEMO_PORT) if args.demo else _start_emulator()
+    prefix = "demo-" if args.demo else ""
+    still = ("fehlercodes",) if args.demo else TABS[:-1]
 
     app = QGuiApplication(sys.argv[:1])
     app.setApplicationName("obd-diag")
@@ -119,6 +126,8 @@ def main() -> int:
     language = LanguageController(settings, app)
     runner = ThreadPoolRunner()
     vm = DiagnosisViewModel(serial_backend(), runner)
+    if args.demo:
+        vm.prefer_demo()  # auch die Portauswahl zeigt dann „demo“ samt Hinweis
     live = LiveViewModel(vm.backend, runner, vm)
     design = DesignController(QSettings(str(_TMP / "design.conf"), QSettings.Format.IniFormat))
     design.setProperty("mode", "light")
@@ -139,9 +148,9 @@ def main() -> int:
 
         for mode in ("light", "dark"):
             design.setProperty("mode", mode)
-            for index, name in enumerate(TABS[:-1]):
-                tabs.setProperty("currentIndex", index)
-                _grab(window, out_dir / f"{name}-{mode}.png")
+            for name in still:
+                tabs.setProperty("currentIndex", TABS.index(name))
+                _grab(window, out_dir / f"{prefix}{name}-{mode}.png")
 
         # Live-Daten: kurze Abfrage mit den Standardwerten
         design.setProperty("mode", "light")
@@ -149,22 +158,28 @@ def main() -> int:
         live.start(port, 38400)
         _wait(lambda: bool(live.property("running")), 30, "Live-Daten starten")
         _settle(20)
-        _grab(window, out_dir / "live-daten-light.png")
+        _grab(window, out_dir / f"{prefix}live-daten-light.png")
         design.setProperty("mode", "dark")
-        _grab(window, out_dir / "live-daten-dark.png")
+        _grab(window, out_dir / f"{prefix}live-daten-dark.png")
         live.stop()
         _wait(lambda: not live.property("running"), 30, "Live-Daten beenden")
 
         # Adapter-Check (Optionen → Adapter prüfen …): Dialog über der Hauptansicht
-        design.setProperty("mode", "light")
-        tabs.setProperty("currentIndex", 0)
-        vm.checkAdapter(port, 38400)
-        _wait(lambda: not vm.property("busy") and bool(vm.property("adapterCheck")), 30, "Adapter")
-        _grab(window, out_dir / "adapter-check-light.png")
+        if not args.demo:
+            design.setProperty("mode", "light")
+            tabs.setProperty("currentIndex", 0)
+            vm.checkAdapter(port, 38400)
+            _wait(
+                lambda: not vm.property("busy") and bool(vm.property("adapterCheck")),
+                30,
+                "Adapter",
+            )
+            _grab(window, out_dir / "adapter-check-light.png")
     finally:
         live.stop()
         runner.wait()
-        emulator.terminate()
+        if emulator is not None:
+            emulator.terminate()
         del engine
     return 0
 

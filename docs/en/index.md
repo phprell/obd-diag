@@ -34,6 +34,7 @@ decision ({doc}`adr/0002-nur-lesend`).
 
 - **At the car:** {doc}`benutzen/installation`, then {doc}`benutzen/adapter` and
   {doc}`benutzen/erster-test`.
+- **Try it without a car or adapter:** {doc}`benutzen/demo`.
 - **Understand what goes over the wire:** {doc}`technik/elm327` and
   {doc}`technik/antwortformate`, every command with its datasheet page in the
   {doc}`technik/befehle`. A real trace, explained line by line:
@@ -51,6 +52,7 @@ program itself speaks both languages: {doc}`benutzen/sprache`.
 benutzen/installation
 benutzen/adapter
 benutzen/erster-test
+benutzen/demo
 benutzen/oberflaeche
 benutzen/cli
 benutzen/sprache

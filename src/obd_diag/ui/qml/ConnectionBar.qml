@@ -46,7 +46,7 @@ ToolBar {
             Accessible.name: qsTr("Serieller Port")
             ToolTip.visible: hovered && !popup.visible
             ToolTip.delay: 600
-            ToolTip.text: qsTr("Adapter wählen oder Pfad eingeben, z. B. /dev/ttyUSB0 oder /dev/pts/5")
+            ToolTip.text: qsTr("Adapter wählen oder Pfad eingeben, z. B. /dev/ttyUSB0 oder /dev/pts/5; „demo“ zeigt ein Beispielfahrzeug ohne Adapter")
 
             delegate: ItemDelegate {
                 required property var modelData
@@ -59,7 +59,9 @@ ToolBar {
                         font.family: "monospace"
                     }
                     Label {
-                        text: modelData.description
+                        // Demo-Text aus dem View-Model, damit er der Sprache folgt
+                        text: modelData.device === bar.vm.demoPort ? bar.vm.demoDescription
+                                                                   : modelData.description
                         color: Theme.muted
                         font.pixelSize: 12
                         visible: text !== ""
@@ -67,12 +69,17 @@ ToolBar {
                 }
             }
 
+            // Vorauswahl laut View-Model: das Demo-Fahrzeug steht immer in der Liste,
+            // wird aber nur auf Wunsch gewählt, nie still statt eines Adapters.
             function resetText() {
-                if (count === 0)
+                currentIndex = find(bar.vm.defaultPort)
+                if (currentIndex < 0)
                     editText = bar.vm.defaultPort
             }
+            readonly property string defaultPort: bar.vm.defaultPort
             Component.onCompleted: resetText()
             onCountChanged: resetText()
+            onDefaultPortChanged: resetText()
             onAccepted: bar.scan()
         }
         Button {
@@ -131,6 +138,16 @@ ToolBar {
         Item {
             Layout.fillWidth: true
         }
+    }
+
+    // Ergebnis der Einrichtungsprüfung übernehmen (SetupDialog)
+    function setConnection(port, baud) {
+        if (locked)
+            return
+        portBox.editText = port
+        const index = baudBox.indexOfValue(baud)
+        if (index >= 0)
+            baudBox.currentIndex = index
     }
 
     function scan() {

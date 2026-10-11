@@ -14,6 +14,8 @@ ApplicationWindow {
     readonly property var design: designController
     // LanguageController (ui/window.py): Deutsch oder Englisch
     readonly property var language: languageController
+    // SetupViewModel (ui/window.py): Einrichtung prüfen
+    readonly property var setupVm: setupCheck
 
     width: 1000
     height: 700
@@ -141,6 +143,13 @@ ApplicationWindow {
             objectName: "optionsMenu"
             width: 320  // sonst werden die langen Einträge gekürzt
             title: qsTr("&Optionen")
+            MenuItem {
+                objectName: "setupMenuItem"
+                text: qsTr("Einrichtung prüfen …")
+                enabled: !window.vm.busy && !window.liveVm.running
+                onTriggered: window.openSetup()
+            }
+            MenuSeparator {}
             MenuItem {
                 objectName: "onlineVinMenuItem"
                 text: qsTr("FIN online nachschlagen (NHTSA)")
@@ -282,6 +291,7 @@ ApplicationWindow {
             Layout.fillHeight: false
             readonly property bool shown: errorBanner.visible || noticeBanner.visible
                                           || voltageBanner.visible || catalogBanner.visible
+                                          || demoBanner.visible
             Layout.fillWidth: true
             Layout.leftMargin: Theme.gap
             Layout.rightMargin: Theme.gap
@@ -289,6 +299,14 @@ ApplicationWindow {
             Layout.bottomMargin: shown ? Theme.gap : 0
             spacing: 6
 
+            Banner {
+                // Demo-Fahrzeug gewählt: Daten stammen nicht vom eigenen Auto
+                id: demoBanner
+                objectName: "demoBanner"
+                Layout.fillWidth: true
+                kind: "info"
+                text: connectionBar.portText.trim() === window.vm.demoPort ? window.vm.demoNotice : ""
+            }
             Banner {
                 id: errorBanner
                 objectName: "errorBanner"
@@ -458,6 +476,25 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    function openSetup() {
+        setupDialog.open()
+        if (!window.setupVm.done)
+            window.setupVm.start()
+    }
+
+    // Beim ersten Start von selbst (bis der Dialog einmal geschlossen wurde)
+    Component.onCompleted: {
+        if (window.setupVm.showOnStart)
+            openSetup()
+    }
+
+    SetupDialog {
+        id: setupDialog
+        objectName: "setupDialog"
+        vm: window.setupVm
+        onApply: (port, baud) => connectionBar.setConnection(port, baud)
     }
 
     ClearDialog {

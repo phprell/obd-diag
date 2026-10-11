@@ -112,6 +112,7 @@ action runs on the adapter at a time ({doc}`live-daten`).
 | Open session … | Ctrl+O | view a saved session only; clearing is not possible then |
 | Report as PDF … | Ctrl+P | write a PDF report in the background |
 | Export CSV … | – | one row per trouble code |
+| Options → Check setup … | – | check adapter, permissions and baud rate; opens by itself on the first start ({doc}`installation`) |
 | Options → Explain trouble codes online | – | codes without a catalog text get an unverified short explanation ({doc}`fehlercodes-online`) |
 | Options → Check adapter … | – | version, command set, voltage and UDS suitability of the adapter, without the vehicle ({doc}`adapter`) |
 | Options → Record adapter trace | – | every action writes a trace ({doc}`sitzungen`) |
@@ -124,6 +125,9 @@ the port, works in a background thread and closes it again; the user interface s
 responsive meanwhile.
 
 ## Trying it against the emulator
+
+Without any tool, the demo vehicle works (port "demo", {doc}`demo`). The emulator, on
+the other hand, can report arbitrary trouble codes:
 
 ```sh
 uv run python tools/emulator.py   # shows the pty, e.g. /dev/pts/5

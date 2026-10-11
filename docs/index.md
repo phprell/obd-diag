@@ -36,6 +36,7 @@ Entscheidung ({doc}`adr/0002-nur-lesend`).
 
 - **Am Auto:** {doc}`benutzen/installation`, dann {doc}`benutzen/adapter` und
   {doc}`benutzen/erster-test`.
+- **Ohne Auto und Adapter ausprobieren:** {doc}`benutzen/demo`.
 - **Verstehen, was über die Leitung geht:** {doc}`technik/elm327` und
   {doc}`technik/antwortformate`, jeder Befehl mit Datenblatt-Seite in der
   {doc}`technik/befehle`. Ein echter Mitschnitt, Zeile für Zeile erklärt:
@@ -53,6 +54,7 @@ Das Programm selbst spricht beide Sprachen: {doc}`benutzen/sprache`.
 benutzen/installation
 benutzen/adapter
 benutzen/erster-test
+benutzen/demo
 benutzen/oberflaeche
 benutzen/cli
 benutzen/sprache
