@@ -13,6 +13,7 @@ ViewTabs 1.0 ViewTabs.qml
 ReadinessView 1.0 ReadinessView.qml
 FreezeFrameView 1.0 FreezeFrameView.qml
 VehicleView 1.0 VehicleView.qml
+UsedCarView 1.0 UsedCarView.qml
 LiveView 1.0 LiveView.qml
 TestResultsView 1.0 TestResultsView.qml
 AdapterDialog 1.0 AdapterDialog.qml

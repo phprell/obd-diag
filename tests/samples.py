@@ -16,6 +16,7 @@ from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, DtcLookup, Sc
 from obd_diag.services.dtc_online import OnlineExplanation
 from obd_diag.services.readiness import Monitor, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session
+from obd_diag.services.used_car import ClearCounters
 from obd_diag.services.vehicle import VinInfo
 
 CEST = timezone(timedelta(hours=2))
@@ -153,10 +154,16 @@ def _info(code: str, catalog: DtcLookup | None) -> DtcInfo | None:
     return catalog.lookup(code, "de") if catalog is not None else INFOS.get(code)
 
 
+# 3 Warmläufe, 45 km und 80 min seit dem Löschen; 12 km und 20 min mit Warnleuchte
+CLEAR_COUNTERS = ClearCounters(
+    warmups=3, distance_km=45, time_min=80, mil_distance_km=12, mil_time_min=20
+)
+
+
 def full_session(catalog: DtcLookup | None = None, *, voltage: float = 12.4) -> Session:
     """Alle Angaben gesetzt: zwei gespeicherte, ein ausstehender, ein permanenter Code
-    (einer davon ohne Katalogeintrag), Readiness, Freeze Frame, FIN, Steuergeräte und
-    Testergebnisse."""
+    (einer davon ohne Katalogeintrag), Readiness, Freeze Frame, FIN, die Zähler für den
+    Gebrauchtwagen-Check (vor kurzem gelöscht), Steuergeräte und Testergebnisse."""
     codes = [
         DiagnosticCode("P0300", DtcKind.STORED, _info("P0300", catalog)),
         DiagnosticCode("P0420", DtcKind.STORED, _info("P0420", catalog)),
@@ -173,6 +180,7 @@ def full_session(catalog: DtcLookup | None = None, *, voltage: float = 12.4) -> 
         readiness=READINESS,
         freeze_frame=FREEZE_FRAME,
         vehicle=VEHICLE,
+        clear_counters=CLEAR_COUNTERS,
         ecus=ECUS,
         tests=TESTS,
     )

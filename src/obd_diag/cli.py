@@ -76,6 +76,16 @@ from obd_diag.services.readiness_assist import (
 from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
 from obd_diag.services.setup_check import SetupReport, Status, run_setup_check
 from obd_diag.services.storage import trace_dir
+from obd_diag.services.used_car import NOTE as USED_CAR_NOTE
+from obd_diag.services.used_car import TITLE as USED_CAR_TITLE
+from obd_diag.services.used_car import (
+    ClearCounters,
+    Level,
+    UsedCarCheck,
+    assess,
+    counter_rows,
+    read_used_car,
+)
 from obd_diag.services.vehicle import (
     VPIC_FIELDS,
     VinInfo,
@@ -554,6 +564,43 @@ def _print_tests(tests: tuple[TestResult, ...] | list[TestResult] | None) -> Non
         )
 
 
+_LEVEL_MARKS = {Level.WARNING: "[!]", Level.INFO: "[i]", Level.OK: "[ok]"}
+
+
+def _print_used_car(counters: ClearCounters | None, check: UsedCarCheck) -> None:
+    print(f"{tr(USED_CAR_TITLE)}: {check.label}")
+    if counters is not None:
+        _labelled(counter_rows(counters), "  ")
+    for finding in check.findings:
+        mark = _LEVEL_MARKS[finding.level]
+        lines = textwrap.wrap(finding.text, 76, subsequent_indent=" " * (len(mark) + 3))
+        print(f"  {mark} " + "\n".join(lines))
+    note = tr("Hinweis: {message}").format(message=tr(USED_CAR_NOTE))
+    print(textwrap.fill(note, 80, initial_indent="  ", subsequent_indent="  "))
+
+
+def _used_car_json(counters: ClearCounters, check: UsedCarCheck, codes: list[str]) -> str:
+    data = {
+        "verdict": check.verdict.value,
+        "recently_cleared": check.recently_cleared,
+        "clear_counters": dataclasses.asdict(counters),
+        "permanent_codes": codes,
+        "findings": [{"level": f.level.value, "text": f.text} for f in check.findings],
+    }
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+def _run_used_car(args: argparse.Namespace) -> None:
+    with _transport(args) as transport:
+        reading = read_used_car(Elm327(transport))
+    check = assess(reading.counters, reading.scan, reading.readiness)
+    if args.json:
+        codes = [c.code for c in reading.scan.codes if c.kind is DtcKind.PERMANENT]
+        print(_used_car_json(reading.counters, check, codes))
+    else:
+        _print_used_car(reading.counters, check)
+
+
 def _print_session(session: Session, *, web_search: bool = False) -> None:
     _print_vehicle(session.vehicle)
     print()
@@ -564,6 +611,9 @@ def _print_session(session: Session, *, web_search: bool = False) -> None:
     _print_readiness(session.readiness)
     print()
     _print_freeze_frame(session.freeze_frame)
+    print()
+    check = assess(session.clear_counters, session.scan, session.readiness)
+    _print_used_car(session.clear_counters, check)
     print()
     _print_ecus(session.ecus)
     print()
@@ -945,8 +995,8 @@ def build_parser() -> argparse.ArgumentParser:
         "diagnose",
         parents=[connection],
         help=tr(
-            "vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN, Steuergeräte "
-            "und Testergebnisse (nur lesend)"
+            "vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN, "
+            "Gebrauchtwagen-Check, Steuergeräte und Testergebnisse (nur lesend)"
         ),
     )
     diagnose_parser.add_argument(
@@ -971,6 +1021,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     readiness_parser.add_argument("--json", action="store_true", help=json_help)
+    used_car_parser = sub.add_parser(
+        "used-car",
+        parents=[connection],
+        help=tr(
+            "Gebrauchtwagen-Check: wurden die Fehlercodes vor kurzem gelöscht? "
+            "Zähler seit dem Löschen, Warnleuchte, permanente Codes (nur lesend)"
+        ),
+    )
+    used_car_parser.add_argument("--json", action="store_true", help=json_help)
     vin_parser = sub.add_parser(
         "vin", parents=[connection], help=tr("FIN lesen (Mode 09) und dekodieren")
     )
@@ -1096,6 +1155,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_diagnose(args)
         elif args.command == "readiness":
             _run_readiness(args)
+        elif args.command == "used-car":
+            _run_used_car(args)
         elif args.command == "vin":
             return _run_vin(args)
         elif args.command == "ecus":

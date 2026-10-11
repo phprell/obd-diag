@@ -171,7 +171,7 @@ def test_tabs_show_session_parts(qtbot: QtBot, ui: Ui, fake_backend: FakeBackend
     assert ui.prop("vehicleFacts", "count") == 5
     assert ui.prop("vehicleOnline", "count") == 2
     assert ui.prop("vehicleEcus", "count") == 2  # Motor und Getriebe (Mode 09)
-    _tab(ui, 5)
+    _tab(ui, 6)
     qtbot.waitUntil(lambda: ui.prop("testsSummary", "visible") is True)
     assert ui.prop("testsSummary", "text") == "1 Test außerhalb der Grenzwerte."
     assert ui.prop("testGroups", "count") == 1
@@ -182,12 +182,19 @@ def test_tabs_show_session_parts(qtbot: QtBot, ui: Ui, fake_backend: FakeBackend
     QMetaObject.invokeMethod(ui.find("onlineVinCheck"), "toggled")
     assert ui.vm.property("onlineVinLookup") is True
     assert ui.prop("onlineVinMenuItem", "checked") is True
+    _tab(ui, 4)
+    qtbot.waitUntil(lambda: ui.prop("usedCarVerdict", "visible") is True)
+    assert ui.prop("usedCarVerdict", "text") == "Auffällig"
+    assert ui.prop("usedCarCounters", "count") == 5
+    assert ui.prop("usedCarFindings", "count") == 4  # gelöscht, Tests offen, MIL, permanent
+    assert "Faustregel" in ui.prop("usedCarNote", "text")
+    assert ui.prop("tabUsedCar", "dot").alpha() > 0
     assert ui.warnings == []
 
 
 @pytest.mark.parametrize(
     ("index", "name"),
-    [(1, "readinessEmpty"), (2, "freezeEmpty"), (3, "vehicleEmpty"), (5, "testsEmpty")],
+    [(1, "readinessEmpty"), (2, "freezeEmpty"), (3, "vehicleEmpty"), (6, "testsEmpty")],
 )
 def test_tabs_empty_states(
     qtbot: QtBot, ui: Ui, fake_backend: FakeBackend, index: int, name: str
@@ -201,6 +208,21 @@ def test_tabs_empty_states(
     assert ui.prop(name, "title") == "Nicht verfügbar – Steuergerät hat nicht geantwortet"  # noqa: RUF001
     assert ui.prop(name, "visible") is True
     assert ui.prop("vehicleHeader", "visible") is False
+    assert ui.warnings == []
+
+
+def test_used_car_tab_empty_and_old_session(
+    qtbot: QtBot, ui: Ui, fake_backend: FakeBackend
+) -> None:
+    _tab(ui, 4)
+    qtbot.waitUntil(lambda: ui.prop("usedCarEmpty", "visible") is True)
+    assert ui.prop("usedCarEmpty", "title") == "Noch nicht verbunden"
+    fake_backend.session = minimal_session()  # wie eine Sitzung älterer Versionen
+    ui.vm.connectAndScan("/dev/ttyUSB0", 38400)
+    qtbot.waitUntil(lambda: ui.prop("usedCarVerdict", "visible") is True)
+    assert ui.prop("usedCarVerdict", "text") == "Nicht beurteilbar"
+    assert ui.prop("usedCarCounters", "count") == 0
+    assert ui.vm.property("usedCar")["countersRead"] is False
     assert ui.warnings == []
 
 

@@ -50,7 +50,7 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   einen roten Stand auf main gebracht).
 - `uv run python tools/emulator.py [--stored P0420,P0300 --pending P0171 --engine-off]`
   – ELM327-emulator mit standardgemäßen Antworten; zeigt das pty (z. B. /dev/pts/5)
-- `uv run obd-diag {info,adapter,scan,diagnose,readiness,vin,ecus,tests,clear,live,ports,export} --port … [--trace]`,
+- `uv run obd-diag {info,adapter,scan,diagnose,readiness,used-car,vin,ecus,tests,clear,live,ports,export} --port … [--trace]`,
   `uv run obd-diag setup-check [--port …]` (Einrichtung: Rechte, Gruppe, Baudrate)
   (`live --list`, `--pids rpm,speed`, `--interval`, `--duration`, `--record [DATEI.csv]`)
 - `uv run obd-diag-gui`
@@ -100,8 +100,9 @@ Trips und Fuzzing).
 Funktionen: Fehlercodes (Mode 03/07/0A) mit deutschem Klartext, Readiness (Mode 01
 PID 01, Otto + Diesel), Freeze Frame (Mode 02), FIN (Mode 09 PID 02) mit Offline-
 Dekodierung, sicheres Löschen, Sitzungen als JSON, PDF-Bericht und CSV, Adapter-
-Mitschnitt, GUI mit Tabs (Fehlercodes / Readiness / Freeze Frame / Fahrzeug /
-Live-Daten / Testergebnisse), Steuergeräte (Mode 09) und Testergebnisse (Mode 06), helles und dunkles Design. Live-Daten: 116 Werte aus 82 Mode-01-PIDs
+Mitschnitt, GUI mit Tabs (Fehlercodes / Readiness / Freeze Frame / Fahrzeug / Gebrauchtwagen /
+Live-Daten / Testergebnisse), Steuergeräte (Mode 09) und Testergebnisse (Mode 06), helles
+und dunkles Design. Live-Daten: 116 Werte aus 82 Mode-01-PIDs
 (auch Lambdasonden 1–8, Nachkat-Trimm, Drehmomentstufen, 66/67), CSV-Aufzeichnung,
 Kacheln mit Verlaufskurve, CLI `obd-diag live`.
 
@@ -135,7 +136,10 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   Schreiben ohne Überschreiben), `setup_check.py` (`run_setup_check`: PySide6/Katalog,
   Zugriff und Gruppe je Port über injizierbaren `Host`, Baudraten 38400/115200 nur mit
   `Elm327.initialize`), `live.py` (`prepare_live`, `select_pids`, `run_live`
-  mit injizierbarer Uhr, `LiveRecorder` CSV unter `recordings/`).
+  mit injizierbarer Uhr, `LiveRecorder` CSV unter `recordings/`), `used_car.py`
+  (Gebrauchtwagen-Check: `read_clear_counters` PID 30/31/4E/21/4D, je PID kleinster bzw.
+  größter Wert aller Steuergeräte; `assess` bewertet mit Scan und Readiness, Texte erst bei
+  der Anzeige; `Session.clear_counters`, `None` in älteren Sitzungen).
 - `data/` – `dtc_catalog.py` (SQLite, read-only), `catalog_build.py`, `wmi.py`
   (WMI → Hersteller, ISO-3780-Länderbereiche; Quellen im Modul).
 - `export/report.py` – PDF (ReportLab) und CSV.

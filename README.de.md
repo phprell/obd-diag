@@ -35,6 +35,9 @@ Ausführliche Dokumentation (Benutzen, Wie es funktioniert, Entwickeln):
 - **Demo-Modus** (noch nicht veröffentlicht): `obd-diag-gui --demo` oder
   `obd-diag … --demo` zeigt ein Beispielfahrzeug (aufgezeichnete Daten des W177) ohne
   Adapter und ohne Auto.
+- **Gebrauchtwagen-Check** (noch nicht veröffentlicht): `obd-diag used-car`, Reiter
+  „Gebrauchtwagen“ und Abschnitt im PDF zeigen, ob die Fehlercodes vor kurzem gelöscht
+  wurden.
 - **Am echten Auto getestet** (2026-10-09, Mercedes A 180 d W177, Adapter FORScan
   ELMconfig, CAN 29 Bit/500 kBit/s, vier Steuergeräte): `info`, `diagnose` und `live`
   lesen richtig. Vier Befunde aus dem Test sind behoben (erstes `ATZ` mit `?`, Freeze
@@ -416,11 +419,26 @@ obd-diag diagnose --port /dev/ttyUSB0 --online-vin      # FIN zusätzlich bei NH
    „keiner gespeichert“.
 4. FIN (Mode 09 PID 02, CAN mehrteilig oder ältere Protokolle mit fünf Zeilen) und
    ihre Offline-Dekodierung.
+5. Zähler für den Gebrauchtwagen-Check (Mode 01 PID 30, 31, 4E, 21, 4D), siehe unten.
 
 Antwortet das Fahrzeug auf Readiness, Freeze Frame oder FIN nicht (oder unbrauchbar),
 fehlt nur dieser Teil. `--save` legt die Sitzung wie unten beschrieben ab, `--pdf` und
 `--csv` exportieren direkt (wie `obd-diag export`). Bei `--json` bleibt stdout reines
 JSON; Pfade gespeicherter Dateien stehen auf stderr.
+
+### Gebrauchtwagen-Check
+
+```sh
+obd-diag used-car --port /dev/ttyUSB0           # Urteil, Zähler, Befunde
+obd-diag used-car --port /dev/ttyUSB0 --json
+```
+
+Beim Löschen der Fehlercodes setzt das Steuergerät Warmläufe (PID 30), Strecke (31) und
+Zeit (4E) seit dem Löschen sowie Strecke (21) und Zeit (4D) mit Warnleuchte auf null.
+„Auffällig“ heißt: weniger als 10 Warmläufe, 200 km oder 300 Minuten seit dem Löschen,
+Warnleuchte an oder seitdem an gewesen, oder permanente Codes (Mode 0A). Eine Faustregel,
+kein Beweis: Auch Werkstatt oder Batteriewechsel setzen die Zähler zurück. `diagnose`
+und die Oberfläche (Reiter „Gebrauchtwagen“) lesen den Check mit.
 
 ### FIN
 
@@ -554,7 +572,7 @@ ohne es bleibt eine Kopfzeilen-Installation (z. B. auf dem Raspberry Pi) klein.
 Oben Port und Baudrate wählen – die Liste zeigt gefundene Adapter, ein Pfad lässt sich
 auch eintippen – und „Verbinden & Scannen“ drücken. Das liest in einem Durchgang
 Fehlercodes, Readiness, Freeze Frame und FIN (nur lesend). Rechts oben steht dann das
-Fahrzeug (Hersteller und FIN), darunter fünf Reiter:
+Fahrzeug (Hersteller und FIN), darunter sechs Reiter:
 
 - **Fehlercodes**: links die Codes nach gespeichert, ausstehend und permanent
   gruppiert, rechts die Erklärung des gewählten Codes mit Ursachen, Symptomen und
@@ -566,6 +584,8 @@ Fahrzeug (Hersteller und FIN), darunter fünf Reiter:
   (Motorlast, Kühlmitteltemperatur, Drehzahl, Geschwindigkeit).
 - **Fahrzeug**: FIN, Hersteller, Land, Modelljahr, Prüfziffer; auf Wunsch Angaben aus
   NHTSA vPIC (Modell, Motor …).
+- **Gebrauchtwagen**: ob die Fehlercodes vor kurzem gelöscht wurden, mit Befunden und
+  den Zählern seit dem Löschen.
 - **Live-Daten**: Werte auswählen (die vom Fahrzeug unterstützten erscheinen nach dem
   ersten Start), Intervall 0,5/1/2 s, „Aufzeichnen (CSV)“, dann Start. Je Wert eine
   Kachel mit aktuellem Wert, kleinster/größter gesehener Wert und einer Kurve der

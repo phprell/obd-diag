@@ -11,8 +11,9 @@ Sprache aller Ausgaben ein ({doc}`sprache`).
 | `obd-diag info` | Adapter-Kennung und Bordspannung | nichts (nur Adapter-Befehle) |
 | `obd-diag adapter` | Adapter-Check: Version, Befehlssatz, UDS-Eignung ({doc}`adapter`) | nichts (nur Adapter-Befehle) |
 | `obd-diag scan` | Fehlercodes lesen | Mode 01, 03, 07, 0A |
-| `obd-diag diagnose` | Fehlercodes, Readiness, Freeze Frame, FIN, Steuergeräte, Testergebnisse | Mode 01, 02, 03, 06, 07, 09, 0A |
+| `obd-diag diagnose` | Fehlercodes, Readiness, Freeze Frame, FIN, Gebrauchtwagen-Check, Steuergeräte, Testergebnisse | Mode 01, 02, 03, 06, 07, 09, 0A |
 | `obd-diag readiness` | Readiness-Assistent: offene Tests seit dem Löschen und in dieser Fahrt ({doc}`readiness`) | Mode 01 |
+| `obd-diag used-car` | Gebrauchtwagen-Check: vor kurzem gelöscht? ({doc}`gebrauchtwagen`) | Mode 01, 03, 07, 0A |
 | `obd-diag vin` | FIN lesen oder eine eingegebene dekodieren | Mode 09 |
 | `obd-diag ecus` | Steuergeräte: Name, Kalibrierungs-ID, CVN, Überwachungszähler ({doc}`steuergeraete-tests`) | Mode 09 |
 | `obd-diag tests` | Testergebnisse mit Grenzwerten ({doc}`steuergeraete-tests`) | Mode 06 |
@@ -27,6 +28,7 @@ obd-diag adapter --port /dev/ttyUSB0               # was kann der Adapter wirkli
 obd-diag scan --port /dev/ttyUSB0                  # Tabelle, Sprache wie das System
 obd-diag scan --port /dev/ttyUSB0 --lang en --json # englisch, maschinenlesbar
 obd-diag diagnose --port /dev/ttyUSB0 --save --pdf bericht.pdf
+obd-diag used-car --port /dev/ttyUSB0               # Fehlercodes vor kurzem gelöscht?
 obd-diag vin WVWZZZ1KZ6W123456                     # nur dekodieren, ohne Adapter
 obd-diag live --port /dev/ttyUSB0 --pids rpm,speed --interval 0.5 --record
 obd-diag export ~/.local/share/obd-diag/sessions/session-20261007-143205.json --pdf bericht.pdf

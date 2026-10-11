@@ -41,6 +41,7 @@ from obd_diag.ui.viewmodels.session_parts import (
     freeze_frame_entry,
     readiness_assist_entry,
     readiness_entry,
+    used_car_entry,
     vehicle_entry,
 )
 from obd_diag.ui.viewmodels.vehicle_info import ecus_entry, results_entry
@@ -394,6 +395,10 @@ class DiagnosisViewModel(QObject):
             self.stateChanged.emit()
 
         self._runner.run(lambda: backend.check_readiness(port, baud), done, self._job_failed)
+
+    @Property(dict, notify=stateChanged)
+    def usedCar(self) -> dict[str, Any]:
+        return used_car_entry(self._session)
 
     @Property(QObject, constant=True)
     def monitors(self) -> MonitorListModel:

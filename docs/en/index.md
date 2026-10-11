@@ -21,6 +21,7 @@ traces from other programs and python-OBD ({doc}`entwickeln/testen`).
 | Explain codes without a catalog text online (optional, unverified) | – | {doc}`benutzen/fehlercodes-online` |
 | Readiness (monitors, check engine light) | Mode 01 PID 01 | {doc}`benutzen/oberflaeche` |
 | Readiness assistant: incomplete tests of this drive, which drive completes them | Mode 01 PID 01, 41 | {doc}`benutzen/readiness` |
+| Used-car check: were the codes cleared recently? | Mode 01, 0A | {doc}`benutzen/gebrauchtwagen` |
 | Freeze frame for the triggering trouble code | Mode 02 | {doc}`technik/dienste` |
 | Read the VIN and decode it offline | Mode 09 PID 02 | {doc}`technik/fin` |
 | Control units: name, calibration ID, CVN, monitoring counters | Mode 09 | {doc}`benutzen/steuergeraete-tests` |
@@ -62,6 +63,7 @@ benutzen/sprache
 benutzen/fehlercodes
 benutzen/fehlercodes-online
 benutzen/readiness
+benutzen/gebrauchtwagen
 benutzen/steuergeraete-tests
 benutzen/live-daten
 benutzen/sitzungen

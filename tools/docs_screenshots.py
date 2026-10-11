@@ -61,9 +61,17 @@ from tests.emulator_patches import (  # noqa: E402
     patch_persistent_clear,
 )
 
-TABS = ("fehlercodes", "readiness", "freeze-frame", "fahrzeug", "live-daten", "testergebnisse")
+TABS = (
+    "fehlercodes",
+    "readiness",
+    "freeze-frame",
+    "fahrzeug",
+    "gebrauchtwagen",
+    "live-daten",
+    "testergebnisse",
+)
 # Der Emulator kennt Mode 06 und Mode 09 (außer der FIN) nicht; diese Reiter nur im Demo-Modus
-_EMULATOR_TABS = ("fehlercodes", "readiness", "freeze-frame", "fahrzeug")
+_EMULATOR_TABS = ("fehlercodes", "readiness", "freeze-frame", "fahrzeug", "gebrauchtwagen")
 _DEMO_TABS = ("fehlercodes", "testergebnisse")
 SIZE = (1180, 760)
 

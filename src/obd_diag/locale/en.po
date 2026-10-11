@@ -288,6 +288,10 @@ msgid "Testergebnisse (Mode 06): nicht verfügbar."
 msgstr "Test results (mode 06): not available."
 
 #: src/obd_diag/cli.py
+msgid "Hinweis: {message}"
+msgstr "Note: {message}"
+
+#: src/obd_diag/cli.py
 msgid "export: --pdf und/oder --csv angeben"
 msgstr "export: specify --pdf and/or --csv"
 
@@ -333,8 +337,8 @@ msgid "ohne Rückfrage löschen"
 msgstr "clear without asking"
 
 #: src/obd_diag/cli.py
-msgid "vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN, Steuergeräte und Testergebnisse (nur lesend)"
-msgstr "full diagnosis: trouble codes, readiness, freeze frame, VIN, control units and test results (read-only)"
+msgid "vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN, Gebrauchtwagen-Check, Steuergeräte und Testergebnisse (nur lesend)"
+msgstr "full diagnosis: trouble codes, readiness, freeze frame, VIN, used-car check, control units and test results (read-only)"
 
 #: src/obd_diag/cli.py
 msgid "Sitzung als JSON ausgeben"
@@ -347,6 +351,10 @@ msgstr "save the session under $XDG_DATA_HOME/obd-diag/sessions"
 #: src/obd_diag/cli.py
 msgid "Readiness-Assistent: offene Tests seit dem Löschen und in dieser Fahrt (PID 01 und 41) mit Hinweisen, welche Fahrt sie abschließt"
 msgstr "Readiness assistant: incomplete tests since codes were cleared and during this drive (PIDs 01 and 41) with hints on which drive completes them"
+
+#: src/obd_diag/cli.py
+msgid "Gebrauchtwagen-Check: wurden die Fehlercodes vor kurzem gelöscht? Zähler seit dem Löschen, Warnleuchte, permanente Codes (nur lesend)"
+msgstr "used-car check: were the trouble codes cleared recently? Counters since clearing, MIL, permanent codes (read-only)"
 
 #: src/obd_diag/cli.py
 msgid "FIN lesen (Mode 09) und dekodieren"
@@ -411,10 +419,6 @@ msgstr "SESSION.json"
 #: src/obd_diag/cli.py
 msgid "Fehler: {message}"
 msgstr "Error: {message}"
-
-#: src/obd_diag/cli.py
-msgid "Hinweis: {message}"
-msgstr "Note: {message}"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
@@ -1517,6 +1521,10 @@ msgid "Readiness (Eigendiagnosen Abgassystem)"
 msgstr "Readiness (emission system self-tests)"
 
 #: src/obd_diag/export/report.py
+msgid "Ergebnis"
+msgstr "Result"
+
+#: src/obd_diag/export/report.py
 #: src/obd_diag/ui/viewmodels/codes.py
 msgid "Keine Beschreibung im Katalog"
 msgstr "No description in the catalog"
@@ -1548,10 +1556,6 @@ msgstr "Value"
 #: src/obd_diag/export/report.py
 msgid "Grenzen"
 msgstr "Limits"
-
-#: src/obd_diag/export/report.py
-msgid "Ergebnis"
-msgstr "Result"
 
 #: src/obd_diag/export/report.py
 msgid "Bestanden heißt: Der Messwert liegt innerhalb der Grenzen, die das Steuergerät selbst meldet. Kein Ergebnis: meist ist der Test seit dem letzten Löschen noch nicht gelaufen. Tests ab Nummer 80 legt der Hersteller fest."
@@ -2071,6 +2075,7 @@ msgid "Laufzeit seit Motorstart"
 msgstr "Run time since engine start"
 
 #: src/obd_diag/protocol/pids.py
+#: src/obd_diag/services/used_car.py
 msgid "Strecke mit Warnleuchte an"
 msgstr "Distance with MIL on"
 
@@ -2151,6 +2156,7 @@ msgid "Drosselklappensteller Sollwert"
 msgstr "Commanded throttle actuator"
 
 #: src/obd_diag/protocol/pids.py
+#: src/obd_diag/services/used_car.py
 msgid "Zeit mit Warnleuchte an"
 msgstr "Time run with MIL on"
 
@@ -2880,6 +2886,115 @@ msgstr "{error}. Is another program using the adapter?"
 msgid "kein freier Dateiname für {stem} in {directory}"
 msgstr "no free file name for {stem} in {directory}"
 
+#: src/obd_diag/services/used_car.py
+msgid "Gebrauchtwagen-Check"
+msgstr "Used-car check"
+
+#: src/obd_diag/services/used_car.py
+msgid "Faustregel, kein Beweis: Auch eine Werkstatt, ein Batteriewechsel oder ein Steuergerätetausch setzt die Zähler zurück. Bei einem Befund den Verkäufer fragen, wann und warum die Fehlercodes gelöscht wurden."
+msgstr "Rule of thumb, not proof: a workshop, a battery change or a replaced control unit also resets the counters. If something is flagged, ask the seller when and why the trouble codes were cleared."
+
+#: src/obd_diag/services/used_car.py
+msgid "Unauffällig"
+msgstr "Inconspicuous"
+
+#: src/obd_diag/services/used_car.py
+msgid "Auffällig"
+msgstr "Suspicious"
+
+#: src/obd_diag/services/used_car.py
+msgid "Nicht beurteilbar"
+msgstr "Cannot be assessed"
+
+#: src/obd_diag/services/used_car.py
+#: src/obd_diag/ui/qml/FreezeFrameView.qml
+msgid "nicht gemeldet"
+msgstr "not reported"
+
+#: src/obd_diag/services/used_car.py
+msgid "{n} Stunde"
+msgid_plural "{n} Stunden"
+msgstr[0] "{n} hour"
+msgstr[1] "{n} hours"
+
+#: src/obd_diag/services/used_car.py
+msgid "Warmläufe seit dem Löschen"
+msgstr "Warm-ups since codes cleared"
+
+#: src/obd_diag/services/used_car.py
+msgid "Strecke seit dem Löschen"
+msgstr "Distance since codes cleared"
+
+#: src/obd_diag/services/used_car.py
+msgid "Zeit seit dem Löschen"
+msgstr "Time since codes cleared"
+
+#: src/obd_diag/services/used_car.py
+msgid "Die Motorkontrollleuchte ist an."
+msgstr "The check engine light (MIL) is on."
+
+#: src/obd_diag/services/used_car.py
+msgid "{n} Minute"
+msgid_plural "{n} Minuten"
+msgstr[0] "{n} minute"
+msgstr[1] "{n} minutes"
+
+#: src/obd_diag/services/used_car.py
+msgid "Passend dazu ist {n} Readiness-Test nicht abgeschlossen: {names}."
+msgid_plural "Passend dazu sind {n} Readiness-Tests nicht abgeschlossen: {names}."
+msgstr[0] "Consistent with this, {n} readiness test is incomplete: {names}."
+msgstr[1] "Consistent with this, {n} readiness tests are incomplete: {names}."
+
+#: src/obd_diag/services/used_car.py
+msgid "{n} Readiness-Test nicht abgeschlossen: {names}. Das kann auch an den Fahrbedingungen liegen."
+msgid_plural "{n} Readiness-Tests nicht abgeschlossen: {names}. Das kann auch an den Fahrbedingungen liegen."
+msgstr[0] "{n} readiness test incomplete: {names}. This can also be due to driving conditions."
+msgstr[1] "{n} readiness tests incomplete: {names}. This can also be due to driving conditions."
+
+#: src/obd_diag/services/used_car.py
+msgid "Keine permanenten Fehlercodes gemeldet."
+msgstr "No permanent trouble codes reported."
+
+#: src/obd_diag/services/used_car.py
+msgid "{n} oder mehr"
+msgstr "{n} or more"
+
+#: src/obd_diag/services/used_car.py
+msgid "{n} Warmlauf"
+msgid_plural "{n} Warmläufe"
+msgstr[0] "{n} warm-up"
+msgstr[1] "{n} warm-ups"
+
+#: src/obd_diag/services/used_car.py
+msgid "Das Fahrzeug meldet nicht, wie lange das Löschen der Fehlercodes her ist (PID 30, 31, 4E); ob kürzlich gelöscht wurde, lässt sich nicht sagen."
+msgstr "The vehicle does not report how long ago the trouble codes were cleared (PID 30, 31, 4E); whether they were cleared recently cannot be told."
+
+#: src/obd_diag/services/used_car.py
+msgid "Die Motorkontrollleuchte war seit dem letzten Löschen an: {since} mit Warnleuchte, jetzt ist sie aus."
+msgstr "The check engine light (MIL) was on since the codes were last cleared: {since} with the MIL on, now it is off."
+
+#: src/obd_diag/services/used_car.py
+msgid "Motorkontrollleuchte aus."
+msgstr "Check engine light (MIL) off."
+
+#: src/obd_diag/services/used_car.py
+msgid "Fehlercodes vor kurzem gelöscht: erst {since} seit dem Löschen."
+msgstr "Trouble codes cleared recently: only {since} since clearing."
+
+#: src/obd_diag/services/used_car.py
+msgid "Permanenter Fehlercode: {codes}. Er lässt sich nicht löschen; das Steuergerät entfernt ihn erst, wenn es den Fehler nicht mehr feststellt."
+msgid_plural "Permanente Fehlercodes: {codes}. Sie lassen sich nicht löschen; das Steuergerät entfernt sie erst, wenn es den Fehler nicht mehr feststellt."
+msgstr[0] "Permanent trouble code: {codes}. It cannot be cleared; the control unit removes it only once it no longer detects the fault."
+msgstr[1] "Permanent trouble codes: {codes}. They cannot be cleared; the control unit removes them only once it no longer detects the fault."
+
+#: src/obd_diag/services/used_car.py
+msgid "Nicht vor kurzem gelöscht: {since} seit dem letzten Löschen."
+msgstr "Not cleared recently: {since} since the codes were last cleared."
+
+#: src/obd_diag/services/used_car.py
+msgid "Gefahren mit Warnleuchte: {since}."
+msgstr "Driven with the MIL on: {since}."
+
 #: src/obd_diag/services/vehicle.py
 msgid "Modell"
 msgstr "Model"
@@ -3364,6 +3479,7 @@ msgstr "Reading trouble codes …"
 #: src/obd_diag/ui/qml/FreezeFrameView.qml
 #: src/obd_diag/ui/qml/ReadinessView.qml
 #: src/obd_diag/ui/qml/TestResultsView.qml
+#: src/obd_diag/ui/qml/UsedCarView.qml
 #: src/obd_diag/ui/qml/VehicleView.qml
 msgid "Noch nicht verbunden"
 msgstr "Not connected yet"
@@ -3442,10 +3558,6 @@ msgstr "The control unit did not answer mode 02 (freeze frame)."
 #: src/obd_diag/ui/qml/FreezeFrameView.qml
 msgid "Auslösender Code"
 msgstr "Triggering code"
-
-#: src/obd_diag/ui/qml/FreezeFrameView.qml
-msgid "nicht gemeldet"
-msgstr "not reported"
 
 #: src/obd_diag/ui/qml/FreezeFrameView.qml
 msgid "Messwerte beim Speichern des Codes"
@@ -3800,6 +3912,26 @@ msgstr "The vehicle did not report any test results (mode 06). obd-diag reads th
 msgid "Jeder Test meldet einen Messwert und die Grenzen, innerhalb derer das Steuergerät ihn als in Ordnung bewertet. „Kein Ergebnis“ heißt meist: Der Test ist seit dem letzten Löschen noch nicht gelaufen. Tests ab Nummer 80 legt der Hersteller fest, ihre Bedeutung ist nicht genormt."
 msgstr "Each test reports a measured value and the limits within which the control unit considers it OK. “No result” usually means the test has not run since the codes were last cleared. Tests from number 80 are defined by the manufacturer; their meaning is not standardised."
 
+#: src/obd_diag/ui/qml/UsedCarView.qml
+msgid "Lese Zähler seit dem Löschen …"
+msgstr "Reading counters since clearing …"
+
+#: src/obd_diag/ui/qml/UsedCarView.qml
+msgid "Nach „Verbinden & Scannen“ steht hier, ob die Fehlercodes vor kurzem gelöscht wurden: Warmläufe, Strecke und Zeit seit dem Löschen, Warnleuchte und permanente Codes."
+msgstr "After “Connect & Scan” this shows whether the trouble codes were cleared recently: warm-ups, distance and time since clearing, check engine light and permanent codes."
+
+#: src/obd_diag/ui/qml/UsedCarView.qml
+msgid "Zähler seit dem letzten Löschen"
+msgstr "Counters since the codes were last cleared"
+
+#: src/obd_diag/ui/qml/UsedCarView.qml
+msgid "In dieser Sitzung nicht gelesen (mit einer älteren Version von obd-diag gespeichert)."
+msgstr "Not read in this session (saved with an older version of obd-diag)."
+
+#: src/obd_diag/ui/qml/UsedCarView.qml
+msgid "Beim Löschen der Fehlercodes setzt das Steuergerät diese Zähler auf null (OBD Mode 01, PID 30, 31, 4E, 21, 4D). Antworten mehrere Steuergeräte, gilt bei den Zählern seit dem Löschen der kleinste Wert."
+msgstr "When the trouble codes are cleared, the control unit resets these counters to zero (OBD mode 01, PID 30, 31, 4E, 21, 4D). If several control units answer, the smallest value counts for the counters since clearing."
+
 #: src/obd_diag/ui/qml/VehicleView.qml
 msgid "Lese Fahrzeug-Identifizierungsnummer …"
 msgstr "Reading vehicle identification number …"
@@ -3863,6 +3995,10 @@ msgstr "Readiness"
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Freeze Frame"
 msgstr "Freeze frame"
+
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Gebrauchtwagen"
+msgstr "Used car"
 
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Live-Daten"

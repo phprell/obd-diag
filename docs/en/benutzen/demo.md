@@ -39,7 +39,8 @@ traces of these tests:
 
 Not recorded are the values of PIDs 21, 30, 31, 49 and 66 (distance with warning lamp,
 warm-ups and distance since clearing, accelerator pedal, air mass). The car reports them
-as supported; in demo mode they hold made-up, plausible values.
+as supported; in demo mode they hold made-up, plausible values. The used-car check is
+therefore “inconspicuous” (40 warm-ups and 3000 km since clearing).
 
 ```{image} ../_static/screenshots/demo-live-daten-light.png
 :alt: Live data in demo mode: engine speed around 860 rpm, coolant 62 °C

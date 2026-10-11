@@ -317,13 +317,22 @@ def test_diagnose_table(
     assert "  Tankentlüftung:            abgeschlossen\n" in out
     assert "  Alle Tests abgeschlossen: nein\n  Hinweis: Das ist keine AU-Bewertung" in out
     assert "AU-bereit" not in out
-    assert out.endswith(
+    assert (
         "Freeze Frame (ausgelöst durch P0133):\n"
         "  Kühlmitteltemperatur:  75 °C\n"
         "  Drehzahl:              1726 1/min\n"
-        "\nSteuergeräte (Mode 09): nicht verfügbar.\n"
-        "\nTestergebnisse (Mode 06): nicht verfügbar.\n"
-    )
+        "\nGebrauchtwagen-Check: Auffällig\n"
+        "  Warmläufe seit dem Löschen: 3\n"
+        "  Strecke seit dem Löschen:   45 km\n"
+        "  Zeit seit dem Löschen:      80 Minuten\n"
+        "  Strecke mit Warnleuchte an: 12 km\n"
+        "  Zeit mit Warnleuchte an:    20 Minuten\n"
+        "  [!] Fehlercodes vor kurzem gelöscht: erst 3 Warmläufe, 45 km, 80 Minuten seit\n"
+        "      dem Löschen.\n"
+    ) in out
+    assert "  [!] Die Motorkontrollleuchte ist an. Gefahren mit Warnleuchte: 12 km, 20\n" in out
+    assert "Fehlercodes gelöscht wurden.\n\nSteuergeräte (Mode 09): nicht verfügbar.\n" in out
+    assert out.endswith("\nTestergebnisse (Mode 06): nicht verfügbar.\n")
     assert "04" not in full_car[0].sent
     assert not (tmp_path / "data").exists()  # ohne --save wird nichts gespeichert
 
@@ -357,6 +366,7 @@ def test_diagnose_without_optional_parts(
     assert out.startswith("Fahrzeug:\n  FIN nicht verfügbar")
     assert "Readiness: nicht verfügbar (PID 01 nicht beantwortet).\n" in out
     assert "Freeze Frame: keiner gespeichert.\n" in out
+    assert "Gebrauchtwagen-Check: Auffällig\n" in out  # Zähler ohne Readiness
     assert out.endswith("Testergebnisse (Mode 06): nicht verfügbar.\n")
 
 

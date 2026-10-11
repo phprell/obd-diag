@@ -38,7 +38,7 @@ from obd_diag.ui import backend
 from tests.fakes import CAN_CAR_ENGINE_OFF, CAN_CAR_FULL, CLEARED
 from tests.samples import full_session
 from tests.unit.test_command_guard import (
-    ECUS_AND_TESTS,
+    DIAGNOSIS,
     FREEZE,
     PRECONDITIONS,
     SCAN,
@@ -368,7 +368,7 @@ def serial_ports(monkeypatch: pytest.MonkeyPatch) -> list[WireCheckingTransport]
 def test_gui_diagnosis_sends_only_reads(serial_ports: list[WireCheckingTransport]) -> None:
     backend.diagnose_port("/dev/ttyUSB0", 38400)
     (transport,) = serial_ports
-    assert transport.sent == [*SCAN, "0101", *FREEZE, "0902", *ECUS_AND_TESTS]
+    assert transport.sent == DIAGNOSIS
 
 
 def test_gui_clear_sends_04_once_after_checks(
