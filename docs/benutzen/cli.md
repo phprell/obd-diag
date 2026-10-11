@@ -15,6 +15,7 @@ Sprache aller Ausgaben ein ({doc}`sprache`).
 | `obd-diag vin` | FIN lesen oder eine eingegebene dekodieren | Mode 09 |
 | `obd-diag live` | Live-Daten anzeigen und aufzeichnen | Mode 01 |
 | `obd-diag export` | gespeicherte Sitzung als PDF/CSV | nichts |
+| `obd-diag compare` | zwei gespeicherte Sitzungen vergleichen ({doc}`sitzungen`) | nichts |
 | `obd-diag clear` | Fehlercodes löschen (gesperrt) | Mode 04 |
 
 ## Beispiele

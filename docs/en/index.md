@@ -23,7 +23,7 @@ traces from other programs and python-OBD ({doc}`entwickeln/testen`).
 | Freeze frame for the triggering trouble code | Mode 02 | {doc}`technik/dienste` |
 | Read the VIN and decode it offline | Mode 09 PID 02 | {doc}`technik/fin` |
 | Live data: 116 values from 82 PIDs, CSV recording | Mode 01 | {doc}`benutzen/live-daten` |
-| Save sessions, PDF report, CSV | – | {doc}`benutzen/sitzungen` |
+| Save and compare sessions, PDF report, CSV | – | {doc}`benutzen/sitzungen` |
 | Clear trouble codes (locked) | Mode 04 | {doc}`benutzen/fehlercodes` |
 
 What obd-diag cannot do: control units outside the standardised emissions diagnostics

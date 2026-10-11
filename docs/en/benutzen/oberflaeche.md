@@ -110,6 +110,7 @@ action runs on the adapter at a time ({doc}`live-daten`).
 | --- | --- | --- |
 | Save session | Ctrl+S | store the diagnosis as JSON, the path is shown |
 | Open session … | Ctrl+O | view a saved session only; clearing is not possible then |
+| Compare with session … | – | compare the displayed diagnosis with a saved one ({doc}`sitzungen`) |
 | Report as PDF … | Ctrl+P | write a PDF report in the background |
 | Export CSV … | – | one row per trouble code |
 | Options → Check setup … | – | check adapter, permissions and baud rate; opens by itself on the first start ({doc}`installation`) |

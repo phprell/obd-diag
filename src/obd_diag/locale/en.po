@@ -32,22 +32,26 @@ msgstr "Note"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "abgeschlossen"
 msgstr "complete"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "nicht abgeschlossen"
 msgstr "incomplete"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "nicht unterstützt"
 msgstr "not supported"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/protocol/elm327.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 #: src/obd_diag/ui/viewmodels/live.py
 #: src/obd_diag/ui/viewmodels/session_parts.py
@@ -103,6 +107,7 @@ msgstr "Commands checked:"
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/services/adapter_check.py
+#: src/obd_diag/services/compare.py
 msgid "ja"
 msgstr "yes"
 
@@ -112,29 +117,34 @@ msgstr "Check scan:"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Motorlast"
 msgstr "Engine load"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/protocol/pids.py
+#: src/obd_diag/services/compare.py
 msgid "Kühlmitteltemperatur"
 msgstr "Coolant temperature"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Drehzahl"
 msgstr "Engine speed"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/protocol/pids.py
+#: src/obd_diag/services/compare.py
 msgid "1/min"
 msgstr "rpm"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/protocol/pids.py
+#: src/obd_diag/services/compare.py
 msgid "Geschwindigkeit"
 msgstr "Speed"
 
@@ -153,6 +163,7 @@ msgstr "Petrol engine"
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/services/adapter_check.py
+#: src/obd_diag/services/compare.py
 msgid "nein"
 msgstr "no"
 
@@ -226,6 +237,7 @@ msgstr "Some codes came back immediately, the fault probably still exists."
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "FIN"
 msgstr "VIN"
 
@@ -253,6 +265,11 @@ msgstr "Freeze frame: none stored."
 #: src/obd_diag/cli.py
 msgid "export: --pdf und/oder --csv angeben"
 msgstr "export: specify --pdf and/or --csv"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/compare.py
+msgid "Keine Unterschiede."
+msgstr "No differences."
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/services/live.py
@@ -360,6 +377,18 @@ msgid "SESSION.json"
 msgstr "SESSION.json"
 
 #: src/obd_diag/cli.py
+msgid "zwei gespeicherte Diagnosesitzungen vergleichen: neue und verschwundene Fehlercodes, Readiness, Freeze Frame (die ältere gilt als vorher)"
+msgstr "compare two saved diagnosis sessions: new and cleared trouble codes, readiness, freeze frame (the older one counts as before)"
+
+#: src/obd_diag/cli.py
+msgid "SESSION1.json"
+msgstr "SESSION1.json"
+
+#: src/obd_diag/cli.py
+msgid "SESSION2.json"
+msgstr "SESSION2.json"
+
+#: src/obd_diag/cli.py
 msgid "Fehler: {message}"
 msgstr "Error: {message}"
 
@@ -369,17 +398,20 @@ msgstr "Note: {message}"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Adapter"
 msgstr "Adapter"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Protokoll"
 msgstr "Protocol"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Bordspannung"
 msgstr "Battery voltage"
@@ -461,6 +493,16 @@ msgid "Fahrzeug liefert keine FIN (Mode 09 PID 02)."
 msgstr "Vehicle does not report a VIN (mode 09 PID 02)."
 
 #: src/obd_diag/cli.py
+#: src/obd_diag/ui/qml/CompareDialog.qml
+msgid "Vorher"
+msgstr "Before"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/qml/CompareDialog.qml
+msgid "Nachher"
+msgstr "After"
+
+#: src/obd_diag/cli.py
 msgid "mindestens {seconds:g} Sekunden"
 msgstr "at least {seconds:g} seconds"
 
@@ -533,12 +575,14 @@ msgstr "Search the web: {url}"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/session_parts.py
 msgid "an"
 msgstr "on"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/session_parts.py
 msgid "aus"
 msgstr "off"
@@ -1389,6 +1433,7 @@ msgid "Otto (Monitore für Otto-Motoren)"
 msgstr "Petrol (monitors for spark ignition engines)"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Fehlercodes"
 msgstr "Trouble codes"
@@ -1398,11 +1443,13 @@ msgid "OBD-Diagnosebericht"
 msgstr "OBD diagnosis report"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Fahrzeug"
 msgstr "Vehicle"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Verbindung"
 msgstr "Connection"
 
@@ -1476,14 +1523,17 @@ msgid "nein, {count} offen"
 msgstr "no, {count} incomplete"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Kontrollleuchte (MIL)"
 msgstr "Check engine light (MIL)"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Gemeldete Fehlercodes"
 msgstr "Reported trouble codes"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Motorart"
 msgstr "Engine type"
 
@@ -2124,6 +2174,61 @@ msgstr "Control unit did not confirm clearing (NO DATA). Backup: {backup}"
 msgid "Löschen nicht bestätigt ({error}), Ergebnis mit 'obd-diag scan' prüfen. Sicherung: {backup}"
 msgstr "Clearing not confirmed ({error}), check the result with 'obd-diag scan'. Backup: {backup}"
 
+#: src/obd_diag/services/compare.py
+msgid "Die Sitzungen stammen von verschiedenen Fahrzeugen (FIN verschieden)."
+msgstr "The sessions come from different vehicles (VIN differs)."
+
+#: src/obd_diag/services/compare.py
+msgid "gespeichert"
+msgstr "stored"
+
+#: src/obd_diag/services/compare.py
+msgid "ausstehend"
+msgstr "pending"
+
+#: src/obd_diag/services/compare.py
+msgid "permanent"
+msgstr "permanent"
+
+#: src/obd_diag/services/compare.py
+msgid "verfügbar"
+msgstr "available"
+
+#: src/obd_diag/services/compare.py
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Readiness"
+msgstr "Readiness"
+
+#: src/obd_diag/services/compare.py
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Freeze Frame"
+msgstr "Freeze frame"
+
+#: src/obd_diag/services/compare.py
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Otto"
+msgstr "Petrol"
+
+#: src/obd_diag/services/compare.py
+msgid "Diesel"
+msgstr "Diesel"
+
+#: src/obd_diag/services/compare.py
+msgid "Auslösender Fehlercode"
+msgstr "Triggering trouble code"
+
+#: src/obd_diag/services/compare.py
+msgid "neu: {value}"
+msgstr "new: {value}"
+
+#: src/obd_diag/services/compare.py
+msgid "entfällt (vorher: {value})"
+msgstr "gone (before: {value})"
+
+#: src/obd_diag/services/compare.py
+msgid "weiterhin {value}"
+msgstr "still {value}"
+
 #: src/obd_diag/services/live.py
 msgid "keine"
 msgstr "none"
@@ -2538,6 +2643,15 @@ msgstr "difficult"
 msgid "ca. {cost} €"
 msgstr "approx. €{cost}"
 
+#: src/obd_diag/ui/viewmodels/compare.py
+msgid "angezeigte Diagnose"
+msgstr "displayed diagnosis"
+
+#: src/obd_diag/ui/viewmodels/compare.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Sitzung ließ sich nicht öffnen: {error}"
+msgstr "Session could not be opened: {error}"
+
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Batteriespannung niedrig: Ergebnisse können unzuverlässig sein. Vor dem Löschen Batterie laden oder Ladegerät anschließen."
 msgstr "Battery voltage low: results may be unreliable. Charge the battery or connect a charger before clearing."
@@ -2630,10 +2744,6 @@ msgid "Sitzung ließ sich nicht speichern: {error}"
 msgstr "Session could not be saved: {error}"
 
 #: src/obd_diag/ui/viewmodels/diagnosis.py
-msgid "Sitzung ließ sich nicht öffnen: {error}"
-msgstr "Session could not be opened: {error}"
-
-#: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Weiterhin {n} Code vorhanden."
 msgid_plural "Weiterhin {n} Codes vorhanden."
 msgstr[0] "{n} code still present."
@@ -2668,10 +2778,6 @@ msgstr "Not all tests complete"
 #: src/obd_diag/ui/viewmodels/session_parts.py
 msgid "Diesel (Selbstzünder)"
 msgstr "Diesel (compression ignition)"
-
-#: src/obd_diag/ui/viewmodels/session_parts.py
-msgid "Otto"
-msgstr "Petrol"
 
 #: src/obd_diag/ui/viewmodels/session_parts.py
 msgid "Herstellercode (WMI)"
@@ -2841,6 +2947,10 @@ msgstr "No stored, pending or permanent codes."
 #: src/obd_diag/ui/qml/CodeList.qml
 msgid "Adapter einstecken, Zündung einschalten, Port wählen und „Verbinden & Scannen“ drücken."
 msgstr "Plug in the adapter, switch the ignition on, choose the port and press “Connect & Scan”."
+
+#: src/obd_diag/ui/qml/CompareDialog.qml
+msgid "Sitzungsvergleich"
+msgstr "Session comparison"
 
 #: src/obd_diag/ui/qml/ConnectionBar.qml
 msgid "Port"
@@ -3033,6 +3143,10 @@ msgid "&Datei"
 msgstr "&File"
 
 #: src/obd_diag/ui/qml/Main.qml
+msgid "Mit Sitzung vergleichen …"
+msgstr "Compare with session …"
+
+#: src/obd_diag/ui/qml/Main.qml
 msgid "Beenden"
 msgstr "Quit"
 
@@ -3148,6 +3262,10 @@ msgstr "Diagnosis sessions (*.json)"
 #: src/obd_diag/ui/qml/Main.qml
 msgid "Alle Dateien (*)"
 msgstr "All files (*)"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Gespeicherte Sitzung zum Vergleich wählen"
+msgstr "Choose a saved session to compare"
 
 #: src/obd_diag/ui/qml/Main.qml
 msgid "Bericht als PDF speichern"
@@ -3272,14 +3390,6 @@ msgstr "Model, engine and further details can be looked up at the US authority N
 #: src/obd_diag/ui/qml/VehicleView.qml
 msgid "Gilt ab dem nächsten Scan; die Antwort wird je FIN lokal gespeichert."
 msgstr "Applies from the next scan; the response is stored locally per VIN."
-
-#: src/obd_diag/ui/qml/ViewTabs.qml
-msgid "Readiness"
-msgstr "Readiness"
-
-#: src/obd_diag/ui/qml/ViewTabs.qml
-msgid "Freeze Frame"
-msgstr "Freeze frame"
 
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Live-Daten"

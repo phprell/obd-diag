@@ -3,6 +3,16 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
+## Unreleased
+
+### Neu
+
+- Sitzungsvergleich: `obd-diag compare ALT.json NEU.json` bzw. in der Oberfläche *Datei →
+  Mit Sitzung vergleichen …* zeigt, was sich zwischen zwei gespeicherten Diagnosen
+  geändert hat: neue, entfallene und weiterhin vorhandene Fehlercodes, Readiness-Monitore,
+  Kontrollleuchte, Freeze Frame, FIN, Protokoll und Bordspannung (`--json` für Skripte).
+  Arbeitet nur mit den Dateien, das Fahrzeug wird nicht angesprochen.
+
 ## 0.2.1 – 2026-10-11
 
 Neu sind Einrichtungs- und Adapter-Check, ein Demo-Modus ohne Auto, die englische

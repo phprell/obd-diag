@@ -16,6 +16,8 @@ ApplicationWindow {
     readonly property var language: languageController
     // SetupViewModel (ui/window.py): Einrichtung prüfen
     readonly property var setupVm: setupCheck
+    // CompareViewModel (ui/window.py): Sitzungsvergleich
+    readonly property var compareVm: sessionCompare
 
     width: 1000
     height: 700
@@ -120,6 +122,12 @@ ApplicationWindow {
             title: qsTr("&Datei")
             MenuItem {
                 action: openAction
+            }
+            MenuItem {
+                objectName: "compareMenuItem"
+                text: qsTr("Mit Sitzung vergleichen …")
+                enabled: window.vm.hasResult && !window.vm.busy
+                onTriggered: compareFileDialog.open()
             }
             MenuItem {
                 objectName: "saveMenuItem"
@@ -535,6 +543,29 @@ ApplicationWindow {
         nameFilters: [qsTr("Diagnosesitzungen (*.json)"), qsTr("Alle Dateien (*)")]
         currentFolder: window.vm.sessionFolder
         onAccepted: window.vm.openSession(selectedFile.toString())
+    }
+
+    FileDialog {
+        id: compareFileDialog
+        objectName: "compareFileDialog"
+        title: qsTr("Gespeicherte Sitzung zum Vergleich wählen")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Diagnosesitzungen (*.json)"), qsTr("Alle Dateien (*)")]
+        currentFolder: window.vm.sessionFolder
+        onAccepted: window.compareVm.compareWith(selectedFile.toString())
+    }
+
+    CompareDialog {
+        id: compareDialog
+        objectName: "compareDialog"
+        vm: window.compareVm
+    }
+
+    Connections {
+        target: window.compareVm
+        function onCompared() {
+            compareDialog.open()
+        }
     }
 
     FileDialog {

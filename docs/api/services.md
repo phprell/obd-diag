@@ -25,6 +25,11 @@
 ```{automodule} obd_diag.services.session
 ```
 
+## `obd_diag.services.compare`
+
+```{automodule} obd_diag.services.compare
+```
+
 ## `obd_diag.services.storage`
 
 ```{automodule} obd_diag.services.storage

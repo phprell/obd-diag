@@ -15,6 +15,7 @@ language of all output ({doc}`sprache`).
 | `obd-diag vin` | read the VIN or decode one that is typed in | Mode 09 |
 | `obd-diag live` | show and record live data | Mode 01 |
 | `obd-diag export` | saved session as PDF/CSV | nothing |
+| `obd-diag compare` | compare two saved sessions ({doc}`sitzungen`) | nothing |
 | `obd-diag clear` | clear trouble codes (locked) | Mode 04 |
 
 ## Examples
