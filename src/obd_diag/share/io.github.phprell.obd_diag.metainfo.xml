@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream-Metadaten für Softwarezentren und Flatpak -->
+<component type="desktop-application">
+  <id>io.github.phprell.obd_diag</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>OBD Diagnostics</name>
+  <name xml:lang="de">OBD-Diagnose</name>
+  <summary>Read fault codes and live data from your car</summary>
+  <summary xml:lang="de">Fehlercodes und Live-Daten aus dem Auto lesen</summary>
+  <developer id="io.github.phprell">
+    <name>Philipp Prell</name>
+  </developer>
+  <description>
+    <p>
+      OBD-II diagnostics for Linux with ELM327-compatible adapters via USB or Bluetooth.
+      Read-only by default: the tool only sends reading requests to the car.
+    </p>
+    <p xml:lang="de">
+      OBD-II-Diagnose für Linux mit ELM327-kompatiblen Adaptern über USB oder Bluetooth.
+      Standardmäßig nur lesend: Das Programm schickt dem Auto nur lesende Anfragen.
+    </p>
+    <ul>
+      <li>Stored, pending and permanent fault codes with offline descriptions</li>
+      <li xml:lang="de">Gespeicherte, ausstehende und permanente Fehlercodes mit Offline-Beschreibung</li>
+      <li>Readiness monitors, freeze frame and vehicle identification number</li>
+      <li xml:lang="de">Readiness-Tests, Freeze Frame und Fahrzeug-Identifizierungsnummer</li>
+      <li>Live data with charts and CSV recording</li>
+      <li xml:lang="de">Live-Daten mit Verlaufskurven und CSV-Aufzeichnung</li>
+      <li>Sessions as JSON, report as PDF and CSV</li>
+      <li xml:lang="de">Sitzungen als JSON, Bericht als PDF und CSV</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.phprell.obd_diag.desktop</launchable>
+  <provides>
+    <binary>obd-diag</binary>
+    <binary>obd-diag-gui</binary>
+  </provides>
+  <url type="homepage">https://phprell.github.io/obd-diag/en/</url>
+  <url type="bugtracker">https://github.com/phprell/obd-diag/issues</url>
+  <url type="vcs-browser">https://github.com/phprell/obd-diag</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Fault codes with description</caption>
+      <image>https://raw.githubusercontent.com/phprell/obd-diag/main/docs/en/_static/screenshots/fehlercodes-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Live data</caption>
+      <image>https://raw.githubusercontent.com/phprell/obd-diag/main/docs/en/_static/screenshots/live-daten-light.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <releases>
+    <release version="0.2.0" date="2026-10-10">
+      <url type="details">https://github.com/phprell/obd-diag/releases/tag/v0.2.0</url>
+    </release>
+  </releases>
+</component>

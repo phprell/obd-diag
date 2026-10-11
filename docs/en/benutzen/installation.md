@@ -1,7 +1,65 @@
 # Installation
 
-obd-diag needs Linux and Python 3.12 or newer. [uv](https://docs.astral.sh/uv/) is
-recommended; it sets up the environment and dependencies from `uv.lock`.
+obd-diag needs Linux. From version 0.2.1 on there are ready-made packages; all of them
+already contain the trouble code catalog.
+
+| Way | For whom | User interface |
+|---|---|---|
+| pipx (PyPI) | any distribution, also Raspberry Pi | with the extra `gui` |
+| AUR | Arch Linux and derivatives | always, with start menu entry and udev rule |
+| Flatpak | desktop, independent of the distribution | always, with start menu entry |
+| Sources | development | with `uv sync` |
+
+## pipx
+
+[pipx](https://pipx.pypa.io/) installs programs from PyPI into their own environment
+(Python 3.12 or newer):
+
+```sh
+pipx install 'obd-diag[gui]'     # with user interface
+pipx install obd-diag            # command line only, for example on a Raspberry Pi
+obd-diag --version
+obd-diag-gui --install-desktop   # start menu entry (remove: --remove-desktop)
+```
+
+`--install-desktop` puts the desktop file and icon under `~/.local/share`. Update with
+`pipx upgrade obd-diag`. Without PyPI, the wheel from a
+[GitHub release](https://github.com/phprell/obd-diag/releases) works as well:
+`pipx install 'obd-diag[gui] @ <address of the .whl file>'`.
+
+## AUR
+
+The package `obd-diag` uses PySide6, pyserial and ReportLab from Arch and also installs
+the start menu entry, the icon and the udev rule (see below):
+
+```sh
+yay -S obd-diag                  # or another AUR helper
+```
+
+Without a helper: put the `PKGBUILD` from the GitHub release (or the AUR) into an empty
+folder and run `makepkg -si` there. The template is in `packaging/aur/`.
+
+## Flatpak
+
+Every release contains `obd-diag.flatpak` (x86_64) with the user interface. Runtime and
+PySide6 come from Flathub:
+
+```sh
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user obd-diag.flatpak
+flatpak run io.github.phprell.obd_diag
+flatpak run --command=obd-diag io.github.phprell.obd_diag --version   # command line
+```
+
+The Flatpak may access all devices (`--device=all`), because Flatpak cannot grant serial
+ports individually, and the network only for the optional online lookups. Access to
+the port is still controlled by the system (see below). The manifest is in
+`packaging/flatpak/`.
+
+## From the sources
+
+[uv](https://docs.astral.sh/uv/) is recommended; it sets up the environment and
+dependencies from `uv.lock`.
 
 ```sh
 git clone https://github.com/phprell/obd-diag.git
@@ -25,8 +83,8 @@ installation stays small, for example on a Raspberry Pi.
 ## Trouble code catalog
 
 The plain texts for the trouble codes (English and German, causes, symptoms, cost
-range) are stored offline in `src/obd_diag/data/dtc_catalog.sqlite`. The file is not
-checked in but built:
+range) are stored offline in `src/obd_diag/data/dtc_catalog.sqlite`. The packages
+contain the file; in the sources it is not checked in but built:
 
 ```sh
 uv run python tools/build_dtc_db.py                     # downloads the data from GitHub
@@ -47,10 +105,14 @@ USB adapters appear as `/dev/ttyUSB0` or `/dev/ttyACM0` and belong to the group 
 sudo usermod -aG uucp $USER      # Debian/Ubuntu: dialout
 ```
 
-or install the udev rule from `packaging/`. It gives the logged-in user access to the
-common USB serial chips (FTDI, CH340/CH341, CP210x):
+or install the udev rule (the AUR package includes it). It gives the currently logged-in
+user access to the common USB serial chips (FTDI, CH340/CH341, CP210x) without changing
+group or file permissions. It is in the sources under `src/obd_diag/share/`:
 
 ```sh
-sudo cp packaging/99-obd-diag.rules /etc/udev/rules.d/
-sudo udevadm control --reload
+curl -LO https://raw.githubusercontent.com/phprell/obd-diag/main/src/obd_diag/share/70-obd-diag.rules
+sudo install -m 644 70-obd-diag.rules /etc/udev/rules.d/
+sudo udevadm control --reload && sudo udevadm trigger
 ```
+
+Then unplug the adapter and plug it in again.

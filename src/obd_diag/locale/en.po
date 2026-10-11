@@ -2182,6 +2182,18 @@ msgstr "Error: the user interface needs PySide6. Install it with: pip install 'o
 msgid "Fehler: Die Oberfläche ließ sich nicht laden."
 msgstr "Error: the user interface could not be loaded."
 
+#: src/obd_diag/ui/app.py
+msgid "Kein Startmenü-Eintrag vorhanden."
+msgstr "No start menu entry present."
+
+#: src/obd_diag/ui/app.py
+msgid "Angelegt: {path}"
+msgstr "Created: {path}"
+
+#: src/obd_diag/ui/app.py
+msgid "Entfernt: {path}"
+msgstr "Removed: {path}"
+
 #: src/obd_diag/ui/backend.py
 msgid "Live-Daten sind in diesem Backend nicht verfügbar"
 msgstr "Live data is not available in this backend"

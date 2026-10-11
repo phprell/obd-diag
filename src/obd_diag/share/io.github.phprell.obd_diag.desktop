@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=OBD Diagnostics
+Name[de]=OBD-Diagnose
+GenericName=Vehicle diagnostics
+GenericName[de]=Fahrzeugdiagnose
+Comment=Read fault codes, readiness and live data via an ELM327 adapter
+Comment[de]=Fehlercodes, Readiness und Live-Daten über einen ELM327-Adapter lesen
+Exec=obd-diag-gui
+Icon=io.github.phprell.obd_diag
+Terminal=false
+Categories=Utility;
+Keywords=OBD;OBD2;OBD-II;ELM327;car;vehicle;diagnostics;DTC;
+Keywords[de]=OBD;OBD2;OBD-II;ELM327;Auto;Fahrzeug;Diagnose;Fehlercode;
+StartupNotify=true

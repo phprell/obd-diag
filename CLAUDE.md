@@ -68,8 +68,15 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   öffentlich: Mitschnitte, Sitzungen und Berichte vom echten Auto nie mit FIN einchecken.
 - Release: Abschnitt `## X.Y.Z – Datum` in `CHANGELOG.md` (auch Doku-Seite
   „Änderungen“), Version in `pyproject.toml` und `__init__.py`; Tag `vX.Y.Z` auf main
-  (nur nach Absprache; aus der Cloud-Umgebung abgewiesen, den Tag pusht der Nutzer) startet `.github/workflows/release.yml` (prüft Versionen, baut
-  Katalog, sdist, Wheel, legt das GitHub-Release mit dem Changelog-Abschnitt an).
+  (nur nach Absprache; aus der Cloud-Umgebung abgewiesen, den Tag pusht der Nutzer) startet `.github/workflows/release.yml` (prüft Versionen
+  samt `<release>` in der AppStream-Datei, baut über `packaging.yml` Katalog, sdist, Wheel,
+  AUR-Paket im Arch-Container und Flatpak, legt das GitHub-Release mit Changelog-Abschnitt,
+  PKGBUILD/.SRCINFO und `obd-diag.flatpak` an, lädt per Trusted Publishing auf PyPI hoch).
+  `tests/unit/test_packaging.py` verlangt jede CHANGELOG-Version auch in der AppStream-Datei.
+  Paketvorlagen: `packaging/aur/PKGBUILD` (Release setzt Version und Prüfsumme ein; ins AUR
+  kopiert der Nutzer), `packaging/flatpak/` (Wheels mit sha256 passend zu `uv.lock`, Test
+  prüft das). Desktop-Datei, Symbol, AppStream und udev-Regel (`70-…`, muss vor 73 liegen
+  wegen `uaccess`) in `src/obd_diag/share/`, App-ID `io.github.phprell.obd_diag`.
 - Mutationstests: `uv run --with mutmut mutmut run` (Ziele in `[tool.mutmut]`),
   danach `mutants/` löschen. Die Testsuite legt `elm.log` an (gitignored), löschen.
 
@@ -123,6 +130,7 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
 - `ui/` – `app.py`, `window.py`, `backend.py` (`live_port`), `jobs.py`, `theme.py`,
   `viewmodels/` (`diagnosis.py`, `live.py`), `qml/` (`LiveView.qml` u. a.).
   `cli.py` – alle Befehle.
+  `desktop.py` – Startmenü-Eintrag für pipx (`obd-diag-gui --install-desktop`).
 
 ## Wichtige Entscheidungen und Fallstricke
 - **Freigabeliste** (`protocol/elm327.py`): `Elm327.command` ist der einzige Weg zum

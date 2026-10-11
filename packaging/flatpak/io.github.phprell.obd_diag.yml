@@ -1,0 +1,65 @@
+# Flatpak der Oberfläche. Baut aus dem Wheel in dist/ (mit Fehlercode-Katalog), das vorher
+# mit `uv run python tools/build_dtc_db.py && uv build --wheel` entsteht; CI und Release
+# machen das in .github/workflows/packaging.yml.
+#   flatpak-builder --user --install --force-clean build-dir packaging/flatpak/io.github.phprell.obd_diag.yml
+id: io.github.phprell.obd_diag
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+base: io.qt.PySide.BaseApp
+base-version: '6.11'
+command: obd-diag-gui
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Serielle Adapter (/dev/ttyUSB*, /dev/ttyACM*, /dev/rfcomm*): Flatpak kennt keine
+  # feinere Freigabe als alle Geräte.
+  - --device=all
+  # Nur für die abschaltbaren Online-Abfragen (NHTSA vPIC, Fehlercode-Erklärungen)
+  - --share=network
+cleanup-commands:
+  - /app/cleanup-BaseApp.sh
+modules:
+  - name: python3-dependencies
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --find-links="file://${PWD}" --prefix=${FLATPAK_DEST}
+        --no-build-isolation pyserial reportlab
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/07/bc/587a445451b253b285629263eb51c2d8e9bcea4fc97826266d186f96f558/pyserial-3.5-py2.py3-none-any.whl
+        sha256: c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0
+      - type: file
+        url: https://files.pythonhosted.org/packages/db/cb/dacbc268cb68d0428ea2cbd85266195a9ab3e677449589ddae59bd7542ac/reportlab-5.0.1-py3-none-any.whl
+        sha256: 1c36e6bb0e71780c72331eba60da7f602e8d4389a8723825af71342e49d791e8
+      - type: file
+        url: https://files.pythonhosted.org/packages/fc/ad/d07d7862a62ffa6d79d68074d14823243dd235a77c45262acbf6adeb28bf/charset_normalizer-3.5.2-py3-none-any.whl
+        sha256: b6b751274acb69d77b3323d6b7dbaa3c7fdfc1eb829b7eb61d262f32e1af9685
+      - type: file
+        only-arches: [x86_64]
+        url: https://files.pythonhosted.org/packages/f7/62/de5bdd77d935331f4f802edc11e4d82950f642caad6cb2f949837b8560e2/pillow-12.3.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+        sha256: 0847a763afefb695bc912d7c131e7e0632d4edc1d8698f58ddabec8e46b8b6d3
+      - type: file
+        only-arches: [aarch64]
+        url: https://files.pythonhosted.org/packages/1f/01/e18aff37cb0b4aac47ac90f016d347a49aca667ef97f190b06ac2aabc928/pillow-12.3.0-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
+        sha256: f7401aebd7f581d7f83a439d87d474999317ee099218e5ad25d125290990ba65
+
+  - name: obd-diag
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --no-deps --prefix=${FLATPAK_DEST} dist/obd_diag-*.whl
+      - install -Dm644 share/${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications/
+      - install -Dm644 share/${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo/
+      - install -Dm644 share/${FLATPAK_ID}.svg -t ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/
+      # Probe: Programm startet und der Katalog ist dabei
+      - ${FLATPAK_DEST}/bin/obd-diag --version
+      - python3 -c "from obd_diag.data.dtc_catalog import DtcCatalog; assert DtcCatalog.default().lookup('P0420')"
+    sources:
+      - type: dir
+        path: ../../dist
+        dest: dist
+      - type: dir
+        path: ../../src/obd_diag/share
+        dest: share

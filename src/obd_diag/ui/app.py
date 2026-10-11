@@ -1,12 +1,38 @@
 """Einstiegspunkt der Desktop-Oberfläche: ``obd-diag-gui``."""
 
 import importlib.util
+import os
 import sys
+from pathlib import Path
 
 from obd_diag.i18n import set_language, system_language, tr
 
 
+def _desktop_entry(option: str, program: str) -> int:
+    """``--install-desktop`` / ``--remove-desktop``: Startmenü-Eintrag für pipx/pip."""
+    from obd_diag.desktop import install_desktop_entry, remove_desktop_entry
+
+    set_language(system_language())
+    if option == "--install-desktop":
+        # Absoluter Pfad, aber Symlinks nicht auflösen: pipx verlinkt ~/.local/bin/... in
+        # seine Umgebung, und der Link bleibt bei einem Upgrade gültig.
+        for path in install_desktop_entry(os.path.abspath(program)):
+            print(tr("Angelegt: {path}").format(path=path))
+    else:
+        removed = remove_desktop_entry()
+        for path in removed:
+            print(tr("Entfernt: {path}").format(path=path))
+        if not removed:
+            print(tr("Kein Startmenü-Eintrag vorhanden."))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
+    args = sys.argv if argv is None else argv
+    for option in ("--install-desktop", "--remove-desktop"):
+        if option in args[1:]:
+            return _desktop_entry(option, args[0])
+
     # PySide6 ist ein optionales Extra; ohne es eine verständliche Meldung statt Traceback.
     if importlib.util.find_spec("PySide6") is None:
         set_language(system_language())
@@ -19,10 +45,11 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtGui import QGuiApplication, QIcon
     from PySide6.QtQml import QQmlApplicationEngine
 
     from obd_diag import __version__
+    from obd_diag.desktop import APP_ID
     from obd_diag.ui.backend import serial_backend
     from obd_diag.ui.jobs import ThreadPoolRunner
     from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel
@@ -32,12 +59,13 @@ def main(argv: list[str] | None = None) -> int:
     # Eine schon laufende Anwendung (Tests mit pytest-qt) weiterverwenden; Qt erlaubt
     # nur eine je Prozess.
     existing = QGuiApplication.instance()
-    if isinstance(existing, QGuiApplication):
-        app = existing
-    else:
-        app = QGuiApplication(sys.argv if argv is None else argv)
+    app = existing if isinstance(existing, QGuiApplication) else QGuiApplication(args)
     app.setApplicationName("obd-diag")
     app.setApplicationVersion(__version__)
+    # Verknüpft das Fenster mit der Desktop-Datei (Wayland: app_id) für Symbol und Taskleiste
+    app.setDesktopFileName(APP_ID)
+    icon = QIcon(str(Path(__file__).parent.parent / "share" / f"{APP_ID}.svg"))
+    app.setWindowIcon(QIcon.fromTheme(APP_ID, icon))
     set_style()
     # Sprache vor dem View-Model: gespeicherte Wahl, sonst die Systemsprache
     language = create_language(app)

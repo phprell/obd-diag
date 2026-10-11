@@ -14,6 +14,15 @@ vor 1.0 kann sich die Bedienung noch ändern.
   Sprachumschalter; die deutschen Adressen bleiben gleich.
 - README auf Englisch, deutsche Fassung in README.de.md.
 - Tests verhindern Texte, die nur in einer Sprache vorliegen.
+- Fertige Pakete: `pipx install 'obd-diag[gui]'` aus PyPI, AUR-Paket `obd-diag` und
+  Flatpak-Bundle am GitHub-Release. Der Release-Workflow baut und prüft alle drei
+  (auch bei jedem PR) und lädt auf PyPI hoch.
+- Startmenü-Eintrag mit Symbol und AppStream-Daten; bei pipx-Installationen legt
+  `obd-diag-gui --install-desktop` ihn an (`--remove-desktop` entfernt ihn).
+- udev-Regel heißt jetzt `70-obd-diag.rules` und liegt in `src/obd_diag/share/`. Unter
+  der alten Nummer 99 kam das Tag `uaccess` zu spät und wirkte nicht; Gruppe und
+  Dateirechte ändert sie nicht mehr (die Gruppe `uucp` gibt es auf Debian nicht).
+- Das sdist enthält keine Release-Notizen und Arbeitsdateien mehr.
 
 ## 0.2.0 – 2026-10-10
 

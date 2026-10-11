@@ -1,6 +1,6 @@
 # obd-diag
 
-**English** · [Deutsch](README.de.md)
+**English** · [Deutsch](https://github.com/phprell/obd-diag/blob/main/README.de.md)
 
 OBD-II diagnostics for Linux with ELM327-compatible adapters: read and explain trouble
 codes, freeze frame, readiness, VIN, live data with recording, as a command line tool
@@ -26,7 +26,8 @@ Full documentation (usage, how it works, development):
   text, readiness, freeze frame, VIN with offline decoding, safe clearing, diagnosis
   sessions as JSON, PDF report and CSV, adapter trace, user interface with light and
   dark theme.
-- **v0.2** (version 0.2.0, changes in [CHANGELOG.md](CHANGELOG.md), German): live data
+- **v0.2** (version 0.2.0, changes in
+  [CHANGELOG.md](https://github.com/phprell/obd-diag/blob/main/CHANGELOG.md), German): live data
   according to SAE J1979 (116 values from 82 PIDs, including all oxygen sensors), CSV
   recording, tab “Live data” and `obd-diag live`.
 - **English and German** (not released yet, see CHANGELOG): user interface
@@ -44,6 +45,17 @@ Full documentation (usage, how it works, development):
   datasheet, third-party traces and python-OBD (see “Development”).
 - Planned (v0.3+): Bluetooth LE, community profiles, fault memory of all control units
   via UDS (read-only), see the design document.
+
+## Installation
+
+From version 0.2.1 on (details: [installation](https://phprell.github.io/obd-diag/en/benutzen/installation.html)):
+
+```sh
+pipx install 'obd-diag[gui]'      # any distribution (PyPI); without [gui] command line only
+obd-diag-gui --install-desktop    # start menu entry for the pipx installation
+yay -S obd-diag                   # Arch Linux (AUR), with start menu entry and udev rule
+flatpak install --user obd-diag.flatpak   # bundle from the GitHub release
+```
 
 ## Documentation
 
@@ -112,8 +124,12 @@ The GUI tests (`tests/ui`) run without a screen (`QT_QPA_PLATFORM=offscreen`, se
 
 Release: set the version in `pyproject.toml` and `src/obd_diag/__init__.py`, write a
 section `## X.Y.Z – date` in `CHANGELOG.md`, and after the merge push the tag `vX.Y.Z`
-on `main`. `.github/workflows/release.yml` then checks tag and versions, builds the
-catalog, sdist and wheel and creates the GitHub release with the changelog section.
+on `main` (add the version to the AppStream file
+`src/obd_diag/share/io.github.phprell.obd_diag.metainfo.xml` as well).
+`.github/workflows/release.yml` then checks tag and versions, builds catalog, sdist,
+wheel, AUR package and Flatpak (`.github/workflows/packaging.yml`, also on every PR),
+creates the GitHub release with the changelog section and uploads to PyPI. Packaging
+templates: `packaging/aur/PKGBUILD`, `packaging/flatpak/`.
 
 ### Trouble code catalog
 
@@ -158,7 +174,8 @@ Supported are ELM327-compatible adapters via USB and classic Bluetooth
 faulty; adapters with a genuine ELM327 or STN chip (e.g. OBDLink) are more reliable.
 
 Permissions: on Arch the group is called `uucp` (Debian/Ubuntu: `dialout`):
-`sudo usermod -aG uucp $USER`, or install the udev rule from `packaging/`.
+`sudo usermod -aG uucp $USER`, or install the udev rule
+`src/obd_diag/share/70-obd-diag.rules` (the AUR package does this).
 
 ### First test at the car
 

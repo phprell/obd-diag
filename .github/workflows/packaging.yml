@@ -1,0 +1,109 @@
+name: Pakete
+
+# Baut und prüft alle Auslieferungsformen: sdist und Wheel (PyPI/pipx), das AUR-Paket in
+# einem Arch-Container und das Flatpak. Läuft bei jedem PR und wird vom Release-Workflow
+# aufgerufen, der die Ergebnisse (Artefakte "dist", "aur", "flatpak") veröffentlicht.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  dist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: uv run python tools/build_dtc_db.py
+      - run: uv build
+      - name: Metadaten für PyPI prüfen
+        run: uvx twine check --strict dist/*
+      - name: sdist ohne Arbeitsdateien
+        run: |
+          tar tzf dist/*.tar.gz > sdist.txt
+          grep -q '/src/obd_diag/data/dtc_catalog.sqlite$' sdist.txt
+          grep -q '/src/obd_diag/share/io.github.phprell.obd_diag.desktop$' sdist.txt
+          ! grep -E '/(notes\.md|CLAUDE\.md|\.github/|elm\.log)' sdist.txt
+      - name: Desktop-Datei und AppStream prüfen
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends desktop-file-utils appstream
+          desktop-file-validate src/obd_diag/share/io.github.phprell.obd_diag.desktop
+          appstreamcli validate --no-net --explain src/obd_diag/share/io.github.phprell.obd_diag.metainfo.xml
+      - name: Mit pipx installieren
+        run: |
+          pipx install "$(ls dist/*.whl)"
+          cd /tmp
+          obd-diag --version
+          "$(pipx environment --value PIPX_LOCAL_VENVS)/obd-diag/bin/python" -I -c \
+            "from obd_diag.data.dtc_catalog import DtcCatalog; assert DtcCatalog.default().lookup('P0420')"
+          XDG_DATA_HOME=/tmp/xdg obd-diag-gui --install-desktop
+          desktop-file-validate /tmp/xdg/applications/io.github.phprell.obd_diag.desktop
+          grep "^Exec=$HOME/.local/bin/obd-diag-gui$" /tmp/xdg/applications/io.github.phprell.obd_diag.desktop
+          XDG_DATA_HOME=/tmp/xdg obd-diag-gui --remove-desktop
+          test ! -e /tmp/xdg/applications/io.github.phprell.obd_diag.desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  aur:
+    needs: dist
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - run: pacman -Syu --noconfirm --needed python python-pyserial python-reportlab pyside6 python-build python-installer python-hatchling namcap
+      - name: PKGBUILD mit Version und Prüfsumme des sdist
+        run: |
+          mkdir aur && cp packaging/aur/PKGBUILD aur/
+          sdist=$(ls dist/obd_diag-*.tar.gz)
+          version=$(basename "$sdist" .tar.gz | sed 's/^obd_diag-//')
+          sum=$(sha256sum "$sdist" | cut -d' ' -f1)
+          sed -i "s/^pkgver=.*/pkgver=$version/; s/^sha256sums=.*/sha256sums=('$sum')/" aur/PKGBUILD
+          # makepkg lädt nichts herunter, wenn die Quelle schon daliegt: geprüft wird
+          # genau die Datei, die das Release unter dieser Adresse veröffentlicht.
+          cp "$sdist" aur/
+      - name: Paket bauen (als Nutzer, makepkg verweigert root)
+        run: |
+          useradd -m builder && chown -R builder aur
+          su builder -c 'cd aur && makepkg --noconfirm && makepkg --printsrcinfo > .SRCINFO'
+          namcap aur/PKGBUILD aur/*.pkg.tar.zst
+          pacman -U --noconfirm aur/*.pkg.tar.zst
+          cd /tmp && obd-diag --version
+          test -f /usr/lib/udev/rules.d/70-obd-diag.rules
+          test -f /usr/share/applications/io.github.phprell.obd_diag.desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aur
+          path: |
+            aur/PKGBUILD
+            aur/.SRCINFO
+          include-hidden-files: true
+
+  flatpak:
+    needs: dist
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: packaging/flatpak/io.github.phprell.obd_diag.yml
+          bundle: obd-diag.flatpak
+          artifact-name: flatpak
+          cache-key: flatpak-builder-${{ hashFiles('packaging/flatpak/*.yml') }}
