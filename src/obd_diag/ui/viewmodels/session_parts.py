@@ -23,6 +23,13 @@ from obd_diag.services.readiness import (
     MonitorState,
     ReadinessStatus,
 )
+from obd_diag.services.readiness_assist import (
+    CYCLE_STATE_LABELS,
+    CYCLE_STATE_TEXTS,
+    ReadinessCheck,
+    advise,
+    notes,
+)
 from obd_diag.services.session import Session
 from obd_diag.services.used_car import NOTE as USED_CAR_NOTE
 from obd_diag.services.used_car import assess, counter_rows
@@ -123,6 +130,46 @@ def readiness_entry(status: ReadinessStatus | None) -> dict[str, Any]:
         "completeCount": complete,
         "incompleteCount": len(incomplete),
         "supportedCount": len(supported),
+    }
+
+
+def readiness_assist_entry(
+    status: ReadinessStatus | None, check: ReadinessCheck | None
+) -> dict[str, Any]:
+    """Readiness-Assistent: offene Tests mit Fahrhinweis.
+
+    Ohne ``check`` aus der Sitzung (nur PID 01), sonst aus dem letzten Lesen von PID 01
+    und 41 (``checked``); ``{"available": False}`` ohne Readiness.
+    """
+    if check is not None:
+        status = check.readiness
+    if status is None:
+        return {"available": False, "checked": check is not None}
+    cycle = check.drive_cycle if check is not None else None
+    items = []
+    for a in advise(status, cycle):
+        items.append(
+            {
+                "key": a.key,
+                "name": tr(a.name),
+                "hint": tr(a.hint),
+                "cycleState": "" if a.cycle is None else a.cycle.value,
+                "cycleLabel": "" if a.cycle is None else tr(CYCLE_STATE_LABELS[a.cycle]),
+                "cycleText": "" if a.cycle is None else tr(CYCLE_STATE_TEXTS[a.cycle]),
+            }
+        )
+    checked_text = ""
+    if check is not None:
+        checked_text = tr("Stand dieser Fahrt gelesen um {time}").format(
+            time=check.created.strftime("%H:%M")
+        )
+    return {
+        "available": True,
+        "checked": check is not None,
+        "checkedText": checked_text,
+        "allComplete": status.all_complete,
+        "items": items,
+        "notes": [tr(n) for n in notes(status, cycle, cycle_read=check is not None)],
     }
 
 

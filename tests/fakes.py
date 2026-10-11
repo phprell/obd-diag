@@ -33,12 +33,15 @@ CAN_CAR_ENGINE_OFF = {
 }
 
 # Für die vollständige Diagnose zusätzlich Readiness (MIL an, 3 Codes, Katalysator und
-# Lambdasonde offen), FIN WVWZZZ1KZ6W123456 (CAN, mehrteilig) und die Zähler für den
-# Gebrauchtwagen-Check: vor kurzem gelöscht (3 Warmläufe, 45 km, 80 min), seitdem 12 km
-# und 20 min mit Warnleuchte.
+# Lambdasonde offen), Readiness dieser Fahrt, FIN WVWZZZ1KZ6W123456 (CAN, mehrteilig) und
+# die Zähler für den Gebrauchtwagen-Check: vor kurzem gelöscht (3 Warmläufe, 45 km,
+# 80 min), seitdem 12 km und 20 min mit Warnleuchte.
 CAN_CAR_FULL = {
     **CAN_CAR_ENGINE_OFF,
     "0101": "4101 8307 6521",
+    # Readiness dieser Fahrt (PID 41): Katalysator freigegeben und noch offen,
+    # Tankentlüftung ausgesetzt
+    "0141": "4141 0007 6101",
     "0902": "014\r0:490201575657\r1:5A5A5A314B5A36\r2:57313233343536",
     "0130": "413003",
     "0131": "4131002D",

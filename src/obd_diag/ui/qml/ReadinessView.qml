@@ -178,6 +178,11 @@ Rectangle {
                 }
             }
 
+            ReadinessAssist {
+                Layout.fillWidth: true
+                vm: pane.vm
+            }
+
             Item {
                 implicitHeight: Theme.gap
             }

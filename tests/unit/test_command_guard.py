@@ -45,6 +45,7 @@ from obd_diag.services import (
     clear,
     diagnostics,
     readiness,
+    readiness_assist,
     session,
     used_car,
     vehicle,
@@ -211,6 +212,12 @@ def test_any_text_is_either_allowed_or_never_sent(cmd: str) -> None:
         ("read_clear_counters", used_car.read_clear_counters, COUNTERS),
         ("read_used_car", used_car.read_used_car, [*SCAN, "0101", *COUNTERS]),
         ("check_adapter", adapter_check.check_adapter, ADAPTER_CHECK),
+        (
+            "read_drive_cycle",
+            lambda e: readiness_assist.read_drive_cycle(e, compression_ignition=False),
+            ["0141"],
+        ),
+        ("check_readiness", readiness_assist.check_readiness, [*INIT, *PROTOCOL, "0101", "0141"]),
         ("scan", lambda e: diagnostics.scan(e, None), SCAN),
         ("run_diagnosis", lambda e: session.run_diagnosis(e, None), DIAGNOSIS),
     ],
@@ -265,6 +272,8 @@ def test_refused_clear_sends_only_reads(tmp_path: Path) -> None:
         (["used-car"], [*SCAN, "0101", *COUNTERS]),
         (["used-car", "--json"], [*SCAN, "0101", *COUNTERS]),
         (["vin"], [*INIT, *PROTOCOL, "0902"]),
+        (["readiness"], [*INIT, *PROTOCOL, "0101", "0141"]),
+        (["readiness", "--json"], [*INIT, *PROTOCOL, "0101", "0141"]),
     ],
 )
 def test_cli_read_commands_send_exactly(
@@ -296,11 +305,12 @@ _READ_CALLS: list[Callable[[Elm327], object]] = [
     lambda e: obd.read_freeze_frame(e),
     lambda e: e.protocol(),
     adapter_check.check_adapter,
+    readiness_assist.check_readiness,
 ]
 
 
 @given(
-    st.dictionaries(st.sampled_from([*DIAGNOSIS, "0202", *ADAPTER_CHECK]), _GARBAGE),
+    st.dictionaries(st.sampled_from([*DIAGNOSIS, "0141", "0202", *ADAPTER_CHECK]), _GARBAGE),
     st.sampled_from(range(len(_READ_CALLS))),
 )
 def test_read_paths_never_write_even_on_broken_answers(broken: dict[str, str], which: int) -> None:
