@@ -43,7 +43,15 @@ from obd_diag.protocol.elm327 import (
     ForbiddenCommandError,
     is_read_only,
 )
-from obd_diag.services import adapter_check, clear, diagnostics, readiness, session, vehicle
+from obd_diag.services import (
+    adapter_check,
+    clear,
+    diagnostics,
+    readiness,
+    readiness_assist,
+    session,
+    vehicle,
+)
 from obd_diag.services.clear import ClearRefused
 from obd_diag.transport import TransportError
 from tests.fakes import (
@@ -229,6 +237,12 @@ def test_any_text_is_either_allowed_or_never_sent(cmd: str) -> None:
         ("read_readiness", readiness.read_readiness, ["0101"]),
         ("read_vin", vehicle.read_vin, ["0902"]),
         ("check_adapter", adapter_check.check_adapter, ADAPTER_CHECK),
+        (
+            "read_drive_cycle",
+            lambda e: readiness_assist.read_drive_cycle(e, compression_ignition=False),
+            ["0141"],
+        ),
+        ("check_readiness", readiness_assist.check_readiness, [*INIT, *PROTOCOL, "0101", "0141"]),
         ("scan", lambda e: diagnostics.scan(e, None), SCAN),
         ("run_diagnosis", lambda e: session.run_diagnosis(e, None), DIAGNOSIS),
     ],
@@ -297,6 +311,8 @@ def test_refused_clear_sends_only_reads(tmp_path: Path) -> None:
         (["vin"], [*INIT, *PROTOCOL, "0902"]),
         (["ecus"], [*INIT, *PROTOCOL, *ECUS]),
         (["tests", "--json"], [*INIT, *PROTOCOL, *TESTS]),
+        (["readiness"], [*INIT, *PROTOCOL, "0101", "0141"]),
+        (["readiness", "--json"], [*INIT, *PROTOCOL, "0101", "0141"]),
     ],
 )
 def test_cli_read_commands_send_exactly(
@@ -333,13 +349,14 @@ _READ_CALLS: list[Callable[[Elm327], object]] = [
     monitor_tests.read_test_results,
     lambda e: e.protocol(),
     adapter_check.check_adapter,
+    readiness_assist.check_readiness,
 ]
 
 
 @given(
     st.dictionaries(
         st.sampled_from(
-            [*SCAN, "0101", *FREEZE, "0902", "0202", *ADAPTER_CHECK, "0900", "0600", "ATH0"]
+            [*SCAN, "0101", "0141", *FREEZE, "0902", "0202", *ADAPTER_CHECK, "0900", "0600", "ATH0"]
         ),
         _GARBAGE,
     ),

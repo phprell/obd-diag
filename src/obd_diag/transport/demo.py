@@ -9,7 +9,7 @@ Steuergeräte, ein gespeicherter Code (U1218) mit Freeze Frame, ein offener Read
 Runden der Reihe nach durch und beginnen danach von vorn.
 
 Nicht aufgezeichnet, aber vom Auto als unterstützt gemeldet und von obd-diag lesbar sind
-die PIDs 21, 30, 31, 49 und 66; dafür stehen hier erfundene, plausible Beispielwerte.
+die PIDs 21, 30, 31, 41, 49 und 66; dafür stehen hier erfundene, plausible Beispielwerte.
 Ebenso erfunden sind die Antworten auf Mode 09 (Steuergerätenamen, Kalibrierungs-IDs,
 CVN, Überwachungszähler) und Mode 06 (Testergebnisse): zu beiden gibt es noch keinen
 Mitschnitt vom Auto.
@@ -122,6 +122,9 @@ _STATIC: dict[str, Reply] = {
     "0685": ("468580990032FF3800C8", None, None, None),  # Ladedruck: 5,0 kPa (-20 bis 20)
     "0698": ("4698802F21341B582710", None, None, None),  # SCR: 85 %
     "06B0": ("46B080170096000001F4", None, None, None),  # DPF: 1,5 kPa
+    # Readiness dieser Fahrt (PID 41, nur das Motorsteuergerät meldet sie laut 0140):
+    # Abgassensor und NMHC-Katalysator noch offen, NOx-Nachbehandlung ausgesetzt
+    "0141": ("41410006E921", None, None, None),
 }
 
 

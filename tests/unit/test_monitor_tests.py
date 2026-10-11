@@ -35,7 +35,8 @@ def test_results_are_split_into_blocks_of_nine() -> None:
     first, second = parse_results(message, 0x01)
     assert first == TestResult("7E8", 0x01, 0x01, 0x0A, 0x0B00, 0x0900, 0x0D00)
     assert first.value == pytest.approx(343.552)  # 2816 · 0,122 mV
-    assert (first.minimum, first.maximum) == (pytest.approx(281.088), pytest.approx(406.016))
+    assert first.minimum == pytest.approx(281.088)
+    assert first.maximum == pytest.approx(406.016)
     assert first.unit == "mV"
     assert first.status is TestStatus.PASSED
     assert second.tid == 0x05
@@ -63,11 +64,9 @@ def test_malformed_results_are_rejected(payload: str) -> None:
 def test_signed_values_and_limits() -> None:
     # UASID 99: 0,1 kPa mit Vorzeichen; -20,0 ≤ 5,0 ≤ 20,0
     test = TestResult("18DAF110", 0x85, 0x80, 0x99, 0x0032, 0xFF38, 0x00C8)
-    assert (test.value, test.minimum, test.maximum) == (
-        pytest.approx(5.0),
-        pytest.approx(-20.0),
-        pytest.approx(20.0),
-    )
+    assert test.value == pytest.approx(5.0)
+    assert test.minimum == pytest.approx(-20.0)
+    assert test.maximum == pytest.approx(20.0)
     assert test.status is TestStatus.PASSED
     # ohne Vorzeichen wäre FF38 die größte Zahl und der Test gälte als nicht bestanden
     below = TestResult("18DAF110", 0x85, 0x80, 0x99, 0xFF00, 0xFF38, 0x00C8)

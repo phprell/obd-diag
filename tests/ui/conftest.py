@@ -23,10 +23,11 @@ from obd_diag.services.adapter_check import AdapterReport, check_adapter
 from obd_diag.services.clear import ClearResult
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
 from obd_diag.services.readiness import MonitorState
+from obd_diag.services.readiness_assist import ReadinessCheck, check_readiness
 from obd_diag.services.session import Session
 from obd_diag.transport.discovery import PortInfo
 from obd_diag.ui.backend import Backend
-from tests.fakes import ADAPTER_V15, FakeTransport
+from tests.fakes import ADAPTER_V15, CAN_CAR_FULL, FakeTransport
 from tests.samples import CREATED
 
 P0420 = DtcInfo(
@@ -145,6 +146,10 @@ class FakeBackend:
         self.calls.append(("adapter", port, baud))
         return check_adapter(Elm327(FakeTransport(ADAPTER_V15)))
 
+    def check_readiness(self, port: str, baud: int) -> ReadinessCheck:
+        self.calls.append(("readiness", port, baud))
+        return check_readiness(Elm327(FakeTransport(CAN_CAR_FULL)))
+
     def list_ports(self) -> list[PortInfo]:
         if self.ports is None:
             raise NotImplementedError
@@ -171,6 +176,7 @@ class FakeBackend:
             export_csv=self.export_csv,
             set_tracing=self.tracing.append,
             check_adapter=self.check_adapter,
+            check_readiness=self.check_readiness,
         )
 
 

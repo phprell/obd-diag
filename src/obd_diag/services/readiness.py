@@ -122,6 +122,17 @@ _COMPRESSION = (
 )
 
 
+def specific_monitors(compression_ignition: bool) -> tuple[tuple[int, str, str], ...]:
+    """Motorspezifische Monitore in Byte C/D als (Bit, Schlüssel, Name).
+
+    Gleicher Aufbau in PID 01 und PID 41 (``services/readiness_assist.py``).
+    """
+    return _COMPRESSION if compression_ignition else _SPARK
+
+
+CONTINUOUS_MONITORS = _CONTINUOUS
+
+
 def _state(supported: int, incomplete: int, bit: int) -> MonitorState:
     if not supported >> bit & 1:
         return MonitorState.NOT_SUPPORTED
