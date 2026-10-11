@@ -16,6 +16,8 @@ ApplicationWindow {
     readonly property var language: languageController
     // SetupViewModel (ui/window.py): Einrichtung prüfen
     readonly property var setupVm: setupCheck
+    // BatteryViewModel (ui/window.py): Batterie- und Anlasstest
+    readonly property var batteryVm: batteryTest
 
     width: 1000
     height: 700
@@ -170,6 +172,15 @@ ApplicationWindow {
                 text: qsTr("Adapter prüfen …")
                 enabled: !window.vm.busy && !window.vm.blocked
                 onTriggered: window.vm.checkAdapter(connectionBar.portText, connectionBar.baud)
+            }
+            MenuItem {
+                objectName: "batteryMenuItem"
+                text: qsTr("Batterie- und Anlasstest …")
+                onTriggered: {
+                    batteryDialog.port = connectionBar.portText
+                    batteryDialog.baud = connectionBar.baud
+                    batteryDialog.open()
+                }
             }
             MenuItem {
                 objectName: "traceMenuItem"
@@ -507,6 +518,12 @@ ApplicationWindow {
         id: adapterDialog
         objectName: "adapterDialog"
         vm: window.vm
+    }
+
+    BatteryDialog {
+        id: batteryDialog
+        objectName: "batteryDialog"
+        vm: window.batteryVm
     }
 
     Dialog {

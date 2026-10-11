@@ -276,7 +276,12 @@ class LiveViewModel(QObject):
 
     @Property(bool, notify=stateChanged)
     def canStart(self) -> bool:
-        return not self._running and not self._diagnosis.property("busy")
+        # ``blocked`` auch durch den Batterietest (ein Thread für alles am Adapter)
+        return (
+            not self._running
+            and not self._diagnosis.property("busy")
+            and not self._diagnosis.property("blocked")
+        )
 
     @Property(QObject, constant=True)
     def values(self) -> LiveValueModel:

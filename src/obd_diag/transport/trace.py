@@ -141,12 +141,19 @@ class FileTracingTransport(TracingTransport):
             self._file.close()
 
 
-def open_serial(port: str, baudrate: int, trace: Path | None = None) -> Transport:
+def open_serial(
+    port: str, baudrate: int, trace: Path | None = None, *, engine_start: bool = False
+) -> Transport:
     """Serieller Transport, mit Mitschnitt nach ``trace``, falls angegeben.
 
-    ``DEMO_PORT`` öffnet statt eines Adapters das Demo-Fahrzeug (``transport/demo.py``).
+    ``DEMO_PORT`` öffnet statt eines Adapters das Demo-Fahrzeug (``transport/demo.py``),
+    mit ``engine_start`` mit stehendem Motor, der von selbst anspringt (Batterietest).
     """
-    transport: Transport = DemoTransport() if port == DEMO_PORT else SerialTransport(port, baudrate)
+    transport: Transport = (
+        DemoTransport(engine_start=engine_start)
+        if port == DEMO_PORT
+        else SerialTransport(port, baudrate)
+    )
     if trace is None:
         return transport
     label = tr("Demo-Fahrzeug") if port == DEMO_PORT else f"{port} {baudrate} Baud"

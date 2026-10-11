@@ -130,6 +130,8 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   Zugriff und Gruppe je Port über injizierbaren `Host`, Baudraten 38400/115200 nur mit
   `Elm327.initialize`), `live.py` (`prepare_live`, `select_pids`, `run_live`
   mit injizierbarer Uhr, `LiveRecorder` CSV unter `recordings/`).
+  `battery.py` (`run_battery_test`: Batterie- und Anlasstest, ATRV schnell + PID 42 als
+  Bezug, injizierbare Uhr; Tests mit `tests/battery_fakes.py`, Demo mit `engine_start`).
 - `data/` – `dtc_catalog.py` (SQLite, read-only), `catalog_build.py`, `wmi.py`
   (WMI → Hersteller, ISO-3780-Länderbereiche; Quellen im Modul).
 - `export/report.py` – PDF (ReportLab) und CSV.

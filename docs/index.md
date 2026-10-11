@@ -61,6 +61,7 @@ benutzen/sprache
 benutzen/fehlercodes
 benutzen/fehlercodes-online
 benutzen/live-daten
+benutzen/batterie
 benutzen/sitzungen
 benutzen/probleme
 ```

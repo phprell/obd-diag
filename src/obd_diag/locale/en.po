@@ -284,6 +284,10 @@ msgid "Adapter-Check: Version, Spannung und unterstützte Befehle prüfen, Urtei
 msgstr "adapter check: test version, voltage and supported commands, verdict for UDS (adapter commands only, the vehicle is not addressed)"
 
 #: src/obd_diag/cli.py
+msgid "Batterie- und Anlasstest: Ruhespannung, Einbruch beim Anlassen und Ladespannung messen und bewerten; den Motor startet man selbst, wenn der Test dazu auffordert"
+msgstr "Battery and cranking test: measure and rate resting voltage, the dip while cranking and charging voltage; you start the engine yourself when the test asks you to"
+
+#: src/obd_diag/cli.py
 msgid "Fehlercodes lesen (gespeichert, ausstehend, permanent)"
 msgstr "read trouble codes (stored, pending, permanent)"
 
@@ -415,6 +419,30 @@ msgid "Für UDS (v0.3)"
 msgstr "For UDS (v0.3)"
 
 #: src/obd_diag/cli.py
+#: src/obd_diag/services/battery.py
+msgid "Batterietest abgebrochen"
+msgstr "Battery test cancelled"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "Ruhespannung"
+msgstr "Resting voltage"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "Anlassen"
+msgstr "Cranking"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "Ladespannung"
+msgstr "Charging voltage"
+
+#: src/obd_diag/cli.py
+msgid "Ergebnis"
+msgstr "Result"
+
+#: src/obd_diag/cli.py
 msgid "Folgende Fehlercodes werden im Steuergerät gelöscht:"
 msgstr "The following trouble codes will be cleared in the control unit:"
 
@@ -524,12 +552,20 @@ msgid "Aufzeichnung: {path}"
 msgstr "Recording: {path}"
 
 #: src/obd_diag/cli.py
+msgid "so lange auf das Anlassen warten (Standard {default:g})"
+msgstr "how long to wait for cranking (default {default:g})"
+
+#: src/obd_diag/cli.py
 msgid "Abstand der Abfragerunden (Standard {default:g}, mindestens {minimum:g})"
 msgstr "interval between query rounds (default {default:g}, at least {minimum:g})"
 
 #: src/obd_diag/cli.py
 msgid "Im Web suchen: {url}"
 msgstr "Search the web: {url}"
+
+#: src/obd_diag/cli.py
+msgid "(Zeit: {seconds:.0f} s)"
+msgstr "(time: {seconds:.0f} s)"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
@@ -2076,6 +2112,142 @@ msgstr "{voltage}: adapter is probably not plugged into the car"
 msgid "{voltage}: niedrig, Batterie laden"
 msgstr "{voltage}: low, charge the battery"
 
+#: src/obd_diag/services/battery.py
+msgid "Richtwerte für 12-V-Bleibatterien. Kurz nach einer Fahrt zeigt die Ruhespannung zu viel; am aussagekräftigsten ist der Test nach einigen Stunden Standzeit."
+msgstr "Guide values for 12 V lead-acid batteries. Shortly after a drive the resting voltage reads too high; the test is most meaningful after the car has stood for a few hours."
+
+#: src/obd_diag/services/battery.py
+msgid "Fahrzeug steht, Gang in P bzw. Leerlauf, Feststellbremse an. Zündung an, Motor aus, Verbraucher (Licht, Gebläse) aus. Den Motor erst starten, wenn obd-diag dazu auffordert, und laufen lassen, bis der Test fertig ist (etwa 15 s)."
+msgstr "Vehicle stationary, gear in P or neutral, parking brake on. Ignition on, engine off, loads (lights, blower) off. Only start the engine when obd-diag asks you to, and let it run until the test is finished (about 15 s)."
+
+#: src/obd_diag/services/battery.py
+msgid "Batterie und Ladung in Ordnung"
+msgstr "Battery and charging OK"
+
+#: src/obd_diag/services/battery.py
+msgid "Auffällig: Einzelheiten beachten"
+msgstr "Noticeable: see details"
+
+#: src/obd_diag/services/battery.py
+msgid "Mangelhaft: Batterie bzw. Ladung prüfen lassen"
+msgstr "Poor: have the battery or charging checked"
+
+#: src/obd_diag/services/battery.py
+msgid "Keine Bewertung möglich"
+msgstr "No rating possible"
+
+#: src/obd_diag/services/battery.py
+msgid "Verbinde und prüfe, ob der Motor steht …"
+msgstr "Connecting and checking that the engine is off …"
+
+#: src/obd_diag/services/battery.py
+msgid "Messe die Ruhespannung, Motor noch nicht starten …"
+msgstr "Measuring resting voltage, do not start the engine yet …"
+
+#: src/obd_diag/services/battery.py
+msgid "Jetzt den Motor starten."
+msgstr "Start the engine now."
+
+#: src/obd_diag/services/battery.py
+msgid "Anlassen erkannt …"
+msgstr "Cranking detected …"
+
+#: src/obd_diag/services/battery.py
+msgid "Motor läuft, messe die Ladespannung. Motor laufen lassen …"
+msgstr "Engine running, measuring charging voltage. Keep the engine running …"
+
+#: src/obd_diag/services/battery.py
+msgid "Der Adapter liefert keine Bordspannung (ATRV); ohne sie geht der Test nicht."
+msgstr "The adapter does not report the battery voltage (ATRV); the test cannot run without it."
+
+#: src/obd_diag/services/battery.py
+msgid "nicht gemessen"
+msgstr "not measured"
+
+#: src/obd_diag/services/battery.py
+msgid "kein Anlassen erkannt"
+msgstr "no cranking detected"
+
+#: src/obd_diag/services/battery.py
+msgid "nicht lesbar"
+msgstr "not readable"
+
+#: src/obd_diag/services/battery.py
+msgid "Der Motor ist nicht angesprungen (oder die Drehzahl war nicht lesbar)."
+msgstr "The engine did not start (or the engine speed was not readable)."
+
+#: src/obd_diag/services/battery.py
+msgid "Der Adapter startete beim Anlassen neu und wurde neu eingerichtet."
+msgstr "The adapter restarted while cranking and was set up again."
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: entladen, Batterie laden und den Test wiederholen"
+msgstr "{voltage}: discharged, charge the battery and repeat the test"
+
+#: src/obd_diag/services/battery.py
+msgid "nicht messbar: der Adapter startete beim Anlassen neu, die Spannung brach vermutlich sehr tief ein"
+msgstr "not measurable: the adapter restarted while cranking, the voltage probably dropped very low"
+
+#: src/obd_diag/services/battery.py
+msgid "kein Spannungseinbruch erkannt"
+msgstr "no voltage dip detected"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage} (Grenze {limit}): zu tief, Batterie schwach oder entladen (auch Anlasser und Kabel kommen in Frage)"
+msgstr "{voltage} (limit {limit}): too low, battery weak or discharged (starter and cables are also possible causes)"
+
+#: src/obd_diag/services/battery.py
+msgid "nicht gemessen: Motor ist nicht angesprungen"
+msgstr "not measured: the engine did not start"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: Lichtmaschine lädt nicht"
+msgstr "{voltage}: alternator is not charging"
+
+#: src/obd_diag/services/battery.py
+msgid "Das Steuergerät meldet keine Spannung (PID 42): Werte nur vom Adapter, oft einige Zehntel Volt zu niedrig."
+msgstr "The control unit does not report a voltage (PID 42): values from the adapter only, often a few tenths of a volt too low."
+
+#: src/obd_diag/services/battery.py
+msgid "Der Motor läuft ({rpm:.0f} 1/min). Motor abstellen, Zündung an lassen und den Test erneut starten."
+msgstr "The engine is running ({rpm:.0f} rpm). Switch the engine off, leave the ignition on and start the test again."
+
+#: src/obd_diag/services/battery.py
+msgid "Die Bordspannung ({voltage} V) ist so hoch wie bei laufendem Motor. Motor abstellen, Zündung an lassen und den Test erneut starten."
+msgstr "The battery voltage ({voltage} V) is as high as with the engine running. Switch the engine off, leave the ignition on and start the test again."
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: gut geladen"
+msgstr "{voltage}: well charged"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: nur teilweise geladen, Batterie laden"
+msgstr "{voltage}: only partly charged, charge the battery"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage} (Grenze {limit}): gut"
+msgstr "{voltage} (limit {limit}): good"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage} (Grenze {limit}): knapp, Batterie altert"
+msgstr "{voltage} (limit {limit}): marginal, battery is ageing"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: zu hoch, Laderegler prüfen lassen"
+msgstr "{voltage}: too high, have the voltage regulator checked"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: Lichtmaschine lädt"
+msgstr "{voltage}: alternator is charging"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: niedrig; bei Fahrzeugen mit Batteriemanagement (Start-Stopp) oft gewollt, sonst Lichtmaschine prüfen"
+msgstr "{voltage}: low; often intended on vehicles with battery management (start-stop), otherwise check the alternator"
+
+#: src/obd_diag/services/battery.py
+msgid "Adapter-Messung um {offset} V korrigiert (Abweichung zum Steuergerät in Ruhe)."
+msgstr "Adapter reading corrected by {offset} V (difference to the control unit at rest)."
+
 #: src/obd_diag/services/clear.py
 msgid "Löschen ist vorerst deaktiviert: Erst muss das Lesen an einem echten Fahrzeug geprüft sein. Es wurde nichts gesendet."
 msgstr "Clearing is disabled for now: reading must first be verified on a real vehicle. Nothing was sent."
@@ -2530,6 +2702,24 @@ msgstr "Live data is not available in this backend"
 msgid "Der Adapter-Check ist in diesem Backend nicht verfügbar"
 msgstr "The adapter check is not available in this backend"
 
+#: src/obd_diag/ui/backend.py
+msgid "Der Batterietest ist in diesem Backend nicht verfügbar"
+msgstr "The battery test is not available in this backend"
+
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "Erst die laufende Abfrage beenden, dann den Test starten."
+msgstr "Finish the running query first, then start the test."
+
+#: src/obd_diag/ui/viewmodels/battery.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Bitte einen Port angeben, z. B. /dev/ttyUSB0."
+msgstr "Please specify a port, e.g. /dev/ttyUSB0."
+
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "noch {seconds:.0f} s"
+msgstr "{seconds:.0f} s left"
+
 #: src/obd_diag/ui/viewmodels/codes.py
 msgid "schwierig"
 msgstr "difficult"
@@ -2581,11 +2771,6 @@ msgstr "The adapter reports an error: {error}"
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "obd-bericht-{date}"
 msgstr "obd-report-{date}"
-
-#: src/obd_diag/ui/viewmodels/diagnosis.py
-#: src/obd_diag/ui/viewmodels/live.py
-msgid "Bitte einen Port angeben, z. B. /dev/ttyUSB0."
-msgstr "Please specify a port, e.g. /dev/ttyUSB0."
 
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Gespeicherte Sitzung vom {created} geöffnet (nur ansehen): {path}"
@@ -2723,6 +2908,32 @@ msgstr "Commands checked"
 msgid "Hinweis schließen"
 msgstr "Close notice"
 
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+msgid "Batterie- und Anlasstest"
+msgstr "Battery and cranking test"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+msgid "Verbinde …"
+msgstr "Connecting …"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+msgid "Erneut testen"
+msgstr "Test again"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+msgid "Test starten"
+msgstr "Start test"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Abbrechen"
+msgstr "Cancel"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+#: src/obd_diag/ui/qml/SetupDialog.qml
+msgid "Schließen"
+msgstr "Close"
+
 #: src/obd_diag/ui/qml/ClearDialog.qml
 msgid "Fehlercodes löschen?"
 msgstr "Clear trouble codes?"
@@ -2762,10 +2973,6 @@ msgstr "Clearing does not fix a defect. If a code returns, the cause still exist
 #: src/obd_diag/ui/qml/ClearDialog.qml
 msgid "Zündung ist an, der Motor ist aus. Ich möchte die Codes löschen."
 msgstr "The ignition is on, the engine is off. I want to clear the codes."
-
-#: src/obd_diag/ui/qml/ClearDialog.qml
-msgid "Abbrechen"
-msgstr "Cancel"
 
 #: src/obd_diag/ui/qml/ClearDialog.qml
 msgid "Fehlercodes löschen"
@@ -3058,6 +3265,10 @@ msgid "Adapter prüfen …"
 msgstr "Check adapter …"
 
 #: src/obd_diag/ui/qml/Main.qml
+msgid "Batterie- und Anlasstest …"
+msgstr "Battery and cranking test …"
+
+#: src/obd_diag/ui/qml/Main.qml
 msgid "Adapter-Mitschnitt aufzeichnen"
 msgstr "Record adapter trace"
 
@@ -3220,10 +3431,6 @@ msgstr "Check"
 #: src/obd_diag/ui/qml/SetupDialog.qml
 msgid "Übernehmen"
 msgstr "Apply"
-
-#: src/obd_diag/ui/qml/SetupDialog.qml
-msgid "Schließen"
-msgstr "Close"
 
 #: src/obd_diag/ui/qml/VehicleView.qml
 msgid "Lese Fahrzeug-Identifizierungsnummer …"

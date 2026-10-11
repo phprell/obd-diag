@@ -27,6 +27,22 @@ from obd_diag.services.adapter_check import (
     version_text,
     voltage_text,
 )
+from obd_diag.services.battery import (
+    BATTERY_INSTRUCTIONS,
+    PHASE_TEXTS,
+    START_TIMEOUT,
+    BatteryProgress,
+    BatteryTestCancelled,
+    BatteryTestRefused,
+    Phase,
+    charge_verdict,
+    crank_verdict,
+    notes,
+    overall_text,
+    rest_verdict,
+    result_to_dict,
+    run_battery_test,
+)
 from obd_diag.services.clear import (
     CLEAR_DISABLED_MESSAGE,
     ClearRefused,
@@ -154,14 +170,15 @@ _AUTO_TRACE = "auto"
 _AUTO_RECORD = "auto"
 
 
-def _transport(args: argparse.Namespace) -> Transport:
+def _transport(args: argparse.Namespace, *, engine_start: bool = False) -> Transport:
     """Serieller Transport aus ``--port``/``--baud``, bei ``--trace`` mit Mitschnitt;
-    mit ``--demo`` (oder ``--port demo``) das Demo-Fahrzeug statt eines Adapters."""
+    mit ``--demo`` (oder ``--port demo``) das Demo-Fahrzeug statt eines Adapters, mit
+    ``engine_start`` bei stehendem Motor, der von selbst anspringt (Batterietest)."""
     demo = args.demo or args.port == DEMO_PORT
     transport: Transport
     if demo:
         _hint(tr(DEMO_NOTICE))
-        transport, label = DemoTransport(), tr("Demo-Fahrzeug")
+        transport, label = DemoTransport(engine_start=engine_start), tr("Demo-Fahrzeug")
     else:
         transport, label = SerialTransport(args.port, args.baud), f"{args.port} {args.baud} Baud"
     if args.trace is None:
@@ -231,6 +248,49 @@ def _run_adapter(args: argparse.Namespace) -> None:
     _labelled([(r.probe.command, probe_text(r)) for r in report.results], indent="  ")
     print()
     _hint(tr(UDS_NOTE), file=sys.stdout)
+
+
+def _run_battery(args: argparse.Namespace) -> int:
+    print(tr(BATTERY_INSTRUCTIONS), file=sys.stderr)
+    seen: set[Phase] = set()
+
+    def progress(p: BatteryProgress) -> None:
+        if p.phase in seen:
+            return
+        seen.add(p.phase)
+        text = tr(PHASE_TEXTS[p.phase])
+        if p.phase is Phase.START and p.remaining is not None:
+            text += " " + tr("(Zeit: {seconds:.0f} s)").format(seconds=p.remaining)
+        print(text, file=sys.stderr)
+
+    try:
+        with _transport(args, engine_start=True) as transport:
+            result = run_battery_test(
+                Elm327(transport), on_progress=progress, start_timeout=args.start_timeout
+            )
+    except BatteryTestRefused as e:
+        _error(e)
+        return 1
+    except (KeyboardInterrupt, BatteryTestCancelled):
+        print(file=sys.stderr)
+        _error(tr("Batterietest abgebrochen"))
+        return 1
+    if args.json:
+        print(json.dumps(result_to_dict(result), ensure_ascii=False, indent=2))
+        return 0
+    print()
+    _labelled(
+        [
+            (tr("Ruhespannung"), rest_verdict(result).text),
+            (tr("Anlassen"), crank_verdict(result).text),
+            (tr("Ladespannung"), charge_verdict(result).text),
+            (tr("Ergebnis"), overall_text(result)),
+        ]
+    )
+    print()
+    for note in notes(result):
+        _hint(note, file=sys.stdout)
+    return 0
 
 
 _STATUS_LABELS = {
@@ -727,6 +787,24 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     adapter_parser.add_argument("--json", action="store_true", help=json_help)
+    battery_parser = sub.add_parser(
+        "battery",
+        parents=[connection],
+        help=tr(
+            "Batterie- und Anlasstest: Ruhespannung, Einbruch beim Anlassen und Ladespannung "
+            "messen und bewerten; den Motor startet man selbst, wenn der Test dazu auffordert"
+        ),
+    )
+    battery_parser.add_argument(
+        "--start-timeout",
+        type=_duration,
+        default=START_TIMEOUT,
+        metavar=tr("SEK"),
+        help=tr("so lange auf das Anlassen warten (Standard {default:g})").format(
+            default=START_TIMEOUT
+        ),
+    )
+    battery_parser.add_argument("--json", action="store_true", help=json_help)
     scan_parser = sub.add_parser(
         "scan",
         parents=[connection],
@@ -872,6 +950,8 @@ def main(argv: list[str] | None = None) -> int:
                 _labelled([(tr("Adapter"), adapter), (tr("Bordspannung"), voltage)])
         elif args.command == "adapter":
             _run_adapter(args)
+        elif args.command == "battery":
+            return _run_battery(args)
         elif args.command == "scan":
             _run_scan(args)
         elif args.command == "clear":

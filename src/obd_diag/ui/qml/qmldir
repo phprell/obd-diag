@@ -16,3 +16,4 @@ VehicleView 1.0 VehicleView.qml
 LiveView 1.0 LiveView.qml
 AdapterDialog 1.0 AdapterDialog.qml
 SetupDialog 1.0 SetupDialog.qml
+BatteryDialog 1.0 BatteryDialog.qml

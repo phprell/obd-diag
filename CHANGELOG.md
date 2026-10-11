@@ -3,6 +3,17 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
+## Unreleased
+
+### Neu
+
+- Batterie- und Anlasstest: `obd-diag battery` bzw. *Optionen → Batterie- und
+  Anlasstest …* misst die Ruhespannung, den Einbruch beim Anlassen (Motor startet man
+  selbst auf Aufforderung) und die Ladespannung im Leerlauf und bewertet sie mit
+  dokumentierten Richtwerten (Grenze beim Anlassen nach Temperatur). Die Spannung kommt
+  beim Anlassen in schneller Folge vom Adapter (`ATRV`), um die Abweichung zum
+  Steuergerät (PID 42) korrigiert. Nur lesend, keine neuen Befehle; auch im Demo-Modus.
+
 ## 0.2.1 – 2026-10-11
 
 Neu sind Einrichtungs- und Adapter-Check, ein Demo-Modus ohne Auto, die englische

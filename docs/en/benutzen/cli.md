@@ -14,6 +14,7 @@ language of all output ({doc}`sprache`).
 | `obd-diag diagnose` | trouble codes, readiness, freeze frame, VIN | Mode 01, 02, 03, 07, 09, 0A |
 | `obd-diag vin` | read the VIN or decode one that is typed in | Mode 09 |
 | `obd-diag live` | show and record live data | Mode 01 |
+| `obd-diag battery` | battery and cranking test ({doc}`batterie`) | Mode 01 |
 | `obd-diag export` | saved session as PDF/CSV | nothing |
 | `obd-diag clear` | clear trouble codes (locked) | Mode 04 |
 

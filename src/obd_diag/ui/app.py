@@ -52,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     from obd_diag.desktop import APP_ID
     from obd_diag.ui.backend import serial_backend
     from obd_diag.ui.jobs import ThreadPoolRunner
+    from obd_diag.ui.viewmodels.battery import BatteryViewModel
     from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel
     from obd_diag.ui.viewmodels.live import LiveViewModel
     from obd_diag.ui.viewmodels.setup import SetupViewModel
@@ -81,13 +82,15 @@ def main(argv: list[str] | None = None) -> int:
     live = LiveViewModel(vm.backend, runner, vm)
     # Beim ersten Start öffnet sich „Einrichtung prüfen“ von selbst
     setup = SetupViewModel(runner, vm, show_on_start=SetupViewModel.first_start())
+    battery = BatteryViewModel(vm.backend, runner, vm)
     engine = QQmlApplicationEngine()
-    load_main_window(engine, vm, live=live, language=language, setup=setup)
+    load_main_window(engine, vm, live=live, language=language, setup=setup, battery=battery)
     if not engine.rootObjects():
         print(tr("Fehler: Die Oberfläche ließ sich nicht laden."), file=sys.stderr)
         return 1
     code = app.exec()
     live.stop()  # sonst wartet runner.wait() ewig auf die Live-Abfrage
+    battery.cancel()  # ebenso auf einen laufenden Batterietest
     runner.wait()  # laufenden Job zu Ende bringen, damit der Port sauber schließt
     # Die Engine vor dem View-Model abbauen, sonst werten die Bindungen ein
     # gelöschtes Objekt aus und melden Fehler.

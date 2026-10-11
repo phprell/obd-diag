@@ -22,6 +22,7 @@ from PySide6.QtQuickControls2 import QQuickStyle
 
 from obd_diag import i18n
 from obd_diag.ui.theme import DesignController
+from obd_diag.ui.viewmodels.battery import BatteryViewModel
 from obd_diag.ui.viewmodels.diagnosis import SETTINGS_APP, SETTINGS_ORG, DiagnosisViewModel
 from obd_diag.ui.viewmodels.live import LiveViewModel
 from obd_diag.ui.viewmodels.setup import SetupViewModel
@@ -191,6 +192,7 @@ def load_main_window(
     live: LiveViewModel | None = None,
     language: LanguageController | None = None,
     setup: SetupViewModel | None = None,
+    battery: BatteryViewModel | None = None,
 ) -> None:
     # Als Kontext-Eigenschaft steht das View-Model schon bereit, bevor die ersten
     # Bindungen ausgewertet werden; Main.qml reicht es an die Teile weiter.
@@ -205,11 +207,14 @@ def load_main_window(
     if setup is None:
         # Ohne Angabe nie von selbst prüfen (Tests); ``app.main`` übergibt den ersten Start
         setup = SetupViewModel(vm.runner, vm, parent=engine)
-    language.attach(engine, vm, live)
+    if battery is None:
+        battery = BatteryViewModel(vm.backend, vm.runner, vm, engine)
+    language.attach(engine, vm, live, battery)
     engine.rootContext().setContextProperty("languageController", language)
     engine.rootContext().setContextProperty("diagnosis", vm)
     engine.rootContext().setContextProperty("live", live)
     engine.rootContext().setContextProperty("setupCheck", setup)
+    engine.rootContext().setContextProperty("batteryTest", battery)
     engine.rootContext().setContextProperty("dialogHelper", helper)
     engine.rootContext().setContextProperty("designController", design)
     engine.load(QUrl.fromLocalFile(str(MAIN_QML)))
