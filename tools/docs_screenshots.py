@@ -60,7 +60,7 @@ from tests.emulator_patches import (  # noqa: E402
     patch_persistent_clear,
 )
 
-TABS = ("fehlercodes", "readiness", "freeze-frame", "fahrzeug", "live-daten")
+TABS = ("fehlercodes", "readiness", "freeze-frame", "fahrzeug", "gebrauchtwagen", "live-daten")
 SIZE = (1180, 760)
 
 

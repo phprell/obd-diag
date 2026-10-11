@@ -6,8 +6,8 @@ uv run obd-diag-gui
 
 Choose port and baud rate at the top (the list shows adapters that were found, a path
 can also be typed in) and press “Connect & Scan”. This reads trouble codes, readiness,
-freeze frame and VIN in one pass, read-only. The vehicle (manufacturer and VIN) then
-appears at the top right, below it five tabs. Adapter, protocol and battery voltage
+freeze frame, VIN and the counters for the used-car check in one pass, read-only. The vehicle (manufacturer and VIN) then
+appears at the top right, below it six tabs. Adapter, protocol and battery voltage
 (red when the voltage is low) are shown at the bottom.
 
 The user interface speaks English and German: *Options → Sprache / Language*
@@ -85,6 +85,23 @@ temperature, engine speed, speed.
 VIN, manufacturer, country, model year and check digit ({doc}`../technik/fin`). “Look
 up VIN online (NHTSA)” (menu *Options* or here) is off by default; when switched on,
 only the VIN goes to the US authority NHTSA at the next scan.
+
+## Used car
+
+```{image} ../_static/screenshots/gebrauchtwagen-light.png
+:alt: Used car tab: verdict, findings and counters since clearing
+:class: only-light
+```
+
+```{image} ../_static/screenshots/gebrauchtwagen-dark.png
+:alt: Used car tab: verdict, findings and counters since clearing
+:class: only-dark
+```
+
+Whether the trouble codes were cleared recently: verdict (suspicious, inconspicuous,
+cannot be assessed) with the findings, and below it the counters since the codes were
+last cleared ({doc}`gebrauchtwagen`). The dot on the tab is orange when something is
+flagged.
 
 ## Live data
 

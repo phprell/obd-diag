@@ -26,6 +26,7 @@ from obd_diag.services.diagnostics import (
 from obd_diag.services.dtc_online import OnlineExplanation
 from obd_diag.services.readiness import Monitor, MonitorState, ReadinessStatus, read_readiness
 from obd_diag.services.storage import data_dir, write_new_json
+from obd_diag.services.used_car import ClearCounters, read_clear_counters
 from obd_diag.services.vehicle import VinInfo, decode_vin, lookup_vpic, read_vin
 
 log = logging.getLogger(__name__)
@@ -38,6 +39,8 @@ class Session:
     readiness: ReadinessStatus | None = None
     freeze_frame: FreezeFrame | None = None
     vehicle: VinInfo | None = None
+    # Gebrauchtwagen-Check; None in Sitzungen älterer Versionen
+    clear_counters: ClearCounters | None = None
 
 
 def run_diagnosis(
@@ -48,13 +51,14 @@ def run_diagnosis(
     online_vin_lookup: bool = False,
     online_dtc_lookup: bool = False,
 ) -> Session:
-    """Scan, Readiness, Freeze Frame und FIN in einem Durchgang; nur lesend.
+    """Scan, Readiness, Freeze Frame, FIN und Zähler seit dem Löschen; nur lesend.
 
     Fehlt eine einzelne Angabe (Steuergerät antwortet nicht), bleibt sie ``None``;
     nur ein fehlgeschlagener Scan bricht ab.
 
     Der Scan setzt den Adapter zurück (``ATZ``) und handelt das Protokoll aus; danach
-    folgen Readiness (``0101``), Freeze Frame (``02xx00``) und FIN (``0902``). Ein
+    folgen Readiness (``0101``), Freeze Frame (``02xx00``), FIN (``0902``) und die Zähler
+    für den Gebrauchtwagen-Check (``0130``, ``0131``, ``014E``, ``0121``, ``014D``). Ein
     ``ElmError`` in einem dieser Teile lässt nur diesen Teil leer; Verbindungsfehler
     (``TransportError``) brechen ab. Der Freeze Frame wird immer gelesen, bleibt aber
     ``None``, wenn er weder einen auslösenden Code noch Werte enthält (ohne
@@ -70,6 +74,7 @@ def run_diagnosis(
     if freeze is not None and freeze.dtc is None and not freeze.values:
         freeze = None
     vin = _optional("FIN", read_vin, elm)
+    counters = _optional("PID 30/31/4E/21/4D", read_clear_counters, elm)
     vehicle = None if vin is None else decode_vin(vin, protocol=result.protocol)
     if vehicle is not None and online_vin_lookup and vehicle.valid:
         vehicle = dataclasses.replace(vehicle, online=lookup_vpic(vehicle.vin))
@@ -77,7 +82,12 @@ def run_diagnosis(
         manufacturer = vehicle.manufacturer if vehicle is not None and vehicle.valid else None
         result = add_online_explanations(result, manufacturer)
     return Session(
-        created=created, scan=result, readiness=readiness, freeze_frame=freeze, vehicle=vehicle
+        created=created,
+        scan=result,
+        readiness=readiness,
+        freeze_frame=freeze,
+        vehicle=vehicle,
+        clear_counters=counters,
     )
 
 
@@ -121,6 +131,9 @@ def session_to_dict(session: Session) -> dict[str, Any]:
             None if session.freeze_frame is None else dataclasses.asdict(session.freeze_frame)
         ),
         "vehicle": None if session.vehicle is None else dataclasses.asdict(session.vehicle),
+        "clear_counters": (
+            None if session.clear_counters is None else dataclasses.asdict(session.clear_counters)
+        ),
     }
 
 
@@ -204,6 +217,20 @@ def _vehicle(data: dict[str, Any]) -> VinInfo:
     )
 
 
+def _clear_counters(data: dict[str, Any]) -> ClearCounters:
+    def number(key: str) -> int | None:
+        value = data.get(key)
+        return None if value is None else int(value)
+
+    return ClearCounters(
+        warmups=number("warmups"),
+        distance_km=number("distance_km"),
+        time_min=number("time_min"),
+        mil_distance_km=number("mil_distance_km"),
+        mil_time_min=number("mil_time_min"),
+    )
+
+
 def session_from_dict(data: dict[str, Any]) -> Session:
     """Gegenstück zu ``session_to_dict``; ``ValueError`` bei fremden oder kaputten Daten."""
     if not isinstance(data, dict) or data.get("format") != SESSION_FORMAT:
@@ -224,8 +251,8 @@ def session_from_dict(data: dict[str, Any]) -> Session:
         )
     try:
         created = datetime.fromisoformat(data["created"])
-        readiness, freeze, vehicle = (
-            data.get(key) for key in ("readiness", "freeze_frame", "vehicle")
+        readiness, freeze, vehicle, counters = (
+            data.get(key) for key in ("readiness", "freeze_frame", "vehicle", "clear_counters")
         )
         return Session(
             created=created,
@@ -233,6 +260,8 @@ def session_from_dict(data: dict[str, Any]) -> Session:
             readiness=None if readiness is None else _readiness(readiness),
             freeze_frame=None if freeze is None else _freeze_frame(freeze),
             vehicle=None if vehicle is None else _vehicle(vehicle),
+            # fehlt in Sitzungen älterer Versionen
+            clear_counters=None if counters is None else _clear_counters(counters),
         )
     except (KeyError, TypeError, ValueError, AttributeError, IndexError) as e:
         raise ValueError(

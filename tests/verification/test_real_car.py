@@ -22,6 +22,11 @@ vorn, was vorher einen Ottomotor ohne offene Tests ergab. Dazu Live-Daten:
 aufgezeichneten CSV ``live_idle.csv``, beide ohne FIN und unverändert. Vier Steuergeräte
 melden Drehzahl, Last und Temperatur mit leicht unterschiedlichen Werten (bis 11 1/min,
 2,4 %); ohne Header gilt die erste Antwort.
+
+Die Zähler für den Gebrauchtwagen-Check (``0130``, ``0131``, ``014E``, ``0121``,
+``014D``) liest ``run_diagnosis`` erst seit v0.2.2; sie fehlen in den Mitschnitten und
+werden beim Abspielen mit ``NO DATA`` beantwortet (``_diagnosis``). Laut Bitmaske im
+Live-Mitschnitt unterstützt das Auto 21, 30 und 31, nicht 4D und 4E.
 """
 
 from pathlib import Path
@@ -38,14 +43,27 @@ from obd_diag.services.live import (
     select_pids,
 )
 from obd_diag.services.readiness import MonitorState
-from obd_diag.services.session import run_diagnosis
+from obd_diag.services.session import Session, run_diagnosis
+from obd_diag.services.used_car import ClearCounters
 from obd_diag.transport.trace import ReplayTransport, read_trace
 
 TRACES = Path(__file__).parent.parent / "fixtures" / "traces" / "mercedes_w177"
+# Nach den Mitschnitten gesendet, aber nicht aufgezeichnet (seit v0.2.2)
+COUNTERS = ("0130", "0131", "014E", "0121", "014D")
+
+
+def _diagnosis(name: str) -> Session:
+    """``run_diagnosis`` über den Mitschnitt; die Zähler-Anfragen danach ergeben NO DATA."""
+    entries = read_trace(TRACES / name)
+    for cmd in COUNTERS:
+        entries += [(">>", f"{cmd}\r".encode()), ("<<", b"NO DATA\r\r>")]
+    session = run_diagnosis(Elm327(ReplayTransport(entries)), None)
+    assert session.clear_counters == ClearCounters()
+    return session
 
 
 def test_diagnosis_replays_with_expected_result() -> None:
-    session = run_diagnosis(Elm327(ReplayTransport.from_file(TRACES / "diagnose.log")), None)
+    session = _diagnosis("diagnose.log")
 
     scan = session.scan
     assert scan.adapter == "ELM327 v1.5"
@@ -80,6 +98,15 @@ def test_diagnosis_replays_with_expected_result() -> None:
     assert vehicle.manufacturer == "Mercedes-Benz"
     assert vehicle.country == "Deutschland"
     assert vehicle.model_year is None  # Stelle 10 = Lenkung, nicht „2001“
+
+
+def test_used_car_counters_supported_by_the_car() -> None:
+    """Bitmasken 0100/0120/0140 aus ``live.log``: das Auto meldet die Strecke mit
+    Warnleuchte (21), Warmläufe (30) und Strecke (31) seit dem Löschen, keine Zeiten."""
+    setup = prepare_live(Elm327(ReplayTransport.from_file(TRACES / "live.log")))
+    keys = {p.key for p in setup.available}
+    assert {"distance_with_mil", "warmups_since_clear", "distance_since_clear"} <= keys
+    assert not {"time_with_mil", "time_since_clear"} & keys
 
 
 def test_first_atz_after_plugging_in_is_repeated() -> None:
@@ -150,7 +177,7 @@ def test_ignition_off_reports_no_connection_with_hint() -> None:
     [("diagnose_order.log", 12.391), ("diagnose_engine_running.log", 13.9)],
 )
 def test_second_test_diagnosis(trace: str, voltage: float) -> None:
-    session = run_diagnosis(Elm327(ReplayTransport.from_file(TRACES / trace)), None)
+    session = _diagnosis(trace)
     assert session.scan.voltage == pytest.approx(voltage)
     assert session.scan.codes == [DiagnosticCode("U1218", DtcKind.STORED)]
 

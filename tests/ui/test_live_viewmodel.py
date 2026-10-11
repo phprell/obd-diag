@@ -593,7 +593,7 @@ def live_ui(qapp: Any, fake_backend: FakeBackend, live_fake: FakeLive) -> Iterat
 
 
 def test_live_tab_runs_and_locks_diagnosis(qtbot: QtBot, live_ui: LiveUi) -> None:
-    live_ui.find("viewTabs").setProperty("currentIndex", 4)
+    live_ui.find("viewTabs").setProperty("currentIndex", 5)
     qtbot.waitUntil(lambda: live_ui.prop("liveEmpty", "visible") is True)
     assert live_ui.prop("liveEmpty", "title") == "Noch keine Live-Daten"
     assert "Beifahrer" in live_ui.prop("liveSafetyBanner", "text")
@@ -627,7 +627,7 @@ def test_live_tab_runs_and_locks_diagnosis(qtbot: QtBot, live_ui: LiveUi) -> Non
 
 def test_live_tab_uses_port_from_header(qtbot: QtBot, live_ui: LiveUi, live_fake: FakeLive) -> None:
     live_ui.find("portBox").setProperty("editText", "/dev/pts/7")
-    live_ui.find("viewTabs").setProperty("currentIndex", 4)
+    live_ui.find("viewTabs").setProperty("currentIndex", 5)
     live_ui.find("liveStartButton").clicked.emit()  # type: ignore[attr-defined]
     qtbot.waitUntil(lambda: bool(live_fake.calls), timeout=5000)
     assert live_fake.calls[0][:2] == ("/dev/pts/7", 38400)
@@ -635,7 +635,7 @@ def test_live_tab_uses_port_from_header(qtbot: QtBot, live_ui: LiveUi, live_fake
 
 
 def test_live_checkbox_toggles_selection(qtbot: QtBot, live_ui: LiveUi) -> None:
-    live_ui.find("viewTabs").setProperty("currentIndex", 4)
+    live_ui.find("viewTabs").setProperty("currentIndex", 5)
     live_ui.live.start("/dev/ttyUSB0", 38400)
     qtbot.waitUntil(lambda: live_ui.live.property("supportedKnown") is True, timeout=5000)
     live_ui.live.stop()
@@ -653,7 +653,7 @@ def test_live_checkbox_toggles_selection(qtbot: QtBot, live_ui: LiveUi) -> None:
 def test_live_threshold_dialog_and_alarm_tile(
     qtbot: QtBot, live_ui: LiveUi, live_fake: FakeLive
 ) -> None:
-    live_ui.find("viewTabs").setProperty("currentIndex", 4)
+    live_ui.find("viewTabs").setProperty("currentIndex", 5)
     live_ui.find("liveThresholdsButton").clicked.emit()  # type: ignore[attr-defined]
     qtbot.waitUntil(lambda: live_ui.prop("liveThresholdDialog", "opened") is True, timeout=5000)
     high = live_ui.find("liveThresholdHigh_coolant_temp")

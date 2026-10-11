@@ -52,6 +52,9 @@ from obd_diag.services.urgency import (
     highest,
     rate_codes,
 )
+from obd_diag.services.used_car import NOTE as USED_CAR_NOTE
+from obd_diag.services.used_car import TITLE as USED_CAR_TITLE
+from obd_diag.services.used_car import Level, Verdict, assess, counter_rows
 from obd_diag.services.vehicle import VPIC_FIELDS, checksum_text, model_year_text
 
 # Bezeichnungen deutsch (Quelltexte), bei der Ausgabe mit ``tr`` übersetzt
@@ -313,6 +316,8 @@ _STATE_COLORS = {
     MonitorState.NOT_SUPPORTED: _MUTED,
 }
 
+_VERDICT_COLORS = {Verdict.INCONSPICUOUS: _GOOD, Verdict.SUSPICIOUS: _BAD, Verdict.UNKNOWN: _MUTED}
+_LEVEL_COLORS = {Level.WARNING: _BAD, Level.INFO: _INK, Level.OK: _GOOD}
 _MARGIN_X = 20 * mm
 _MARGIN_TOP = 18 * mm
 _MARGIN_BOTTOM = 24 * mm
@@ -610,6 +615,31 @@ class _Builder:
         )
         return out
 
+    def used_car(self, session: Session) -> list[Flowable]:
+        out: list[Flowable] = [self._p(tr(USED_CAR_TITLE), "h1")]
+        check = assess(session.clear_counters, session.scan, session.readiness)
+        color = _VERDICT_COLORS[check.verdict]
+        rows: list[tuple[str, Any]] = [
+            (tr("Ergebnis"), self._colored(check.label, color, bold=True))
+        ]
+        if session.clear_counters is not None:
+            rows += counter_rows(session.clear_counters)
+        out.append(self._kv_table(rows, 58 * mm))
+        out.append(Spacer(1, 4))
+        for finding in check.findings:
+            out.append(
+                Paragraph(
+                    escape(self.fonts.clean(finding.text)),
+                    ParagraphStyle(
+                        "befund", self.styles["bullet"], textColor=_LEVEL_COLORS[finding.level]
+                    ),
+                    bulletText="•",
+                )
+            )
+        out.append(Spacer(1, 4))
+        out.append(self._p(tr(USED_CAR_NOTE), "note"))
+        return out
+
     def _list_column(self, heading: str, items: list[Flowable]) -> list[Flowable]:
         return [self._p(heading, "label"), Spacer(1, 1), *items]
 
@@ -880,10 +910,11 @@ class _NumberedCanvas(Canvas):
 
 def export_pdf(session: Session, path: Path) -> None:
     """Bericht: Fahrzeug, Adapter/Protokoll/Spannung, Fehlercodes mit Erklärung,
-    Freeze Frame, Readiness. In der eingestellten Sprache, DIN A4.
+    Freeze Frame, Readiness, Gebrauchtwagen-Check. In der eingestellten Sprache, DIN A4.
 
     Reihenfolge: Kopf, Fahrzeug und Verbindung, Kurzübersicht, Readiness,
-    Fehlercodes nach Art, Freeze Frame. Fehlende Angaben stehen als „nicht verfügbar“.
+    Gebrauchtwagen-Check, Fehlercodes nach Art, Freeze Frame. Fehlende Angaben stehen als
+    „nicht verfügbar“.
     """
     fonts = _fonts()
     b = _Builder(fonts)
@@ -893,6 +924,7 @@ def export_pdf(session: Session, path: Path) -> None:
         *b.summary(session),
         # Readiness und Freeze Frame sind kürzer als eine Seite: nie mitten darin umbrechen
         KeepTogether(b.readiness(session.readiness)),
+        KeepTogether(b.used_car(session)),
         *b.codes(session),
         KeepTogether(b.freeze_frame(session)),
     ]

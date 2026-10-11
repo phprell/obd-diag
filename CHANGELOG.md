@@ -23,6 +23,16 @@ vor 1.0 kann sich die Bedienung noch ändern.
   11,8 V oder über 15,5 V. Überschrittene Werte sind markiert (`!`, rote Kachel), die CSV
   hat dafür die neue letzte Spalte „Warnungen“. Gesendet wird dafür nichts zusätzlich.
 
+- Gebrauchtwagen-Check: `obd-diag used-car`, Reiter „Gebrauchtwagen“ in der Oberfläche
+  und ein Abschnitt im PDF-Bericht zeigen, ob die Fehlercodes vor kurzem gelöscht wurden.
+  Gelesen werden die Zähler, die das Löschen auf null setzt (Mode 01 PID 30 Warmläufe,
+  31 Strecke, 4E Zeit seit dem Löschen, 21/4D Strecke/Zeit mit Warnleuchte), dazu
+  Warnleuchte, offene Readiness-Tests und permanente Codes (Mode 0A). Urteil
+  „auffällig“, „unauffällig“ oder „nicht beurteilbar“ nach einer Faustregel (unter
+  10 Warmläufen, 200 km oder 300 Minuten). `obd-diag diagnose` und „Verbinden & Scannen“
+  lesen die Zähler mit (fünf Anfragen mehr) und speichern sie in der Sitzung; ältere
+  Sitzungen öffnen weiter. Nur lesend, keine neuen Befehle in der Freigabeliste.
+
 ## 0.2.1 – 2026-10-11
 
 Neu sind Einrichtungs- und Adapter-Check, ein Demo-Modus ohne Auto, die englische
