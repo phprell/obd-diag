@@ -4,6 +4,7 @@ import argparse
 import dataclasses
 import json
 import sys
+import textwrap
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -47,6 +48,7 @@ from obd_diag.services.live import (
 )
 from obd_diag.services.readiness import ALL_COMPLETE_LABEL, AU_NOTE, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
+from obd_diag.services.setup_check import SetupReport, Status, run_setup_check
 from obd_diag.services.storage import trace_dir
 from obd_diag.services.vehicle import (
     VPIC_FIELDS,
@@ -186,6 +188,42 @@ def _run_ports() -> None:
     width = max(len(p.device) for p in ports)
     for p in ports:
         print(f"{p.device:<{width}}  {p.description}")
+
+
+_STATUS_LABELS = {
+    Status.OK: N_("OK"),
+    Status.WARNING: N_("Warnung"),
+    Status.ERROR: N_("Fehler"),
+    Status.INFO: N_("Hinweis"),
+}
+
+
+def _print_setup(report: SetupReport) -> None:
+    labels = {status: tr(label) for status, label in _STATUS_LABELS.items()}
+    width = max(len(label) for label in labels.values())
+    indent = " " * (width + 4)
+    for item in report.items:
+        print(f"  {labels[item.status]:<{width}}  {item.title}")
+        if item.detail:
+            print(textwrap.fill(item.detail, 100, initial_indent=indent, subsequent_indent=indent))
+        if item.fix:
+            print(indent + tr("Abhilfe: {command}").format(command=item.fix))
+    print()
+    adapter = report.adapter
+    if adapter is None:
+        print(tr("Ergebnis: kein nutzbarer Adapter gefunden."))
+        return
+    command = f"obd-diag diagnose --port {adapter.port} --baud {adapter.baud}"
+    if report.ok:
+        print(tr("Ergebnis: bereit. Weiter mit: {command}").format(command=command))
+    else:
+        print(tr("Ergebnis: Adapter antwortet, aber nicht alles ist eingerichtet."))
+
+
+def _run_setup_check(args: argparse.Namespace) -> int:
+    report = run_setup_check(args.port)
+    _print_setup(report)
+    return 0 if report.adapter is not None else 1
 
 
 def _confirm() -> bool:
@@ -722,6 +760,17 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     sub.add_parser("ports", parents=[common], help=tr("angeschlossene Adapter auflisten"))
+    setup_parser = sub.add_parser(
+        "setup-check",
+        parents=[common],
+        help=tr(
+            "Einrichtung prüfen: Adapter finden, Zugriffsrechte und Baudrate (38400, 115200); "
+            "sendet nur Adapter-Befehle (ATZ ...)"
+        ),
+    )
+    setup_parser.add_argument(
+        "--port", help=tr("nur diesen Port prüfen (Standard: alle gefundenen Adapter)")
+    )
     export_parser = sub.add_parser(
         "export",
         parents=[common],
@@ -773,6 +822,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_live(args)
         elif args.command == "ports":
             _run_ports()
+        elif args.command == "setup-check":
+            return _run_setup_check(args)
         elif args.command == "export":
             return _run_export(args, args.export_parser)
     except (TransportError, ElmError) as e:

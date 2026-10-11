@@ -56,3 +56,35 @@ Zugriff auf die gängigen USB-Seriell-Chips (FTDI, CH340/CH341, CP210x):
 sudo cp packaging/99-obd-diag.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
+
+## Einrichtung prüfen
+
+```sh
+obd-diag setup-check                     # alle gefundenen Adapter
+obd-diag setup-check --port /dev/rfcomm0 # nur diesen Port
+```
+
+prüft der Reihe nach, ob die Oberfläche (PySide6) und der Fehlercode-Katalog
+installiert sind, welche Adapter angeschlossen sind, ob der Nutzer sie öffnen darf
+und mit welcher Baudrate sie antworten (erst 38400, dann 115200). Fehlt der Zugriff,
+nennt die Prüfung die Gruppe des Geräts und den Befehl zum Eintragen; ist der Nutzer
+schon eingetragen, aber noch nicht neu angemeldet, sagt sie das. Findet sie keinen
+Adapter und ist `brltty` installiert, weist sie darauf hin: das Programm für
+Braillezeilen belegt unter Ubuntu oft Adapter mit CH340-Chip.
+
+```
+  OK       Oberfläche (PySide6) installiert
+  OK       Fehlercode-Katalog vorhanden
+  OK       /dev/ttyUSB0 (USB Serial (QinHeng)): Zugriff erlaubt
+  OK       /dev/ttyUSB0: ELM327 v1.5 antwortet mit 38400 Baud
+  Hinweis  Vor dem Verbinden am Auto: Zündung einschalten (der Motor darf aus bleiben). Bei Adaptern mit MS-/HS-CAN-Schalter HS-CAN wählen.
+
+Ergebnis: bereit. Weiter mit: obd-diag diagnose --port /dev/ttyUSB0 --baud 38400
+```
+
+Gesendet werden nur die Adapter-Befehle, mit denen jeder Befehl beginnt (`ATZ`,
+`ATE0`, `ATL0`, `ATS0`, `ATH0`, `ATSP0`); nichts davon erreicht das Fahrzeug, die Prüfung
+geht also auch ohne Auto. Der Exit-Code ist 0, wenn ein Adapter antwortet.
+
+Die Oberfläche öffnet dieselbe Prüfung beim ersten Start von selbst und danach unter
+*Optionen → Einrichtung prüfen …*; „Übernehmen“ trägt Port und Baudrate oben ein.
