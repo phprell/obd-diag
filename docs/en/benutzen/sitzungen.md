@@ -75,6 +75,9 @@ the scan. Compared are:
 - **Readiness:** check engine light, reported code count, every monitor and "All tests
   complete".
 - **Freeze frame:** triggering code and measured values.
+- **Counters since clearing** (used-car check): warm-ups, distance and time since
+  clearing and with the warning light on. If the counters since clearing went down,
+  the codes were cleared in between; this is marked red.
 - **Vehicle and connection:** VIN (obd-diag warns if the VINs differ), adapter, protocol
   and battery voltage (differences of 0.1 V or more).
 

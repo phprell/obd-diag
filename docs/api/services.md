@@ -44,3 +44,8 @@
 
 ```{automodule} obd_diag.services.live
 ```
+
+## `obd_diag.services.used_car`
+
+```{automodule} obd_diag.services.used_car
+```

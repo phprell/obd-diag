@@ -73,6 +73,9 @@ Die ältere Sitzung gilt als „vorher“, die Reihenfolge der Dateien ist egal.
 - **Readiness:** Motorkontrollleuchte, gemeldete Codezahl, jeder Monitor und „Alle Tests
   abgeschlossen“.
 - **Freeze Frame:** auslösender Code und Messwerte.
+- **Zähler seit dem Löschen** (Gebrauchtwagen-Check): Warmläufe, Strecke und Zeit seit
+  dem Löschen sowie mit Warnleuchte. Fallen die Zähler seit dem Löschen, wurde
+  dazwischen gelöscht; das ist rot markiert.
 - **Fahrzeug und Verbindung:** FIN (bei verschiedener FIN warnt obd-diag), Adapter,
   Protokoll und Bordspannung (Unterschiede ab 0,1 V).
 

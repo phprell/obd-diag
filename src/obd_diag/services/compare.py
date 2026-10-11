@@ -12,6 +12,7 @@ Texte entstehen beim Vergleich in der eingestellten Sprache (``tr``); nach einem
 Sprachwechsel einfach neu vergleichen. Fehlercode-Titel bleiben in der Sprache des Scans.
 """
 
+import dataclasses
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -19,6 +20,7 @@ from typing import Any
 
 from obd_diag.i18n import N_, decimal, tr
 from obd_diag.protocol.obd import FreezeFrame
+from obd_diag.protocol.pids import PIDS
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, ScanResult
 from obd_diag.services.readiness import ALL_COMPLETE_LABEL, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session
@@ -302,6 +304,52 @@ def _compare_freeze_frame(before: Session, after: Session) -> list[Change]:
     return changes
 
 
+# Feld in ``ClearCounters``, Schlüssel in ``PIDS`` (Bezeichnung, Einheit), zählt seit
+# dem Löschen (True) oder mit Warnleuchte (False)
+_COUNTERS: tuple[tuple[str, str, bool], ...] = (
+    ("warmups", "warmups_since_clear", True),
+    ("distance_km", "distance_since_clear", True),
+    ("time_min", "time_since_clear", True),
+    ("mil_distance_km", "distance_with_mil", False),
+    ("mil_time_min", "time_with_mil", False),
+)
+
+
+def _compare_clear_counters(before: Session, after: Session) -> list[Change]:
+    """Zähler des Gebrauchtwagen-Checks (PID 30, 31, 4E, 21, 4D).
+
+    Fällt ein Zähler seit dem Löschen, wurde dazwischen gelöscht (oder die Batterie
+    abgeklemmt): schlechter, weil die Vorgeschichte damit weg ist. Mehr Strecke oder
+    Zeit mit Warnleuchte ist ebenfalls schlechter.
+    """
+    a, b = before.clear_counters, after.clear_counters
+    if a is None and b is None:
+        return []
+    # asdict statt getattr: der Architekturtest verbietet berechnete Attributnamen
+    old = {} if a is None else dataclasses.asdict(a)
+    new = {} if b is None else dataclasses.asdict(b)
+    changes: list[Change] = []
+    for field, key, since_clear in _COUNTERS:
+        v_a, v_b = old.get(field), new.get(field)
+        if v_a == v_b:
+            continue
+        spec = PIDS[key]
+        trend = Trend.NEUTRAL
+        if v_a is not None and v_b is not None:
+            if since_clear and v_b < v_a:
+                trend = Trend.WORSE
+            elif not since_clear:
+                trend = Trend.WORSE if v_b > v_a else Trend.BETTER
+
+        def text(value: int | None, unit: str = spec.unit) -> str | None:
+            if value is None:
+                return None
+            return f"{value} {tr(unit)}" if unit else str(value)
+
+        changes.append(Change(_kind(v_a, v_b), spec.name, text(v_a), text(v_b), trend))
+    return changes
+
+
 def _voltage_text(voltage: float | None) -> str:
     return tr("unbekannt") if voltage is None else f"{decimal(voltage)} V"
 
@@ -354,6 +402,7 @@ SECTIONS: list[tuple[str, str, Comparer]] = [
     ("codes", N_("Fehlercodes"), _compare_codes),
     ("readiness", N_("Readiness"), _compare_readiness),
     ("freeze_frame", N_("Freeze Frame"), _compare_freeze_frame),
+    ("clear_counters", N_("Zähler seit dem Löschen"), _compare_clear_counters),
     ("connection", N_("Verbindung"), _compare_connection),
 ]
 

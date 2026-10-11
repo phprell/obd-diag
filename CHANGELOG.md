@@ -15,8 +15,19 @@ vor 1.0 kann sich die Bedienung noch ändern.
 - Sitzungsvergleich: `obd-diag compare ALT.json NEU.json` bzw. in der Oberfläche *Datei →
   Mit Sitzung vergleichen …* zeigt, was sich zwischen zwei gespeicherten Diagnosen
   geändert hat: neue, entfallene und weiterhin vorhandene Fehlercodes, Readiness-Monitore,
-  Kontrollleuchte, Freeze Frame, FIN, Protokoll und Bordspannung (`--json` für Skripte).
+  Kontrollleuchte, Freeze Frame, Zähler seit dem Löschen, FIN, Protokoll und
+  Bordspannung (`--json` für Skripte).
   Arbeitet nur mit den Dateien, das Fahrzeug wird nicht angesprochen.
+
+- Gebrauchtwagen-Check: `obd-diag used-car`, Reiter „Gebrauchtwagen“ in der Oberfläche
+  und ein Abschnitt im PDF-Bericht zeigen, ob die Fehlercodes vor kurzem gelöscht wurden.
+  Gelesen werden die Zähler, die das Löschen auf null setzt (Mode 01 PID 30 Warmläufe,
+  31 Strecke, 4E Zeit seit dem Löschen, 21/4D Strecke/Zeit mit Warnleuchte), dazu
+  Warnleuchte, offene Readiness-Tests und permanente Codes (Mode 0A). Urteil
+  „auffällig“, „unauffällig“ oder „nicht beurteilbar“ nach einer Faustregel (unter
+  10 Warmläufen, 200 km oder 300 Minuten). `obd-diag diagnose` und „Verbinden & Scannen“
+  lesen die Zähler mit (fünf Anfragen mehr) und speichern sie in der Sitzung; ältere
+  Sitzungen öffnen weiter. Nur lesend, keine neuen Befehle in der Freigabeliste.
 
 ## 0.2.1 – 2026-10-11
 

@@ -220,6 +220,31 @@ def test_freeze_frame_changes() -> None:
     assert change_text(gone["Motorlast"]) == "entfällt (vorher: 34,5 %)"
 
 
+def test_clear_counters() -> None:
+    """Fallen die Zähler seit dem Löschen, wurde dazwischen gelöscht."""
+    before = full_session()
+    assert before.clear_counters is not None
+    counters = dataclasses.replace(
+        before.clear_counters, warmups=1, distance_km=120, mil_distance_km=0, mil_time_min=None
+    )
+    result = compare_sessions(before, _later(before, clear_counters=counters))
+    changes = {c.subject: c for c in _section(result, "clear_counters")}
+    assert changes["Warmläufe seit Löschen"] == Change(
+        ChangeKind.CHANGED, "Warmläufe seit Löschen", "3", "1", Trend.WORSE
+    )
+    assert change_text(changes["Strecke seit Löschen"]) == "45 km → 120 km"
+    assert changes["Strecke seit Löschen"].trend is Trend.NEUTRAL
+    assert changes["Strecke mit Warnleuchte an"].trend is Trend.BETTER
+    assert change_text(changes["Zeit mit Warnleuchte an"]) == "entfällt (vorher: 20 min)"
+    assert "Zeit seit Löschen" not in changes
+    # ältere Sitzung ohne Zähler
+    old = dataclasses.replace(before, clear_counters=None)
+    changes = {
+        c.subject: c for c in _section(compare_sessions(old, _later(before)), "clear_counters")
+    }
+    assert change_text(changes["Strecke seit Löschen"]) == "neu: 45 km"
+
+
 def test_vehicle_and_connection() -> None:
     before = full_session()
     assert before.vehicle is not None
@@ -260,6 +285,7 @@ def test_sections_are_extensible() -> None:
         "codes",
         "readiness",
         "freeze_frame",
+        "clear_counters",
         "connection",
     ]
     extra = ("extra", "Extra", lambda a, b: [Change(ChangeKind.CHANGED, "x", "1", "2")])
@@ -283,7 +309,14 @@ def test_english_texts() -> None:
     finally:
         set_language("de")
     titles = [s.title for s in result.sections]
-    assert titles == ["Vehicle", "Trouble codes", "Readiness", "Freeze frame", "Connection"]
+    assert titles == [
+        "Vehicle",
+        "Trouble codes",
+        "Readiness",
+        "Freeze frame",
+        "Counters since clearing",
+        "Connection",
+    ]
 
 
 def test_json_form() -> None:
