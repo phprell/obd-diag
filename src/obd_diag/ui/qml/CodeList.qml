@@ -128,9 +128,9 @@ Rectangle {
         Label {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
-            text: pane.vm.busy ? "Lese Fehlercodes …"
-                : pane.vm.hasResult ? "Keine Fehlercodes gespeichert."
-                : "Noch nicht verbunden"
+            text: pane.vm.busy ? qsTr("Lese Fehlercodes …")
+                : pane.vm.hasResult ? qsTr("Keine Fehlercodes gespeichert.")
+                : qsTr("Noch nicht verbunden")
             font.pixelSize: 16
             font.bold: true
             color: pane.vm.hasResult && !pane.vm.busy ? Theme.okText : palette.text
@@ -141,9 +141,8 @@ Rectangle {
             horizontalAlignment: Text.AlignHCenter
             visible: !pane.vm.busy
             text: pane.vm.hasResult
-                  ? "Weder gespeicherte noch ausstehende oder permanente Codes."
-                  : "Adapter einstecken, Zündung einschalten, Port wählen und "
-                    + "„Verbinden & Scannen“ drücken."
+                  ? qsTr("Weder gespeicherte noch ausstehende oder permanente Codes.")
+                  : qsTr("Adapter einstecken, Zündung einschalten, Port wählen und „Verbinden & Scannen“ drücken.")
             color: Theme.muted
             wrapMode: Text.Wrap
         }

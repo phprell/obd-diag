@@ -1,6 +1,7 @@
 """Die Byte-Beispiele der Dokumentation (``docs/technik``) stimmen mit dem Code überein.
 
-Wer ein Beispiel auf den Seiten ändert, ändert es hier mit. Außerdem: Die erzeugten
+Wer ein Beispiel auf den Seiten ändert, ändert es hier mit. Jedes Beispiel muss auf der
+deutschen und der englischen Seite (``docs/en/technik``) stehen. Außerdem: Die erzeugten
 Tabellen (``tools/docs_tables.py``) decken jede Freigabe und jeden Live-Wert ab.
 """
 
@@ -21,8 +22,22 @@ from tools.docs_tables import command_tables, formula, pid_table, write_tables
 DOCS = Path(__file__).resolve().parents[2] / "docs"
 
 
-def _page(name: str) -> str:
-    return (DOCS / "technik" / name).read_text(encoding="utf-8")
+class _Pages:
+    """Eine Technik-Seite in beiden Sprachen; ``in`` gilt nur, wenn der Text in beiden
+    steht."""
+
+    def __init__(self, name: str) -> None:
+        self.texts = [
+            (folder / "technik" / name).read_text(encoding="utf-8")
+            for folder in (DOCS, DOCS / "en")
+        ]
+
+    def __contains__(self, item: str) -> bool:
+        return all(item in text for text in self.texts)
+
+
+def _page(name: str) -> _Pages:
+    return _Pages(name)
 
 
 def test_single_frame_rpm() -> None:
@@ -130,6 +145,17 @@ def test_command_table_lists_every_spec_entry() -> None:
         if forbidden.command:
             assert f"`{forbidden.command}`" in table
     assert len(re.findall(r"\*\*ja\*\*", table)) == 1  # nur 04 schreibt
+
+
+def test_english_tables() -> None:
+    pids = pid_table(lang="en")
+    assert "| `0C` | `rpm` | Engine speed | rpm | `(256A + B) / 4` | 0 to 16383.8 |" in pids
+    assert "only if bit 0 of A is set" in pids and "signed" in pids
+    commands = command_tables(lang="en")
+    assert "datasheet p. 28" in commands and "(CR only)" in commands
+    assert len(re.findall(r"\*\*yes\*\*", commands)) == 1
+    for table in (pids, commands):
+        assert not re.search(r"[äöüß]|\b(nur|bis|ja|nein|Datenblatt|Bedeutung)\b", table)
 
 
 def test_write_tables_is_idempotent(tmp_path: Path) -> None:

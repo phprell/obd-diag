@@ -2,7 +2,8 @@
 
 Alle Funktionen stehen unter einem Befehl `obd-diag` mit Unterbefehlen. Befehle mit
 Adapter nehmen `--port` (Standard `/dev/ttyUSB0`), `--baud` (Standard 38400) und
-`--trace` für einen Mitschnitt ({doc}`sitzungen`).
+`--trace` für einen Mitschnitt ({doc}`sitzungen`). `--lang de` oder `--lang en` stellt die
+Sprache aller Ausgaben ein ({doc}`sprache`).
 
 | Befehl | Zweck | sendet ans Fahrzeug |
 | --- | --- | --- |
@@ -18,7 +19,7 @@ Adapter nehmen `--port` (Standard `/dev/ttyUSB0`), `--baud` (Standard 38400) und
 ## Beispiele
 
 ```sh
-obd-diag scan --port /dev/ttyUSB0                  # Tabelle, Texte auf Deutsch
+obd-diag scan --port /dev/ttyUSB0                  # Tabelle, Sprache wie das System
 obd-diag scan --port /dev/ttyUSB0 --lang en --json # englisch, maschinenlesbar
 obd-diag diagnose --port /dev/ttyUSB0 --save --pdf bericht.pdf
 obd-diag vin WVWZZZ1KZ6W123456                     # nur dekodieren, ohne Adapter

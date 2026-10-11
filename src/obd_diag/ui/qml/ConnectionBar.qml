@@ -33,7 +33,7 @@ ToolBar {
         spacing: Theme.gap
 
         Label {
-            text: "Port"
+            text: qsTr("Port")
         }
         ComboBox {
             id: portBox
@@ -43,10 +43,10 @@ ToolBar {
             enabled: !bar.locked
             model: bar.vm.ports
             textRole: "device"
-            Accessible.name: "Serieller Port"
+            Accessible.name: qsTr("Serieller Port")
             ToolTip.visible: hovered && !popup.visible
             ToolTip.delay: 600
-            ToolTip.text: "Adapter wählen oder Pfad eingeben, z. B. /dev/ttyUSB0 oder /dev/pts/5"
+            ToolTip.text: qsTr("Adapter wählen oder Pfad eingeben, z. B. /dev/ttyUSB0 oder /dev/pts/5")
 
             delegate: ItemDelegate {
                 required property var modelData
@@ -76,11 +76,11 @@ ToolBar {
             onAccepted: bar.scan()
         }
         Button {
-            text: "Suchen"
+            text: qsTr("Suchen")
             enabled: !bar.locked
             ToolTip.visible: hovered
             ToolTip.delay: 600
-            ToolTip.text: "Angeschlossene Adapter neu suchen"
+            ToolTip.text: qsTr("Angeschlossene Adapter neu suchen")
             onClicked: bar.vm.refreshPorts()
         }
 
@@ -89,7 +89,7 @@ ToolBar {
         }
 
         Label {
-            text: "Baud"
+            text: qsTr("Baud")
         }
         ComboBox {
             id: baudBox
@@ -97,7 +97,7 @@ ToolBar {
             Layout.preferredWidth: 110
             enabled: !bar.locked
             model: [38400, 9600, 115200, 230400, 500000]
-            Accessible.name: "Baudrate"
+            Accessible.name: qsTr("Baudrate")
         }
 
         Item {
@@ -106,7 +106,7 @@ ToolBar {
 
         Button {
             objectName: "scanButton"
-            text: bar.vm.hasResult && !bar.vm.viewOnly ? "Erneut scannen" : "Verbinden && Scannen"
+            text: bar.vm.hasResult && !bar.vm.viewOnly ? qsTr("Erneut scannen") : qsTr("Verbinden && Scannen")
             enabled: !bar.locked
             palette.button: Theme.accentButton
             palette.buttonText: "white"

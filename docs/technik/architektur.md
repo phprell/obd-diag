@@ -24,6 +24,9 @@ flowchart TB
 | `services/` | ganze Abläufe: Scan, Diagnose, Löschen, Live | `scan`, `run_diagnosis`, `clear_codes`, `run_live`, `read_vin`, Sitzungen und Ablage |
 | `ui/`, `cli.py` | Anzeige und Bedienung | View-Models, QML, `obd-diag`-Befehle |
 
+Das Übersetzungsmodul `obd_diag.i18n` gehört zu keiner Schicht und importiert nichts aus
+dem Paket; jede Schicht darf es benutzen ({doc}`../benutzen/sprache`).
+
 ## Regeln, die Tests prüfen
 
 - **Keine Importe nach oben.** `transport` importiert nichts aus `protocol` oder

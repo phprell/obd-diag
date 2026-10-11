@@ -24,6 +24,7 @@ class SpecEntry:
     writes: bool
     requires: str | None
     meaning: str
+    meaning_en: str
     source: str
     page: int
     quote: str
@@ -39,6 +40,7 @@ class SpecEntry:
 class Forbidden:
     command: str
     reason: str
+    reason_en: str
     source: str
     page: int
     quote: str
@@ -68,6 +70,7 @@ def load_spec() -> CommandSpec:
             writes=e["writes"],
             requires=e.get("requires"),
             meaning=e["meaning"],
+            meaning_en=e["meaning_en"],
             source=e["source"],
             page=e["page"],
             quote=e["quote"],
@@ -75,7 +78,7 @@ def load_spec() -> CommandSpec:
         for e in data["allowed"]
     )
     forbidden = tuple(
-        Forbidden(e["command"], e["reason"], e["source"], e["page"], e["quote"])
+        Forbidden(e["command"], e["reason"], e["reason_en"], e["source"], e["page"], e["quote"])
         for e in data["forbidden"]
     )
     return CommandSpec(allowed, forbidden)

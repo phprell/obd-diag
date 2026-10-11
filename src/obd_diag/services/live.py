@@ -17,6 +17,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Self
 
+from obd_diag.i18n import csv_delimiter, language, tr
 from obd_diag.protocol import pids as pid_table
 from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
 from obd_diag.protocol.pids import PidSpec
@@ -85,17 +86,19 @@ def select_pids(
     ohne Werte liest nichts.
     """
     by_key = {spec.key: spec for spec in setup.available}
-    offered = ", ".join(by_key) or "keine"
+    offered = ", ".join(by_key) or tr("keine")
     if keys is None:
         defaults = [by_key[key] for key in DEFAULT_KEYS if key in by_key]
         if not defaults:
             raise SelectionError(
-                f"Das Fahrzeug unterstützt keinen der Standardwerte (verfügbar: {offered})"
+                tr(
+                    "Das Fahrzeug unterstützt keinen der Standardwerte (verfügbar: {offered})"
+                ).format(offered=offered)
             )
         return defaults
     wanted = list(dict.fromkeys(keys))
     if not wanted:
-        raise SelectionError("keine Werte gewählt")
+        raise SelectionError(tr("keine Werte gewählt"))
     unknown: list[str] = []
     unsupported: list[str] = []
     selected: list[PidSpec] = []
@@ -111,32 +114,41 @@ def select_pids(
             unsupported.append(key)
     problems = []
     if unknown:
-        problems.append(f"unbekannte Werte: {', '.join(unknown)}")
+        problems.append(tr("unbekannte Werte: {keys}").format(keys=", ".join(unknown)))
     if unsupported and not skip_unsupported:
-        problems.append(f"vom Fahrzeug nicht unterstützt: {', '.join(unsupported)}")
+        problems.append(_unsupported(unsupported))
     if problems:
-        raise SelectionError(f"{'; '.join(problems)} (verfügbar: {offered})")
+        raise SelectionError(_with_offered("; ".join(problems), offered))
     if not selected:
-        raise SelectionError(
-            f"vom Fahrzeug nicht unterstützt: {', '.join(unsupported)} (verfügbar: {offered})"
-        )
+        raise SelectionError(_with_offered(_unsupported(unsupported), offered))
     return selected
 
 
+def _unsupported(keys: list[str]) -> str:
+    return tr("vom Fahrzeug nicht unterstützt: {keys}").format(keys=", ".join(keys))
+
+
+def _with_offered(problem: str, offered: str) -> str:
+    return tr("{problem} (verfügbar: {offered})").format(problem=problem, offered=offered)
+
+
 def _csv_number(value: float | None) -> str:
-    """Bis zu drei Nachkommastellen, Dezimalkomma, ohne Tausenderpunkt; None: leer."""
+    """Bis zu drei Nachkommastellen, ohne Tausendertrennung; None: leer. Dezimalzeichen
+    nach der Sprache (``obd_diag.i18n``)."""
     if value is None:
         return ""
     text = f"{value:.3f}".rstrip("0").rstrip(".")
     if text == "-0":
         text = "0"
-    return text.replace(".", ",")
+    return text.replace(".", ",") if language() == "de" else text
 
 
 class LiveRecorder:
-    """Schreibt Live-Werte als CSV (UTF-8 mit BOM, Semikolon, Dezimalkomma wie export).
+    """Schreibt Live-Werte als CSV (UTF-8 mit BOM; Trennzeichen und Dezimalzeichen nach
+    der Sprache wie export: Deutsch Semikolon und Komma, Englisch Komma und Punkt).
 
-    Kopfzeile: ``Zeit (s)``, dann je Wert ``Name (Einheit)``, zuletzt ``Bordspannung (V)``.
+    Kopfzeile: ``Zeit (s)``, dann je Wert ``Name (Einheit)``, zuletzt ``Bordspannung (V)``
+    (in der eingestellten Sprache).
     Nicht lesbare Werte bleiben leere Zellen. Jede Zeile wird sofort geschrieben
     (flush), damit ein Abbruch nichts verliert. Die Datei wird beim Erzeugen exklusiv
     angelegt; existiert sie schon, gibt es ``FileExistsError`` (nie überschreiben).
@@ -146,8 +158,12 @@ class LiveRecorder:
         self.path = path
         self.pids = list(pids)
         self._file = path.open("x", encoding="utf-8-sig", newline="")
-        self._writer = csv.writer(self._file, delimiter=";", lineterminator="\r\n")
-        header = ["Zeit (s)", *(f"{p.name} ({p.unit})" for p in self.pids), "Bordspannung (V)"]
+        self._writer = csv.writer(self._file, delimiter=csv_delimiter(), lineterminator="\r\n")
+        header = [
+            tr("Zeit (s)"),
+            *(f"{p.name} ({tr(p.unit)})" for p in self.pids),
+            tr("Bordspannung (V)"),
+        ]
         self._writer.writerow(header)
         self._file.flush()
 
@@ -269,8 +285,10 @@ def run_live(
         failed_rounds = failed_rounds + 1 if groups and len(errors) == len(groups) else 0
         if failed_rounds >= MAX_FAILED_ROUNDS:
             raise ElmError(
-                f"keine Antwort vom Fahrzeug in {failed_rounds} Runden nacheinander "
-                f"(Zündung aus?): {errors[-1]}"
+                tr(
+                    "keine Antwort vom Fahrzeug in {rounds} Runden nacheinander "
+                    "(Zündung aus?): {error}"
+                ).format(rounds=failed_rounds, error=errors[-1])
             )
         sample = LiveSample(round_start - start, values, voltage, throttled)
         if recorder is not None:

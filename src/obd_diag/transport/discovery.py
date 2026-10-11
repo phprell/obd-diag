@@ -6,6 +6,8 @@ from pathlib import Path
 
 from serial.tools import list_ports as serial_ports
 
+from obd_diag.i18n import tr
+
 DEV = Path("/dev")
 BLUETOOTH_DESCRIPTION = "Bluetooth (RFCOMM)"
 
@@ -27,7 +29,7 @@ def _usb_description(description: str, manufacturer: str | None) -> str:
     text = "" if description in ("", "n/a") else description
     if manufacturer and manufacturer not in text:
         text = f"{text} ({manufacturer})" if text else manufacturer
-    return text or "USB-Seriell"
+    return text or tr("USB-Seriell")
 
 
 def _sort_key(device: str) -> tuple[str, int]:

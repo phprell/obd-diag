@@ -23,6 +23,8 @@ Headern (``ATH1``) und ordnen die Frames über die CAN-ID zu (``protocol.headers
 
 import re
 
+from obd_diag.i18n import tr
+
 _BYTE_COUNT = re.compile(r"^[0-9A-F]{3}$")
 _FRAME = re.compile(r"^([0-9A-F]):\s*(.*)$")
 
@@ -39,7 +41,7 @@ def _hex(text: str) -> bytes:
     try:
         return bytes.fromhex(text.replace(" ", ""))
     except ValueError:
-        raise ValueError(f"keine Hex-Daten: {text!r}") from None
+        raise ValueError(tr("keine Hex-Daten: {text}").format(text=repr(text))) from None
 
 
 class _Collector:
@@ -65,9 +67,10 @@ class _Collector:
         index = self.open
         if index is not None and self.lengths[index] is not None and not self.complete(index):
             raise FrameSequenceError(
-                f"mehrteilige Nachricht unvollständig ({len(self.messages[index])} von "
-                f"{self.lengths[index]} Bytes): Frames fehlen oder stammen von mehreren "
-                "Steuergeräten"
+                tr(
+                    "mehrteilige Nachricht unvollständig ({got} von {length} Bytes): Frames "
+                    "fehlen oder stammen von mehreren Steuergeräten"
+                ).format(got=len(self.messages[index]), length=self.lengths[index])
             )
         self.open = None
 
@@ -81,14 +84,18 @@ class _Collector:
         ):
             index = None  # nächste Nachricht ohne Längenzeile (ELM327-emulator)
         if index is not None and self.complete(index):
-            raise FrameSequenceError(f"Frame {seq:X} nach vollständiger Nachricht")
+            raise FrameSequenceError(
+                tr("Frame {seq:X} nach vollständiger Nachricht").format(seq=seq)
+            )
         if index is None:
             index = self.open = self.add(b"", None)
             self.next_seq = 0
         if seq != self.next_seq:
             raise FrameSequenceError(
-                f"Frame {seq:X} statt {self.next_seq:X}; Antworten mehrerer Steuergeräte "
-                "vermischt? Nur mit Headern (ATH1) zuzuordnen"
+                tr(
+                    "Frame {seq:X} statt {expected:X}; Antworten mehrerer Steuergeräte "
+                    "vermischt? Nur mit Headern (ATH1) zuzuordnen"
+                ).format(seq=seq, expected=self.next_seq)
             )
         self.messages[index] += data
         self.next_seq = (seq + 1) % 16

@@ -6,6 +6,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from obd_diag.i18n import tr
+
 
 def data_dir() -> Path:
     """``$XDG_DATA_HOME/obd-diag`` (Standard: ~/.local/share/obd-diag)."""
@@ -44,6 +46,10 @@ def write_new_json(directory: Path, stem: str, data: dict[str, Any]) -> Path:
             except FileExistsError:
                 continue
             return path
-        raise FileExistsError(f"kein freier Dateiname für {stem} in {directory}")
+        raise FileExistsError(
+            tr("kein freier Dateiname für {stem} in {directory}").format(
+                stem=stem, directory=directory
+            )
+        )
     finally:
         tmp.unlink(missing_ok=True)

@@ -37,6 +37,10 @@ Vorhandene Dateien werden nie überschrieben (dann `…-2.json`). Die Datei trä
 `"format": "obd-diag-session"` und `"version": 1`; fremde oder neuere Formate lehnt das
 Laden ab.
 
+Die Sitzung ist sprachneutral bis auf die Fehlercode-Texte: Die stehen in der Sprache
+des Scans. Alles andere (Monitornamen, Beschriftungen) erscheint beim Öffnen oder
+Exportieren in der eingestellten Sprache.
+
 ## PDF-Bericht und CSV
 
 ```sh
@@ -44,13 +48,14 @@ obd-diag export ~/.local/share/obd-diag/sessions/session-20261007-143205.json \
     --pdf bericht.pdf --csv fehlercodes.csv
 ```
 
-- **PDF** (DIN A4, Deutsch): Fahrzeug, Adapter, Protokoll, Bordspannung,
+- **PDF** (DIN A4, in der eingestellten Sprache): Fahrzeug, Adapter, Protokoll, Bordspannung,
   Kurzübersicht, Readiness, Fehlercodes mit Erklärung, Ursachen, Symptomen und
   Kostenrahmen, Freeze Frame. Schrift: DejaVu Sans, Liberation Sans oder Noto Sans,
   falls installiert (eingebettet), sonst Helvetica.
 - **CSV**: eine Zeile pro Fehlercode (Code, Art, Titel, Beschreibung, Ursachen,
-  Symptome, MIL, Abgasrelevant, Reparaturaufwand, Kosten, Datum, FIN). UTF-8 mit BOM
-  und `;`, damit ein deutsches Excel sie per Doppelklick richtig öffnet.
+  Symptome, MIL, Abgasrelevant, Reparaturaufwand, Kosten, Datum, FIN). UTF-8 mit BOM;
+  auf Deutsch mit `;`, auf Englisch mit `,` als Trennzeichen, damit eine
+  Tabellenkalkulation in dieser Sprache sie per Doppelklick richtig öffnet.
 
 ## Mitschnitt (`--trace`)
 

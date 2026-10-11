@@ -12,4 +12,5 @@ data
 export
 ui
 cli
+i18n
 ```

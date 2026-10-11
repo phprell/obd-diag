@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+from obd_diag.i18n import N_, tr
 from obd_diag.protocol.headers import HeaderFormat, header_format
 from obd_diag.transport import Transport, TransportError
 
@@ -95,7 +96,8 @@ class NoConnectionError(ElmError):
     die Ursache, ``HINT`` sagt dem Nutzer daher, was zu tun ist.
     """
 
-    HINT = (
+    # deutsch; zur Ausgabe ``tr(NoConnectionError.HINT)``
+    HINT = N_(
         "Kein Steuergerät antwortet. Zündung einschalten (der Motor darf aus bleiben), "
         "bei Adaptern mit MS-/HS-CAN-Schalter HS-CAN wählen und erneut versuchen."
     )
@@ -181,8 +183,8 @@ class Elm327:
         if cmd == CLEAR_COMMAND:
             if self._clear_allowed:
                 return
-            raise ForbiddenCommandError("04 (Fehlercodes löschen) nur über clear_dtcs")
-        raise ForbiddenCommandError(f"nicht freigegebener Befehl {cmd!r}")
+            raise ForbiddenCommandError(tr("04 (Fehlercodes löschen) nur über clear_dtcs"))
+        raise ForbiddenCommandError(tr("nicht freigegebener Befehl {cmd}").format(cmd=repr(cmd)))
 
     def initialize(self) -> str:
         """Setzt den Adapter zurück und schaltet Echo, Zeilenvorschub und Leerzeichen ab.
@@ -299,7 +301,10 @@ class Elm327:
                 # Mit Headern würden alle weiteren Antworten falsch gelesen. Kein
                 # ElmError, damit kein Aufrufer das als "Angabe fehlt" abfängt.
                 raise TransportError(
-                    f"Adapter lässt sich nicht auf ATH0 zurückstellen ({e}); Sitzung abgebrochen"
+                    tr(
+                        "Adapter lässt sich nicht auf ATH0 zurückstellen ({error}); "
+                        "Sitzung abgebrochen"
+                    ).format(error=e)
                 ) from e
 
     def _protocol_number(self) -> str:
@@ -351,5 +356,7 @@ class Elm327:
         except UnknownCommandError:
             name = ""
         if inferred is not None:
-            name = f"{name or 'unbekannt'} (laut Headern {inferred})"
+            name = tr("{name} (laut Headern {inferred})").format(
+                name=name or tr("unbekannt"), inferred=inferred
+            )
         return ObdProtocol(number, name, inferred)

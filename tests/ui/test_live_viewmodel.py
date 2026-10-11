@@ -224,7 +224,7 @@ def test_start_delivers_values_from_worker_and_stops(
     assert vm.property("running") is False
     assert vm.property("stopping") is False
     assert diagnosis.property("blocked") is False
-    assert vm.property("notice") == "Live-Daten beendet nach 3 Runde(n)."
+    assert vm.property("notice") == "Live-Daten beendet nach 3 Runden."
     assert vm.property("recordingPath") == ""
     # Werte bleiben nach dem Stopp sichtbar
     assert _entry(vm, "rpm")["valueText"] == "876"

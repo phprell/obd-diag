@@ -1,6 +1,6 @@
 """Tabellen für die Dokumentation aus Freigabeliste und PID-Tabelle erzeugen.
 
-    uv run python tools/docs_tables.py [ZIELORDNER]      # Standard: docs/_gen
+    uv run python tools/docs_tables.py [ZIELORDNER] [--lang en]   # Standard: docs/_gen
 
 Schreibt Markdown-Dateien, die ``docs/`` per ``{include}`` einbindet; ``docs/conf.py``
 ruft ``write_tables`` bei jedem Bauen auf. So zeigt die Dokumentation immer genau das,
@@ -12,19 +12,26 @@ Die Formeln der Live-Werte stehen im Code teils als Funktion mit Docstring
 Quelltext gelesen und in die J1979-Schreibweise mit Datenbytes ``A``, ``B``, ``C`` …
 übersetzt; bleibt dabei Python-Syntax übrig, schlägt ``formula`` fehl, statt eine
 halbe Formel zu zeigen.
+
+Mit ``lang="en"`` entstehen dieselben Tabellen englisch für ``docs/en`` (Namen der
+Live-Werte aus ``obd_diag.i18n``, Bedeutungen aus ``meaning_en``/``reason_en`` der
+Spezifikation).
 """
 
+import argparse
 import ast
 import inspect
 import re
 import sys
 import textwrap
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from obd_diag import i18n  # noqa: E402
 from obd_diag.protocol.pids import PIDS, PidSpec  # noqa: E402
 from tests.command_spec import CommandSpec, load_spec  # noqa: E402
 
@@ -100,76 +107,152 @@ def formula(decode: Callable[[bytes], object]) -> str:
     raise ValueError(f"keine Formel für {decode!r}")
 
 
-def _number(value: float) -> str:
+# Feste Texte der Tabellen je Sprache
+_TEXT = {
+    "de": {
+        "pid_header": "| PID | Schlüssel | Wert | Einheit | Formel | Bereich |",
+        "to": "bis",
+        "pid_head": (
+            "{values} Werte aus {pids} PIDs, nach PID sortiert. `A`, `B`, `C` … sind "
+            "die Datenbytes nach `41 <PID>`; der Bereich ist der volle Wertebereich der "
+            "Kodierung, nicht der physikalisch plausible.\n\n"
+        ),
+        "datasheet": "Datenblatt S. {page}",
+        "page": "{source} S. {page}",
+        "allowed": "## Erlaubte Befehle\n",
+        "allowed_header": "| Befehl | Bedeutung | ans Fahrzeug | schreibt | Quelle | Zitat |",
+        "only_in": " (nur in `{context}`)",
+        "yes": "ja",
+        "no": "nein",
+        "forbidden": "## Verbotene Beispiele\n",
+        "forbidden_intro": (
+            "Diese Befehle lehnt die Freigabeliste ab; die Tests prüfen, dass keiner je "
+            "gesendet wird.\n"
+        ),
+        "forbidden_header": "| Befehl | Warum verboten | Quelle | Zitat |",
+        "cr_only": "(nur CR)",
+        "quote": "„{quote}“",
+    },
+    "en": {
+        "pid_header": "| PID | Key | Value | Unit | Formula | Range |",
+        "to": "to",
+        "pid_head": (
+            "{values} values from {pids} PIDs, sorted by PID. `A`, `B`, `C` … are the "
+            "data bytes after `41 <PID>`; the range is the full value range of the "
+            "encoding, not the physically plausible one.\n\n"
+        ),
+        "datasheet": "datasheet p. {page}",
+        "page": "{source} p. {page}",
+        "allowed": "## Allowed commands\n",
+        "allowed_header": "| Command | Meaning | to the vehicle | writes | Source | Quote |",
+        "only_in": " (only in `{context}`)",
+        "yes": "yes",
+        "no": "no",
+        "forbidden": "## Forbidden examples\n",
+        "forbidden_intro": (
+            "The allowlist rejects these commands; the tests check that none of them is "
+            "ever sent.\n"
+        ),
+        "forbidden_header": "| Command | Why forbidden | Source | Quote |",
+        "cr_only": "(CR only)",
+        "quote": "“{quote}”",
+    },
+}
+
+# Deutsche Teile der Formeln (aus _REPLACEMENTS, formula und Docstrings) auf Englisch
+_FORMULA_EN: list[tuple[str, str]] = [
+    (r"vorzeichenbehaftet", "signed"),
+    (r"nur wenn Bit (\d+) von A gesetzt", r"only if bit \1 of A is set"),
+    (r"Sonde geht nicht in den Kraftstofftrimm ein", "sensor not used for fuel trim"),
+]
+
+
+@contextmanager
+def _language(lang: str) -> Iterator[None]:
+    """Namen der Live-Werte (``PidSpec.name``) vorübergehend in ``lang``."""
+    before = i18n.language()
+    i18n.set_language(lang)
+    try:
+        yield
+    finally:
+        i18n.set_language(before)
+
+
+def _formula_text(decode: Callable[[bytes], object], lang: str) -> str:
+    text = formula(decode)
+    if lang == "en":
+        for pattern, replacement in _FORMULA_EN:
+            text = re.sub(pattern, replacement, text)
+    return text
+
+
+def _number(value: float, lang: str = "de") -> str:
     text = f"{value:.6g}"
-    return text.replace(".", ",")
+    return text.replace(".", ",") if lang == "de" else text
 
 
-def pid_table(pids: dict[str, PidSpec] = PIDS) -> str:
-    rows = [
-        "| PID | Schlüssel | Wert | Einheit | Formel | Bereich |",
-        "| --- | --- | --- | --- | --- | --- |",
-    ]
-    for spec in pids.values():
-        rows.append(
-            f"| `{spec.pid:02X}` | `{spec.key}` | {_cell(spec.name)} | {_cell(spec.unit)} "
-            f"| `{_cell(formula(spec.decode))}` "
-            f"| {_number(spec.minimum)} bis {_number(spec.maximum)} |"
-        )
+def pid_table(pids: dict[str, PidSpec] = PIDS, lang: str = "de") -> str:
+    t = _TEXT[lang]
+    rows = [t["pid_header"], "| --- | --- | --- | --- | --- | --- |"]
+    with _language(lang):
+        for spec in pids.values():
+            rows.append(
+                f"| `{spec.pid:02X}` | `{spec.key}` | {_cell(spec.name)} "
+                f"| {_cell(i18n.tr(spec.unit))} "
+                f"| `{_cell(_formula_text(spec.decode, lang))}` "
+                f"| {_number(spec.minimum, lang)} {t['to']} {_number(spec.maximum, lang)} |"
+            )
     distinct = len({spec.pid for spec in pids.values()})
-    head = (
-        f"{len(pids)} Werte aus {distinct} PIDs, nach PID sortiert. `A`, `B`, `C` … sind "
-        "die Datenbytes nach `41 <PID>`; der Bereich ist der volle Wertebereich der "
-        "Kodierung, nicht der physikalisch plausible.\n\n"
-    )
+    head = t["pid_head"].format(values=len(pids), pids=distinct)
     return head + "\n".join(rows) + "\n"
 
 
-def _source_link(source: str, page: int) -> str:
+def _source_link(source: str, page: int, lang: str = "de") -> str:
+    t = _TEXT[lang]
     if source == "ELM327DSJ":
-        return f"Datenblatt S. {page}"
-    return f"{source} S. {page}"
+        return t["datasheet"].format(page=page)
+    return t["page"].format(source=source, page=page)
 
 
-def command_tables(spec: CommandSpec | None = None) -> str:
+def command_tables(spec: CommandSpec | None = None, lang: str = "de") -> str:
     spec = spec or load_spec()
-    out = [
-        "## Erlaubte Befehle\n",
-        "| Befehl | Bedeutung | ans Fahrzeug | schreibt | Quelle | Zitat |",
-        "| --- | --- | --- | --- | --- | --- |",
-    ]
+    t = _TEXT[lang]
+    out = [t["allowed"], t["allowed_header"], "| --- | --- | --- | --- | --- | --- |"]
     for entry in spec.allowed:
         cmd = entry.command if entry.command is not None else entry.pattern
-        meaning = entry.meaning
+        meaning = entry.meaning if lang == "de" else entry.meaning_en
         if entry.requires:
-            meaning += f" (nur in `{entry.requires}`)"
+            meaning += t["only_in"].format(context=entry.requires)
+        writes = f"**{t['yes']}**" if entry.writes else t["no"]
         out.append(
             f"| `{_cell(cmd or '')}` | {_cell(meaning)} "
-            f"| {'ja' if entry.reaches_vehicle else 'nein'} "
-            f"| {'**ja**' if entry.writes else 'nein'} "
-            f"| {_source_link(entry.source, entry.page)} | „{_cell(entry.quote)}“ |"
+            f"| {t['yes'] if entry.reaches_vehicle else t['no']} "
+            f"| {writes} "
+            f"| {_source_link(entry.source, entry.page, lang)} "
+            f"| {t['quote'].format(quote=_cell(entry.quote))} |"
         )
     out += [
         "",
-        "## Verbotene Beispiele\n",
-        "Diese Befehle lehnt die Freigabeliste ab; die Tests prüfen, dass keiner je "
-        "gesendet wird.\n",
-        "| Befehl | Warum verboten | Quelle | Zitat |",
+        t["forbidden"],
+        t["forbidden_intro"],
+        t["forbidden_header"],
         "| --- | --- | --- | --- |",
     ]
     for forbidden in spec.forbidden:
-        cmd = f"`{_cell(forbidden.command)}`" if forbidden.command else "(nur CR)"
+        cmd = f"`{_cell(forbidden.command)}`" if forbidden.command else t["cr_only"]
+        reason = forbidden.reason if lang == "de" else forbidden.reason_en
         out.append(
-            f"| {cmd} | {_cell(forbidden.reason)} "
-            f"| {_source_link(forbidden.source, forbidden.page)} | „{_cell(forbidden.quote)}“ |"
+            f"| {cmd} | {_cell(reason)} "
+            f"| {_source_link(forbidden.source, forbidden.page, lang)} "
+            f"| {t['quote'].format(quote=_cell(forbidden.quote))} |"
         )
     return "\n".join(out) + "\n"
 
 
-def write_tables(out_dir: Path) -> list[Path]:
+def write_tables(out_dir: Path, lang: str = "de") -> list[Path]:
     """Schreibt alle erzeugten Tabellen nach ``out_dir`` und liefert die Dateien."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    files = {"pids.md": pid_table(), "befehle.md": command_tables()}
+    files = {"pids.md": pid_table(lang=lang), "befehle.md": command_tables(lang=lang)}
     written = []
     for name, text in files.items():
         path = out_dir / name
@@ -180,8 +263,12 @@ def write_tables(out_dir: Path) -> list[Path]:
 
 
 def main() -> None:
-    out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "_gen"
-    for path in write_tables(out_dir):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("out_dir", nargs="?", type=Path)
+    parser.add_argument("--lang", choices=tuple(_TEXT), default="de")
+    args = parser.parse_args()
+    default = ROOT / "docs" / "_gen" if args.lang == "de" else ROOT / "docs" / "en" / "_gen"
+    for path in write_tables(args.out_dir or default, args.lang):
         print(path)
 
 

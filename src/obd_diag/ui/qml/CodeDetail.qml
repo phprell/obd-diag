@@ -17,7 +17,7 @@ Rectangle {
     Label {
         anchors.centerIn: parent
         visible: !pane.hasEntry
-        text: pane.vm.hasCodes ? "Code in der Liste auswählen" : ""
+        text: pane.vm.hasCodes ? qsTr("Code in der Liste auswählen") : ""
         color: Theme.muted
     }
 
@@ -82,17 +82,14 @@ Rectangle {
                         Layout.fillWidth: true
                         kind: "info"
                         text: !pane.hasInfo
-                              ? "Für diesen Code gibt es keinen Eintrag im Offline-Katalog. "
-                                + "Herstellerspezifische Codes (z. B. P1xxx, U1xxx) sind dort oft "
-                                + "nicht enthalten; die Bedeutung steht in den Unterlagen des "
-                                + "Herstellers."
+                              ? qsTr("Für diesen Code gibt es keinen Eintrag im Offline-Katalog. Herstellerspezifische Codes (z. B. P1xxx, U1xxx) sind dort oft nicht enthalten; die Bedeutung steht in den Unterlagen des Herstellers.")
                               : ""
                     }
 
                     // Ungeprüfte Online-Erklärung (nur nach Opt-in) und Websuche
                     SectionTitle {
                         visible: pane.hasOnline
-                        text: "Online-Erklärung (ungeprüft)"
+                        text: qsTr("Online-Erklärung (ungeprüft)")
                         Layout.topMargin: 8
                     }
                     Label {
@@ -105,9 +102,9 @@ Rectangle {
                     Label {
                         Layout.fillWidth: true
                         visible: pane.hasOnline
-                        text: "Englisch, aus einer frei verfügbaren Sammlung ohne belegte "
-                              + "Herkunft. Quelle: <a href=\"" + (pane.entry.onlineUrl ?? "")
-                              + "\">" + (pane.entry.onlineSource ?? "") + "</a>"
+                        text: qsTr("Englisch, aus einer frei verfügbaren Sammlung ohne belegte Herkunft. Quelle: %1")
+                              .arg("<a href=\"" + (pane.entry.onlineUrl ?? "") + "\">"
+                                   + (pane.entry.onlineSource ?? "") + "</a>")
                         textFormat: Text.StyledText
                         color: Theme.muted
                         font.pixelSize: 12
@@ -117,9 +114,9 @@ Rectangle {
                     Button {
                         objectName: "searchWebButton"
                         visible: pane.hasEntry && !pane.hasInfo
-                        text: "Im Web suchen"
+                        text: qsTr("Im Web suchen")
                         ToolTip.visible: hovered
-                        ToolTip.text: "Öffnet eine Websuche nach dem Code im Browser"
+                        ToolTip.text: qsTr("Öffnet eine Websuche nach dem Code im Browser")
                         onClicked: Qt.openUrlExternally(pane.entry.searchUrl)
                     }
 
@@ -140,17 +137,17 @@ Rectangle {
                                  || pane.entry.emissionsRelevant === true
                         Chip {
                             visible: pane.entry.mil === true
-                            text: "Motorkontrollleuchte (MIL) an"
+                            text: qsTr("Motorkontrollleuchte (MIL) an")
                             textColor: Theme.warnText
                             fill: Theme.warnBg
                         }
                         Chip {
                             visible: pane.entry.mil === false
-                            text: "Keine Motorkontrollleuchte"
+                            text: qsTr("Keine Motorkontrollleuchte")
                         }
                         Chip {
                             visible: pane.entry.emissionsRelevant === true
-                            text: "Abgasrelevant"
+                            text: qsTr("Abgasrelevant")
                             textColor: Theme.warnText
                             fill: Theme.warnBg
                         }
@@ -158,7 +155,7 @@ Rectangle {
 
                     SectionTitle {
                         visible: causes.count > 0
-                        text: "Mögliche Ursachen"
+                        text: qsTr("Mögliche Ursachen")
                         Layout.topMargin: 8
                     }
                     Repeater {
@@ -185,7 +182,7 @@ Rectangle {
 
                     SectionTitle {
                         visible: symptoms.count > 0
-                        text: "Symptome"
+                        text: qsTr("Symptome")
                         Layout.topMargin: 8
                     }
                     Repeater {
@@ -202,7 +199,7 @@ Rectangle {
 
                     SectionTitle {
                         visible: repair.visible
-                        text: "Reparatur"
+                        text: qsTr("Reparatur")
                         Layout.topMargin: 8
                     }
                     GridLayout {
@@ -214,7 +211,7 @@ Rectangle {
                         rowSpacing: 4
                         Label {
                             visible: (pane.entry.costText ?? "") !== ""
-                            text: "Kostenrahmen"
+                            text: qsTr("Kostenrahmen")
                             color: Theme.muted
                         }
                         Label {
@@ -225,7 +222,7 @@ Rectangle {
                         }
                         Label {
                             visible: (pane.entry.difficultyLabel ?? "") !== ""
-                            text: "Schwierigkeit"
+                            text: qsTr("Schwierigkeit")
                             color: Theme.muted
                         }
                         Label {
@@ -236,7 +233,7 @@ Rectangle {
                     Label {
                         visible: repair.visible
                         Layout.fillWidth: true
-                        text: "Richtwert für Teile und Arbeit, je nach Fahrzeug und Werkstatt."
+                        text: qsTr("Richtwert für Teile und Arbeit, je nach Fahrzeug und Werkstatt.")
                         color: Theme.muted
                         font.pixelSize: 12
                         wrapMode: Text.Wrap

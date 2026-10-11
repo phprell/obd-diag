@@ -17,14 +17,13 @@ Rectangle {
         anchors.centerIn: parent
         width: Math.min(parent.width - 2 * Theme.pad, 520)
         visible: !pane.available
-        title: pane.vm.busy ? "Lese Readiness …"
-             : !pane.vm.hasResult ? "Noch nicht verbunden"
-             : "Nicht verfügbar – Steuergerät hat nicht geantwortet"
+        title: pane.vm.busy ? qsTr("Lese Readiness …")
+             : !pane.vm.hasResult ? qsTr("Noch nicht verbunden")
+             : qsTr("Nicht verfügbar – Steuergerät hat nicht geantwortet")
         text: pane.vm.busy ? ""
             : !pane.vm.hasResult
-              ? "Nach „Verbinden & Scannen“ steht hier, ob alle Eigendiagnosen "
-                + "für das Abgassystem (Readiness) abgeschlossen sind."
-              : "Das Steuergerät hat den Readiness-Status (Mode 01, PID 01) nicht gemeldet."
+              ? qsTr("Nach „Verbinden & Scannen“ steht hier, ob alle Eigendiagnosen für das Abgassystem (Readiness) abgeschlossen sind.")
+              : qsTr("Das Steuergerät hat den Readiness-Status (Mode 01, PID 01) nicht gemeldet.")
     }
 
     ScrollView {
@@ -92,15 +91,15 @@ Rectangle {
                     spacing: 6
                     Chip {
                         objectName: "readinessMil"
-                        text: "Motorkontrollleuchte (MIL) " + (pane.info.milLabel ?? "")
+                        text: qsTr("Motorkontrollleuchte (MIL) %1").arg(pane.info.milLabel ?? "")
                         textColor: pane.info.milOn ? Theme.warnText : Theme.muted
                         fill: pane.info.milOn ? Theme.warnBg : Theme.background
                     }
                     Chip {
-                        text: "Gemeldete Fehlercodes: " + (pane.info.dtcCount ?? 0)
+                        text: qsTr("Gemeldete Fehlercodes: %1").arg(pane.info.dtcCount ?? 0)
                     }
                     Chip {
-                        text: "Motor: " + (pane.info.engineLabel ?? "")
+                        text: qsTr("Motor: %1").arg(pane.info.engineLabel ?? "")
                     }
                 }
 
@@ -108,10 +107,8 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.topMargin: 2
                     objectName: "readinessNote"
-                    text: "Abgeschlossen heißt: alle Eigendiagnosen, die das Fahrzeug unterstützt, "
-                          + "sind gelaufen. Offene Tests laufen bei normaler Fahrt von selbst; "
-                          + "nach dem Löschen von Fehlercodes dauert das einige Fahrzyklen. "
-                          + (pane.info.auNote ?? "")
+                    text: qsTr("Abgeschlossen heißt: alle Eigendiagnosen, die das Fahrzeug unterstützt, sind gelaufen. Offene Tests laufen bei normaler Fahrt von selbst; nach dem Löschen von Fehlercodes dauert das einige Fahrzyklen.")
+                          + " " + (pane.info.auNote ?? "")
                     color: Theme.muted
                     font.pixelSize: 12
                     wrapMode: Text.Wrap
@@ -128,12 +125,12 @@ Rectangle {
                     Layout.bottomMargin: 4
                     SectionTitle {
                         Layout.fillWidth: true
-                        text: "Monitore"
+                        text: qsTr("Monitore")
                         topPadding: 0
                     }
                     Label {
-                        text: (pane.info.completeCount ?? 0) + " von "
-                              + (pane.info.supportedCount ?? 0) + " abgeschlossen"
+                        text: qsTr("%1 von %2 abgeschlossen").arg(pane.info.completeCount ?? 0)
+                              .arg(pane.info.supportedCount ?? 0)
                         color: Theme.muted
                         font.pixelSize: 12
                     }

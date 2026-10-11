@@ -3,6 +3,18 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
+## Unreleased
+
+- Englische Oberfläche: Sprache unter „Optionen → Sprache / Language“ wählbar, Wechsel
+  sofort ohne Neustart. Beim ersten Start gilt die Systemsprache (Deutsch nur bei
+  deutschem System, sonst Englisch).
+- Kommandozeile, PDF-Bericht und CSV mit `--lang de|en` (Standard: Systemsprache;
+  die Oberfläche exportiert in ihrer Sprache); englische CSV mit Komma und Dezimalpunkt.
+- Dokumentation zusätzlich auf Englisch unter https://phprell.github.io/obd-diag/en/ mit
+  Sprachumschalter; die deutschen Adressen bleiben gleich.
+- README auf Englisch, deutsche Fassung in README.de.md.
+- Tests verhindern Texte, die nur in einer Sprache vorliegen.
+
 ## 0.2.0 – 2026-10-10
 
 Erstes veröffentlichtes Release. Es umfasst den Funktionsumfang v0.1 (nie einzeln

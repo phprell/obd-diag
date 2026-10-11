@@ -11,20 +11,26 @@ from PySide6.QtCore import (
     Signal,
 )
 
+from obd_diag.i18n import N_, tr
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind
 from obd_diag.services.dtc_online import search_url
 
+# Bezeichnungen deutsch, bei der Ausgabe mit ``tr`` übersetzt
 KIND_LABELS = {
-    DtcKind.STORED: "Gespeichert",
-    DtcKind.PENDING: "Ausstehend",
-    DtcKind.PERMANENT: "Permanent",
+    DtcKind.STORED: N_("Gespeichert"),
+    DtcKind.PENDING: N_("Ausstehend"),
+    DtcKind.PERMANENT: N_("Permanent"),
 }
 
-LIKELIHOOD_LABELS = {"high": "hoch", "medium": "mittel", "low": "niedrig"}
+LIKELIHOOD_LABELS = {"high": N_("hoch"), "medium": N_("mittel"), "low": N_("niedrig")}
 
-DIFFICULTY_LABELS = {"easy": "einfach", "medium": "mittel", "hard": "schwierig"}
+DIFFICULTY_LABELS = {"easy": N_("einfach"), "medium": N_("mittel"), "hard": N_("schwierig")}
 
-NO_INFO_TITLE = "Keine Beschreibung im Katalog"
+NO_INFO_TITLE = N_("Keine Beschreibung im Katalog")
+
+
+def _label(labels: dict[str, str], key: str) -> str:
+    return tr(labels[key]) if key in labels else key
 
 
 def cost_text(cost: tuple[int, int] | None) -> str:
@@ -32,8 +38,8 @@ def cost_text(cost: tuple[int, int] | None) -> str:
         return ""
     low, high = cost
     if low == high:
-        return f"ca. {low} €"
-    return f"ca. {low}–{high} €"  # noqa: RUF001
+        return tr("ca. {cost} €").format(cost=low)
+    return tr("ca. {cost} €").format(cost=f"{low}–{high}")  # noqa: RUF001
 
 
 def code_entry(c: DiagnosticCode, manufacturer: str | None = None) -> dict[str, Any]:
@@ -46,15 +52,15 @@ def code_entry(c: DiagnosticCode, manufacturer: str | None = None) -> dict[str, 
     return {
         "code": c.code,
         "kind": c.kind.value,
-        "kindLabel": KIND_LABELS[c.kind],
+        "kindLabel": tr(KIND_LABELS[c.kind]),
         "hasInfo": info is not None,
-        "title": info.title if info is not None else NO_INFO_TITLE,
+        "title": info.title if info is not None else tr(NO_INFO_TITLE),
         "description": (info.description or "") if info is not None else "",
         "causes": [
             {
                 "label": cause.label,
                 "likelihood": cause.likelihood,
-                "likelihoodLabel": LIKELIHOOD_LABELS.get(cause.likelihood, cause.likelihood),
+                "likelihoodLabel": _label(LIKELIHOOD_LABELS, cause.likelihood),
             }
             for cause in (info.causes if info is not None else ())
         ],
@@ -63,7 +69,7 @@ def code_entry(c: DiagnosticCode, manufacturer: str | None = None) -> dict[str, 
         "mil": info.mil if info is not None else None,
         "emissionsRelevant": info.emissions_relevant if info is not None else None,
         "difficultyLabel": (
-            DIFFICULTY_LABELS.get(info.repair_difficulty, info.repair_difficulty)
+            _label(DIFFICULTY_LABELS, info.repair_difficulty)
             if info is not None and info.repair_difficulty is not None
             else ""
         ),
@@ -107,14 +113,20 @@ class CodeListModel(QAbstractListModel):
         super().__init__(parent)
         self._entries: list[dict[str, Any]] = []
         self._codes: list[DiagnosticCode] = []
+        self._manufacturer: str | None = None
 
     def set_codes(self, codes: list[DiagnosticCode], manufacturer: str | None = None) -> None:
         order = list(KIND_LABELS)
+        self._manufacturer = manufacturer
         self.beginResetModel()
         self._codes = sorted(codes, key=lambda c: order.index(c.kind))  # stabil
         self._entries = [code_entry(c, manufacturer) for c in self._codes]
         self.endResetModel()
         self.countChanged.emit()
+
+    def retranslate(self) -> None:
+        """Bezeichnungen nach einem Sprachwechsel neu aufbauen (Katalogtexte bleiben)."""
+        self.set_codes(self._codes, self._manufacturer)
 
     @property
     def codes(self) -> list[DiagnosticCode]:

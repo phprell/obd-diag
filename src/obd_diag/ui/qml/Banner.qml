@@ -43,7 +43,7 @@ Rectangle {
             implicitHeight: 24
             padding: 0
             text: "✕"
-            Accessible.name: "Hinweis schließen"
+            Accessible.name: qsTr("Hinweis schließen")
             onClicked: banner.closed()
         }
     }

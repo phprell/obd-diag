@@ -18,3 +18,4 @@ elm.log*
 mutants/
 docs/_build/
 docs/_gen/
+docs/en/_gen/

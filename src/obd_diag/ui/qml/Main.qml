@@ -12,13 +12,15 @@ ApplicationWindow {
     readonly property var liveVm: live
     // DesignController (ui/theme.py): hell, dunkel oder wie das System
     readonly property var design: designController
+    // LanguageController (ui/window.py): Deutsch oder Englisch
+    readonly property var language: languageController
 
     width: 1000
     height: 700
     minimumWidth: 760
     minimumHeight: 480
     visible: true
-    title: "OBD-Diagnose"
+    title: qsTr("OBD-Diagnose")
     color: Theme.background
 
     // Fusion-Palette passend zum Design (Theme.qml); Menüs und Dialoge erben sie.
@@ -69,32 +71,42 @@ ApplicationWindow {
         onTriggered: window.design.mode = key
     }
 
+    // Eintrag unter Optionen → Sprache; die Namen stehen in ihrer eigenen Sprache
+    component LanguageItem: MenuItem {
+        required property string code
+        objectName: "language_" + code
+        checkable: true
+        checked: window.language.language === code
+        ButtonGroup.group: languageGroup
+        onTriggered: window.language.language = code
+    }
+
     // --- Aktionen (Menü, Tastenkürzel und Schaltflächen teilen sie sich) ---
 
     Action {
         id: openAction
-        text: "Sitzung öffnen …"
+        text: qsTr("Sitzung öffnen …")
         shortcut: StandardKey.Open
         enabled: !window.vm.busy && !window.liveVm.running
         onTriggered: openDialog.open()
     }
     Action {
         id: saveAction
-        text: "Sitzung speichern"
+        text: qsTr("Sitzung speichern")
         shortcut: StandardKey.Save
         enabled: window.vm.canSave
         onTriggered: window.vm.saveSession()
     }
     Action {
         id: pdfAction
-        text: "Bericht als PDF …"
+        text: qsTr("Bericht als PDF …")
         shortcut: "Ctrl+P"
         enabled: window.vm.canExport
         onTriggered: exportDialog.start("pdf")
     }
     Action {
         id: csvAction
-        text: "CSV exportieren …"
+        text: qsTr("CSV exportieren …")
         enabled: window.vm.canExport
         onTriggered: exportDialog.start("csv")
     }
@@ -103,7 +115,7 @@ ApplicationWindow {
         objectName: "menuBar"
         Menu {
             objectName: "fileMenu"
-            title: "&Datei"
+            title: qsTr("&Datei")
             MenuItem {
                 action: openAction
             }
@@ -121,24 +133,24 @@ ApplicationWindow {
             }
             MenuSeparator {}
             MenuItem {
-                text: "Beenden"
+                text: qsTr("Beenden")
                 onTriggered: Qt.quit()
             }
         }
         Menu {
             objectName: "optionsMenu"
             width: 320  // sonst werden die langen Einträge gekürzt
-            title: "&Optionen"
+            title: qsTr("&Optionen")
             MenuItem {
                 objectName: "onlineVinMenuItem"
-                text: "FIN online nachschlagen (NHTSA)"
+                text: qsTr("FIN online nachschlagen (NHTSA)")
                 checkable: true
                 checked: window.vm.onlineVinLookup
                 onToggled: window.vm.onlineVinLookup = checked
             }
             MenuItem {
                 objectName: "onlineCodesMenuItem"
-                text: "Fehlercodes online erklären"
+                text: qsTr("Fehlercodes online erklären")
                 checkable: true
                 checked: window.vm.onlineCodeLookup
                 onToggled: window.vm.onlineCodeLookup = checked
@@ -146,34 +158,51 @@ ApplicationWindow {
             MenuSeparator {}
             MenuItem {
                 objectName: "traceMenuItem"
-                text: "Adapter-Mitschnitt aufzeichnen"
+                text: qsTr("Adapter-Mitschnitt aufzeichnen")
                 checkable: true
                 checked: window.vm.traceAdapter
                 onToggled: window.vm.traceAdapter = checked
             }
             MenuItem {
-                text: "Mitschnitt-Ordner öffnen"
+                text: qsTr("Mitschnitt-Ordner öffnen")
                 onTriggered: window.vm.openTraceFolder()
             }
             MenuSeparator {}
             Menu {
                 objectName: "designMenu"
-                title: "Design"
+                title: qsTr("Design")
 
                 ButtonGroup {
                     id: designGroup
                 }
                 DesignItem {
                     key: "system"
-                    text: "Wie das System"
+                    text: qsTr("Wie das System")
                 }
                 DesignItem {
                     key: "light"
-                    text: "Hell"
+                    text: qsTr("Hell")
                 }
                 DesignItem {
                     key: "dark"
-                    text: "Dunkel"
+                    text: qsTr("Dunkel")
+                }
+            }
+            Menu {
+                objectName: "languageMenu"
+                // zweisprachig, damit man es in jeder Sprache findet
+                title: "Sprache / Language"
+
+                ButtonGroup {
+                    id: languageGroup
+                }
+                LanguageItem {
+                    code: "de"
+                    text: "Deutsch"
+                }
+                LanguageItem {
+                    code: "en"
+                    text: "English"
                 }
             }
         }
@@ -219,7 +248,7 @@ ApplicationWindow {
                 }
                 Chip {
                     visible: window.vm.viewOnly
-                    text: "Gespeicherte Sitzung · nur ansehen"
+                    text: qsTr("Gespeicherte Sitzung · nur ansehen")
                     textColor: Theme.infoText
                     fill: Theme.infoBg
                 }
@@ -284,8 +313,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 kind: "info"
                 text: window.vm.catalogMissing
-                      ? "Der Fehlercode-Katalog fehlt, Codes erscheinen ohne Beschreibung. "
-                        + "Erzeugen mit: uv run python tools/build_dtc_db.py"
+                      ? qsTr("Der Fehlercode-Katalog fehlt, Codes erscheinen ohne Beschreibung. Erzeugen mit: uv run python tools/build_dtc_db.py")
                       : ""
             }
         }
@@ -366,23 +394,23 @@ ApplicationWindow {
                 color: Theme.muted
                 text: {
                     if (window.liveVm.running)
-                        return window.liveVm.stopping ? "Live-Daten: stoppe …"
-                             : "Live-Daten laufen" + (window.liveVm.connectionText
-                                                      ? "  ·  " + window.liveVm.connectionText : "")
+                        return window.liveVm.stopping ? qsTr("Live-Daten: stoppe …")
+                             : qsTr("Live-Daten laufen") + (window.liveVm.connectionText
+                                                            ? "  ·  " + window.liveVm.connectionText : "")
                     if (window.vm.busy)
                         return window.vm.busyText
                     if (!window.vm.hasResult)
-                        return "Nicht verbunden"
+                        return qsTr("Nicht verbunden")
                     const voltage = window.vm.lowVoltage
-                        ? "<font color=\"" + Theme.errorText + "\"><b>" + window.vm.voltageText
-                          + " (niedrig)</b></font>"
+                        ? "<font color=\"" + Theme.errorText + "\"><b>"
+                          + qsTr("%1 (niedrig)").arg(window.vm.voltageText) + "</b></font>"
                         : window.vm.voltageText
                     const prefix = window.vm.viewOnly
-                        ? "Sitzung vom " + window.vm.createdText + "  ·  "
+                        ? qsTr("Sitzung vom %1").arg(window.vm.createdText) + "  ·  "
                         : ""
-                    return prefix + "Adapter: " + window.vm.adapter
-                         + "  ·  Protokoll: " + window.vm.protocol
-                         + "  ·  Bordspannung: " + voltage
+                    return prefix + qsTr("Adapter: %1").arg(window.vm.adapter)
+                         + "  ·  " + qsTr("Protokoll: %1").arg(window.vm.protocol)
+                         + "  ·  " + qsTr("Bordspannung: %1").arg(voltage)
                 }
             }
             Button {
@@ -390,7 +418,7 @@ ApplicationWindow {
                 action: saveAction
                 ToolTip.visible: hovered && window.vm.sessionPath !== ""
                 ToolTip.delay: 400
-                ToolTip.text: "Gespeichert: " + window.vm.sessionPath
+                ToolTip.text: qsTr("Gespeichert: %1").arg(window.vm.sessionPath)
             }
             Button {
                 objectName: "pdfButton"
@@ -407,7 +435,7 @@ ApplicationWindow {
                     id: clearButton
                     objectName: "clearButton"
                     anchors.fill: parent
-                    text: "Fehlercodes löschen …"
+                    text: qsTr("Fehlercodes löschen …")
                     enabled: window.vm.canClear
                     onClicked: clearDialog.open()
                 }
@@ -420,7 +448,7 @@ ApplicationWindow {
                              && (window.vm.clearDisabledReason !== "" || window.vm.viewOnly)
                     delay: 400
                     text: window.vm.clearDisabledReason !== "" ? window.vm.clearDisabledReason
-                                                               : "nur bei verbundenem Fahrzeug"
+                                                               : qsTr("nur bei verbundenem Fahrzeug")
                 }
             }
         }
@@ -436,7 +464,7 @@ ApplicationWindow {
         id: refusedDialog
         objectName: "refusedDialog"
         property alias message: refusedLabel.text
-        title: "Löschen nicht möglich"
+        title: qsTr("Löschen nicht möglich")
         modal: true
         anchors.centerIn: Overlay.overlay
         width: Math.min(480, window.width - 48)
@@ -453,9 +481,9 @@ ApplicationWindow {
     FileDialog {
         id: openDialog
         objectName: "openDialog"
-        title: "Diagnosesitzung öffnen"
+        title: qsTr("Diagnosesitzung öffnen")
         fileMode: FileDialog.OpenFile
-        nameFilters: ["Diagnosesitzungen (*.json)", "Alle Dateien (*)"]
+        nameFilters: [qsTr("Diagnosesitzungen (*.json)"), qsTr("Alle Dateien (*)")]
         currentFolder: window.vm.sessionFolder
         onAccepted: window.vm.openSession(selectedFile.toString())
     }
@@ -476,10 +504,10 @@ ApplicationWindow {
             Qt.callLater(dialogHelper.prefillFileName, name)
         }
 
-        title: kind === "pdf" ? "Bericht als PDF speichern" : "Fehlercodes als CSV speichern"
+        title: kind === "pdf" ? qsTr("Bericht als PDF speichern") : qsTr("Fehlercodes als CSV speichern")
         fileMode: FileDialog.SaveFile
         defaultSuffix: kind
-        nameFilters: kind === "pdf" ? ["PDF-Dokumente (*.pdf)"] : ["CSV-Dateien (*.csv)"]
+        nameFilters: kind === "pdf" ? [qsTr("PDF-Dokumente (*.pdf)")] : [qsTr("CSV-Dateien (*.csv)")]
         onAccepted: {
             if (kind === "pdf")
                 window.vm.exportPdf(selectedFile.toString())

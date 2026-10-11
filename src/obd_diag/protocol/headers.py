@@ -28,6 +28,8 @@ import re
 from dataclasses import dataclass
 from enum import StrEnum
 
+from obd_diag.i18n import tr
+
 
 class HeaderFormat(StrEnum):
     CAN_11 = "CAN 11 Bit"
@@ -57,21 +59,25 @@ def _classify(line: str, can: bool | None) -> tuple[HeaderFormat, str, bytes]:
     tokens = line.split()
     compact = "".join(tokens)
     if not compact or not _HEX.match(compact):
-        raise ValueError(f"keine Hex-Daten: {line!r}")
+        raise ValueError(tr("keine Hex-Daten: {text}").format(text=repr(line)))
     eleven = len(tokens[0]) == 3 if len(tokens) > 1 else len(compact) % 2 == 1
     if eleven:
         if can is False:
-            raise ValueError(f"CAN-Header bei Nicht-CAN-Protokoll: {line!r}")
+            raise ValueError(
+                tr("CAN-Header bei Nicht-CAN-Protokoll: {line}").format(line=repr(line))
+            )
         fmt, size = HeaderFormat.CAN_11, 3
     elif len(compact) % 2:
-        raise ValueError(f"ungerade Zahl von Hex-Ziffern: {line!r}")
+        raise ValueError(tr("ungerade Zahl von Hex-Ziffern: {line}").format(line=repr(line)))
     elif can is True or (can is None and compact.startswith("18DA")):
         fmt, size = HeaderFormat.CAN_29, 8
     else:
         fmt, size = HeaderFormat.LEGACY, 6
     rest = compact[size:]
     if len(rest) % 2:
-        raise ValueError(f"ungerade Zahl von Hex-Ziffern nach dem Header: {line!r}")
+        raise ValueError(
+            tr("ungerade Zahl von Hex-Ziffern nach dem Header: {line}").format(line=repr(line))
+        )
     return fmt, compact[:size], bytes.fromhex(rest)
 
 
@@ -125,49 +131,68 @@ def parse_header_response(response: str, *, can: bool | None = None) -> list[Ecu
         ecu = _ecu(fmt, header)
         if fmt is HeaderFormat.LEGACY:
             if len(frame) < 2:
-                raise ValueError(f"Nachricht ohne Daten: {line!r}")
+                raise ValueError(tr("Nachricht ohne Daten: {line}").format(line=repr(line)))
             found.append((ecu, len(found), header, bytearray(frame[:-1])))
             lengths.append(None)
             continue
         if not frame:
-            raise ValueError(f"CAN-Frame ohne Daten: {line!r}")
+            raise ValueError(tr("CAN-Frame ohne Daten: {line}").format(line=repr(line)))
         kind, low = frame[0] >> 4, frame[0] & 0xF
         current = opened.get(header)
         if kind == 0:
             if not 1 <= low <= _MAX_SF or len(frame) < 1 + low:
-                raise ValueError(f"ungültiger Einzel-Frame: {line!r}")
+                raise ValueError(tr("ungültiger Einzel-Frame: {line}").format(line=repr(line)))
             if current is not None and not current.complete:
-                raise ValueError(f"Einzel-Frame von {header} vor Ende der mehrteiligen Nachricht")
+                raise ValueError(
+                    tr("Einzel-Frame von {header} vor Ende der mehrteiligen Nachricht").format(
+                        header=header
+                    )
+                )
             found.append((ecu, len(found), header, bytearray(frame[1 : 1 + low])))
             lengths.append(None)
         elif kind == 1:
             if len(frame) < 2:
-                raise ValueError(f"erster Frame ohne Länge: {line!r}")
+                raise ValueError(tr("erster Frame ohne Länge: {line}").format(line=repr(line)))
             length = low << 8 | frame[1]
             if length <= _MAX_SF:
-                raise ValueError(f"erster Frame mit Länge {length}: {line!r}")
+                raise ValueError(
+                    tr("erster Frame mit Länge {length}: {line}").format(
+                        length=length, line=repr(line)
+                    )
+                )
             if current is not None and not current.complete:
-                raise ValueError(f"neue Nachricht von {header} vor Ende der vorigen")
+                raise ValueError(
+                    tr("neue Nachricht von {header} vor Ende der vorigen").format(header=header)
+                )
             opened[header] = _Open(len(found), length, frame[2:])
             found.append((ecu, len(found), header, opened[header].data))
             lengths.append(length)
         elif kind == 2:
             if current is None or current.complete:
-                raise ValueError(f"Folge-Frame ohne ersten Frame von {header}: {line!r}")
+                raise ValueError(
+                    tr("Folge-Frame ohne ersten Frame von {header}: {line}").format(
+                        header=header, line=repr(line)
+                    )
+                )
             if low != current.next_seq:
                 raise ValueError(
-                    f"Folge-Frame {low:X} statt {current.next_seq:X} von {header}: "
-                    "Frames fehlen oder sind vertauscht"
+                    tr(
+                        "Folge-Frame {seq:X} statt {expected:X} von {header}: "
+                        "Frames fehlen oder sind vertauscht"
+                    ).format(seq=low, expected=current.next_seq, header=header)
                 )
             current.data += frame[1:]
             current.next_seq = (current.next_seq + 1) % 16
         elif kind != 3:
-            raise ValueError(f"unbekanntes PCI-Byte {frame[0]:02X}: {line!r}")
+            raise ValueError(
+                tr("unbekanntes PCI-Byte {pci:02X}: {line}").format(pci=frame[0], line=repr(line))
+            )
     for header, current in opened.items():
         if not current.complete:
             raise ValueError(
-                f"mehrteilige Nachricht von {header} unvollständig "
-                f"({len(current.data)} von {current.length} Bytes)"
+                tr(
+                    "mehrteilige Nachricht von {header} unvollständig ({got} von {length} Bytes)"
+                ).format(header=header, got=len(current.data), length=current.length)
             )
     messages = [
         EcuMessage(ecu, header, bytes(data if length is None else data[:length]))

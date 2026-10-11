@@ -17,18 +17,16 @@ Rectangle {
         anchors.centerIn: parent
         width: Math.min(parent.width - 2 * Theme.pad, 520)
         visible: !pane.shown
-        title: pane.vm.busy ? "Lese Freeze Frame …"
-             : !pane.vm.hasResult ? "Noch nicht verbunden"
-             : pane.frame.available ? "Kein Freeze Frame gespeichert"
-             : "Nicht verfügbar – Steuergerät hat nicht geantwortet"
+        title: pane.vm.busy ? qsTr("Lese Freeze Frame …")
+             : !pane.vm.hasResult ? qsTr("Noch nicht verbunden")
+             : pane.frame.available ? qsTr("Kein Freeze Frame gespeichert")
+             : qsTr("Nicht verfügbar – Steuergerät hat nicht geantwortet")
         text: pane.vm.busy ? ""
             : !pane.vm.hasResult
-              ? "Nach „Verbinden & Scannen“ stehen hier die Messwerte, die das Steuergerät "
-                + "beim Speichern eines Fehlercodes festgehalten hat."
+              ? qsTr("Nach „Verbinden & Scannen“ stehen hier die Messwerte, die das Steuergerät beim Speichern eines Fehlercodes festgehalten hat.")
             : pane.frame.available
-              ? "Das Steuergerät hat keine Momentaufnahme abgelegt, etwa weil kein Fehlercode "
-                + "gesetzt ist oder die Codes gelöscht wurden."
-              : "Das Steuergerät hat Mode 02 (Freeze Frame) nicht beantwortet."
+              ? qsTr("Das Steuergerät hat keine Momentaufnahme abgelegt, etwa weil kein Fehlercode gesetzt ist oder die Codes gelöscht wurden.")
+              : qsTr("Das Steuergerät hat Mode 02 (Freeze Frame) nicht beantwortet.")
     }
 
     ScrollView {
@@ -51,7 +49,7 @@ Rectangle {
                 Layout.fillWidth: true
 
                 SectionTitle {
-                    text: "Auslösender Code"
+                    text: qsTr("Auslösender Code")
                     topPadding: 0
                 }
                 RowLayout {
@@ -59,7 +57,7 @@ Rectangle {
                     spacing: 12
                     Label {
                         objectName: "freezeDtc"
-                        text: pane.frame.dtc !== "" ? pane.frame.dtc : "nicht gemeldet"
+                        text: pane.frame.dtc !== "" ? pane.frame.dtc : qsTr("nicht gemeldet")
                         font.family: pane.frame.dtc !== "" ? "monospace" : Qt.application.font.family
                         font.bold: pane.frame.dtc !== ""
                         font.pixelSize: pane.frame.dtc !== "" ? 22 : 14
@@ -76,7 +74,7 @@ Rectangle {
                 SectionTitle {
                     visible: rows.count > 0
                     Layout.topMargin: 8
-                    text: "Messwerte beim Speichern des Codes"
+                    text: qsTr("Messwerte beim Speichern des Codes")
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -97,16 +95,14 @@ Rectangle {
                 }
                 Label {
                     visible: rows.count === 0
-                    text: "Keine Messwerte gespeichert."
+                    text: qsTr("Keine Messwerte gespeichert.")
                     color: Theme.muted
                 }
 
                 Label {
                     Layout.fillWidth: true
                     Layout.topMargin: 4
-                    text: "Momentaufnahme (Frame 0) von dem Augenblick, in dem das Steuergerät den "
-                          + "Code gespeichert hat. Hilft einzugrenzen, unter welchen Bedingungen "
-                          + "der Fehler auftritt. Wird beim Löschen der Codes mit gelöscht."
+                    text: qsTr("Momentaufnahme (Frame 0) von dem Augenblick, in dem das Steuergerät den Code gespeichert hat. Hilft einzugrenzen, unter welchen Bedingungen der Fehler auftritt. Wird beim Löschen der Codes mit gelöscht.")
                     color: Theme.muted
                     font.pixelSize: 12
                     wrapMode: Text.Wrap
