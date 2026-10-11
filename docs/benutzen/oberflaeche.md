@@ -29,7 +29,8 @@ Die Oberfläche spricht Deutsch und Englisch: *Optionen → Sprache / Language*
 
 Links die Codes, gruppiert nach gespeichert, ausstehend und permanent; rechts die
 Erklärung des gewählten Codes mit Ursachen und ihrer Wahrscheinlichkeit, Symptomen und
-Kostenrahmen aus dem Offline-Katalog ({doc}`fehlercodes`). Fehlt ein Code im Katalog,
+Kostenrahmen aus dem Offline-Katalog ({doc}`fehlercodes`). Ein Etikett je Code nennt die
+Dringlichkeit, die Detailansicht ihre Begründung. Fehlt ein Code im Katalog,
 öffnet „Im Web suchen“ eine Websuche im Browser; mit „Fehlercodes online erklären“ steht
 dort zusätzlich eine ungeprüfte Kurzerklärung ({doc}`fehlercodes-online`).
 
@@ -100,7 +101,8 @@ geht beim nächsten Scan nur die FIN an die US-Behörde NHTSA.
 Werte auswählen (die vom Fahrzeug unterstützten erscheinen nach dem ersten Start),
 Intervall 0,5, 1 oder 2 s, auf Wunsch „Aufzeichnen (CSV)“, dann Start. Je Wert eine
 Kachel mit aktuellem Wert, kleinstem und größtem gesehenen Wert und einer Kurve der
-letzten 120 Werte. Solange Live-Daten laufen, sind Scan, Löschen und Export gesperrt,
+letzten 120 Werte. „Warnschwellen …“ stellt Grenzen je Wert ein; wird eine
+überschritten, färbt sich die Kachel rot. Solange Live-Daten laufen, sind Scan, Löschen und Export gesperrt,
 denn am Adapter läuft immer nur eine Aktion ({doc}`live-daten`).
 
 ## Menüs und Schaltflächen

@@ -25,6 +25,26 @@ Antwortet ein Steuergerät mit „Mode nicht unterstützt“ (`7F 0A 11`), hat e
 dieser Art. Jede andere Ablehnung ist ein Fehler und wird nie als „keine Codes“ gezeigt
 ({doc}`../technik/antwortformate`).
 
+## Dringlichkeit
+
+Jeder Code bekommt eine grobe Einordnung in vier Stufen, in der Kommandozeile unter dem
+Code, in der Oberfläche als Etikett in der Liste und mit Begründung in der Detailansicht,
+im PDF-Bericht beim Code und in der Kurzübersicht, in der CSV als letzte Spalte. Grundlage
+sind nur die Art des Codes, die Kontrollleuchte (Readiness, PID 01; bei `scan` nicht
+gelesen) und wenige Codes, deren Bedeutung nach SAE J2012 für alle Hersteller gleich ist.
+Die erste zutreffende Regel gilt:
+
+| Stufe | Wann |
+| --- | --- |
+| Möglichst nicht weiterfahren | `P0217` Kühlmittel-Übertemperatur, `P0218` Getriebeöl-Übertemperatur, `P0524` Öldruck zu niedrig |
+| Bald in die Werkstatt | Verbrennungsaussetzer `P0300`–`P0312` oder Airbag `B0001`–`B0099`, gespeichert oder permanent; jeder permanente Code; gespeichert bei eingeschalteter Kontrollleuchte |
+| Bei Gelegenheit prüfen | gespeichert, Kontrollleuchte aus oder nicht gelesen |
+| Beobachten | nur ausstehend |
+
+Das ist keine Ferndiagnose: Ob die Kontrollleuchte blinkt (Aussetzer, die den
+Katalysator schädigen), liefert OBD nicht, und herstellerspezifische Codes wie `U1218`
+fallen unter die allgemeinen Regeln. Bei spürbaren Auffälligkeiten eine Werkstatt fragen.
+
 ## Löschen
 
 :::{warning}

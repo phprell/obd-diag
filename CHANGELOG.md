@@ -3,6 +3,21 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
+## Unveröffentlicht
+
+### Neu
+
+- Dringlichkeit je Fehlercode in vier Stufen (möglichst nicht weiterfahren, bald in die
+  Werkstatt, bei Gelegenheit prüfen, beobachten) mit Begründung: in `scan`/`diagnose`,
+  in der Oberfläche (Etikett in der Liste, Begründung im Detail), im PDF-Bericht und als
+  letzte CSV-Spalte. Grundlage sind Art des Codes, Kontrollleuchte und wenige genormte
+  Codes (Übertemperatur, Öldruck, Aussetzer, Airbag); keine Ferndiagnose.
+- Warnschwellen für Live-Daten: `obd-diag live --alarm SCHLÜSSEL=UNTEN:OBEN`
+  (`--no-alarms` ohne Vorgaben), in der Oberfläche „Warnschwellen …“. Vorgaben:
+  Kühlmittel über 115 °C, Motoröl über 130 °C, Bord- und Steuergerätespannung unter
+  11,8 V oder über 15,5 V. Überschrittene Werte sind markiert (`!`, rote Kachel), die CSV
+  hat dafür die neue letzte Spalte „Warnungen“. Gesendet wird dafür nichts zusätzlich.
+
 ## 0.2.1 – 2026-10-11
 
 Neu sind Einrichtungs- und Adapter-Check, ein Demo-Modus ohne Auto, die englische

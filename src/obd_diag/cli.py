@@ -15,7 +15,7 @@ from obd_diag.data.dtc_catalog import DtcCatalog
 from obd_diag.i18n import LANGUAGES, N_, set_language, system_language, tr, trn
 from obd_diag.protocol.elm327 import Elm327, ElmError, NoConnectionError
 from obd_diag.protocol.obd import FreezeFrame
-from obd_diag.protocol.pids import PidSpec
+from obd_diag.protocol.pids import PIDS, PidSpec
 from obd_diag.services.adapter_check import (
     UDS_NOTE,
     check_adapter,
@@ -26,6 +26,14 @@ from obd_diag.services.adapter_check import (
     uds_text,
     version_text,
     voltage_text,
+)
+from obd_diag.services.alarms import (
+    DEFAULT_THRESHOLDS,
+    VOLTAGE_KEY,
+    VOLTAGE_LABEL,
+    Threshold,
+    merge,
+    parse_threshold,
 )
 from obd_diag.services.clear import (
     CLEAR_DISABLED_MESSAGE,
@@ -51,6 +59,7 @@ from obd_diag.services.live import (
     LiveRecorder,
     LiveSample,
     SelectionError,
+    alarm_text,
     new_recording_path,
     prepare_live,
     recording_dir,
@@ -61,6 +70,7 @@ from obd_diag.services.readiness import ALL_COMPLETE_LABEL, AU_NOTE, MonitorStat
 from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
 from obd_diag.services.setup_check import SetupReport, Status, run_setup_check
 from obd_diag.services.storage import trace_dir
+from obd_diag.services.urgency import URGENCY_NOTE, UrgencyRating, highest, rate_codes
 from obd_diag.services.vehicle import (
     VPIC_FIELDS,
     VinInfo,
@@ -100,17 +110,30 @@ def _labelled(rows: list[tuple[str, str]], indent: str = "") -> None:
         print(f"{indent}{label + ':':<{width}} {value}")
 
 
+def _urgency_text(rating: UrgencyRating) -> str:
+    return tr("Dringlichkeit: {label}. {reason}").format(
+        label=tr(rating.label), reason=tr(rating.reason)
+    )
+
+
 def _print_codes(
-    codes: list[DiagnosticCode], manufacturer: str | None = None, *, web_search: bool = False
+    codes: list[DiagnosticCode],
+    manufacturer: str | None = None,
+    *,
+    web_search: bool = False,
+    ratings: dict[str, UrgencyRating] | None = None,
 ) -> None:
-    """Code und Titel; mit ``web_search`` (``--online-codes``) zu Codes ohne Katalogtext
-    die Online-Erklärung und einen Link für die Websuche."""
+    """Code und Titel, mit ``ratings`` darunter die Dringlichkeit; mit ``web_search``
+    (``--online-codes``) zu Codes ohne Katalogtext die Online-Erklärung und einen Link
+    für die Websuche."""
+    indent = " " * 9
     for c in codes:
-        if c.info is not None:
-            print(f"  {c.code}  {c.info.title}")
-            continue
-        print(f"  {c.code}  {tr('(keine Beschreibung im Katalog)')}")
-        if not web_search:
+        title = c.info.title if c.info is not None else tr("(keine Beschreibung im Katalog)")
+        print(f"  {c.code}  {title}")
+        if ratings is not None and c.code in ratings:
+            text = _urgency_text(ratings[c.code])
+            print(textwrap.fill(text, 88, initial_indent=indent, subsequent_indent=indent))
+        if c.info is not None or not web_search:
             continue
         if c.online is not None:
             print("         " + tr("Online, ungeprüft: {text}").format(text=c.online.text))
@@ -122,8 +145,14 @@ def _print_codes(
 
 
 def _print_scan(
-    result: ScanResult, manufacturer: str | None = None, *, web_search: bool = False
+    result: ScanResult,
+    manufacturer: str | None = None,
+    *,
+    web_search: bool = False,
+    mil_on: bool | None = None,
 ) -> None:
+    """Adapter, Spannung und Codes nach Art mit Dringlichkeit; ``mil_on`` aus der
+    Readiness (``None``: nicht gelesen)."""
     voltage = tr("unbekannt") if result.voltage is None else f"{result.voltage:.1f} V"
     _labelled(
         [
@@ -138,12 +167,18 @@ def _print_scan(
     if not result.codes:
         print(tr("Keine Fehlercodes gespeichert."))
         return
+    ratings = rate_codes(result.codes, mil_on)
     for kind, heading in _SECTIONS:
         codes = [c for c in result.codes if c.kind is kind]
         if not codes:
             continue
         print(f"{tr(heading)}:")
-        _print_codes(codes, manufacturer, web_search=web_search)
+        _print_codes(codes, manufacturer, web_search=web_search, ratings=ratings)
+    top = highest(ratings.values())
+    if top is not None:
+        print()
+        print(tr("Dringlichkeit insgesamt: {label}").format(label=tr(top.label)))
+        print(textwrap.fill(tr("Hinweis: {message}").format(message=tr(URGENCY_NOTE)), 88))
 
 
 def _scan_json(result: ScanResult) -> str:
@@ -410,7 +445,8 @@ def _print_session(session: Session, *, web_search: bool = False) -> None:
     print()
     vehicle = session.vehicle
     manufacturer = vehicle.manufacturer if vehicle is not None else None
-    _print_scan(session.scan, manufacturer, web_search=web_search)
+    mil_on = session.readiness.mil_on if session.readiness is not None else None
+    _print_scan(session.scan, manufacturer, web_search=web_search, mil_on=mil_on)
     print()
     _print_readiness(session.readiness)
     print()
@@ -539,6 +575,21 @@ def _keys(text: str) -> list[str]:
     return [key.strip().lower() for key in text.split(",") if key.strip()]
 
 
+def _alarm(text: str) -> tuple[str, Threshold]:
+    """``--alarm SCHLÜSSEL=UNTEN:OBEN``; Schlüssel aus ``--list`` oder ``voltage``."""
+    try:
+        key, threshold = parse_threshold(text)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
+    if key != VOLTAGE_KEY and key not in PIDS:
+        raise argparse.ArgumentTypeError(
+            tr("unbekannter Wert: {key} (Schlüssel zeigt --list, Bordspannung: {voltage})").format(
+                key=key, voltage=VOLTAGE_KEY
+            )
+        )
+    return key, threshold
+
+
 def _live_number(value: float | None) -> str:
     if value is None:
         return _MISSING
@@ -547,7 +598,11 @@ def _live_number(value: float | None) -> str:
 
 
 class _LiveTable:
-    """Feste Spalten: Zeit, je Wert ``Name (Einheit)``, Bordspannung."""
+    """Feste Spalten: Zeit, je Wert ``Name (Einheit)``, Bordspannung.
+
+    Werte jenseits einer Warnschwelle stehen mit ``!`` in der Tabelle; Beginn und Ende
+    einer Warnung meldet ein Hinweis auf stderr (nicht jede Runde).
+    """
 
     def __init__(self, pids: list[PidSpec]) -> None:
         self.pids = pids
@@ -559,6 +614,7 @@ class _LiveTable:
         self.widths = [max(len(h), 8) for h in self.headers]
         self.rounds = 0
         self.throttled = False
+        self.alarming: set[str] = set()  # Schlüssel mit Warnung in der letzten Runde
 
     def print_header(self) -> None:
         print("  ".join(h.rjust(w) for h, w in zip(self.headers, self.widths, strict=True)))
@@ -577,10 +633,25 @@ class _LiveTable:
                 )
             else:
                 _hint(tr("Bordspannung wieder ausreichend."))
+        alarms = {alarm.key: alarm for alarm in sample.alarms}
+        for key, alarm in alarms.items():
+            if key not in self.alarming:
+                print(
+                    tr("Warnung: {message}").format(message=alarm_text(alarm, self.pids)),
+                    file=sys.stderr,
+                )
+        for key in sorted(self.alarming - alarms.keys()):
+            name = tr(VOLTAGE_LABEL) if key == VOLTAGE_KEY else PIDS[key].name
+            _hint(tr("{name} wieder im Bereich.").format(name=name))
+        self.alarming = set(alarms)
+
+        def mark(key: str, text: str) -> str:
+            return text + "!" if key in alarms else text
+
         cells = [
             f"{sample.elapsed:.1f}",
-            *(_live_number(sample.values.get(p.key)) for p in self.pids),
-            _MISSING if sample.voltage is None else f"{sample.voltage:.1f}",
+            *(mark(p.key, _live_number(sample.values.get(p.key))) for p in self.pids),
+            mark(VOLTAGE_KEY, _MISSING if sample.voltage is None else f"{sample.voltage:.1f}"),
         ]
         print("  ".join(c.rjust(w) for c, w in zip(cells, self.widths, strict=True)), flush=True)
         self.rounds += 1
@@ -596,6 +667,12 @@ def _print_available(pids: list[PidSpec]) -> None:
     print(f"{key_title:<{key_width}}  {name_title:<{name_width}}  {unit_title}")
     for p in pids:
         print(f"{p.key:<{key_width}}  {p.name:<{name_width}}  {tr(p.unit)}")
+
+
+def _thresholds(args: argparse.Namespace) -> dict[str, Threshold]:
+    """Warnschwellen: die Vorgaben (ohne ``--no-alarms``), geändert durch ``--alarm``."""
+    base = {} if args.no_alarms else DEFAULT_THRESHOLDS
+    return merge(base, args.alarm or ())
 
 
 def _run_live(args: argparse.Namespace) -> int:
@@ -647,6 +724,7 @@ def _run_live(args: argparse.Namespace) -> int:
                     ),
                     interval=args.interval,
                     recorder=recorder,
+                    thresholds=_thresholds(args),
                     clock=time.monotonic,
                     sleep=time.sleep,
                 )
@@ -818,6 +896,25 @@ def build_parser() -> argparse.ArgumentParser:
             "als CSV aufzeichnen (ohne DATEI: unter $XDG_DATA_HOME/obd-diag/recordings); "
             "vorhandene Dateien werden nicht überschrieben"
         ),
+    )
+    defaults = ", ".join(
+        f"{key}={'' if t.low is None else f'{t.low:g}'}:{'' if t.high is None else f'{t.high:g}'}"
+        for key, t in DEFAULT_THRESHOLDS.items()
+    )
+    live_parser.add_argument(
+        "--alarm",
+        action="append",
+        type=_alarm,
+        metavar=tr("SCHLÜSSEL=UNTEN:OBEN"),
+        help=tr(
+            "Warnschwelle setzen, z. B. coolant_temp=:110 (leere Seite: keine Grenze, "
+            "SCHLÜSSEL=: schaltet die Warnung ab; mehrfach möglich). Vorgabe: {defaults}"
+        ).format(defaults=defaults),
+    )
+    live_parser.add_argument(
+        "--no-alarms",
+        action="store_true",
+        help=tr("ohne die vorgegebenen Warnschwellen (nur die mit --alarm gesetzten)"),
     )
     sub.add_parser("ports", parents=[common], help=tr("angeschlossene Adapter auflisten"))
     setup_parser = sub.add_parser(

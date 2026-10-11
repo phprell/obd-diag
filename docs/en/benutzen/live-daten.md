@@ -53,11 +53,37 @@ formula and value range is in {doc}`../technik/pids`.
   count as bus errors.
 - Only `01xx` and `ATRV` are sent.
 
+## Warning thresholds
+
+If a value is below its lower or above its upper threshold, it is marked with `!` in
+the table and a note reports when the warning starts and ends; in the window the tile
+turns red and a bar names the value. Defaults (rough guide values that do not trigger in
+normal operation; what is normal for your own car is in its documentation):
+
+| Value | Key | Warning |
+| --- | --- | --- |
+| Coolant temperature | `coolant_temp` | above 115 °C |
+| Engine oil temperature | `oil_temp` | above 130 °C |
+| Control module voltage | `control_voltage` | below 11.8 V, above 15.5 V |
+| Battery voltage (`ATRV`) | `voltage` | below 11.8 V, above 15.5 V |
+
+```sh
+obd-diag live --alarm coolant_temp=:105 --alarm rpm=:4500   # set upper limits
+obd-diag live --alarm voltage=12.2: --alarm oil_temp=:       # lower limit; warning off
+obd-diag live --no-alarms --alarm speed=:130                 # only this one threshold
+```
+
+`--alarm KEY=LOW:HIGH` replaces the default for that value; an empty side means no
+limit, comma or point are both accepted as decimal separator. In the window,
+“Warning thresholds …” sets them per value; they are saved and apply from the next
+start. Only the values that are read anyway are checked; nothing extra is sent.
+
 ## Recording
 
 `--record` writes a CSV under `~/.local/share/obd-diag/recordings/`
 (`live-YYYYMMDD-HHMMSS.csv`) or to the given file, which is never overwritten. The
 format follows the language ({doc}`sprache`): UTF-8 with BOM; in English `,` as
 separator and a decimal point, in German `;` and a decimal comma. First column
-`Time (s)`, then `Name (unit)` per value, last `Battery voltage (V)`. Every row is
-written immediately, so an abort loses nothing.
+`Time (s)`, then `Name (unit)` per value, `Battery voltage (V)` and last `Warnings`
+(thresholds exceeded in that round as text, several separated by ` | `, otherwise
+empty). Every row is written immediately, so an abort loses nothing.

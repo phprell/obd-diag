@@ -20,6 +20,7 @@ from obd_diag.ui.viewmodels.diagnosis import DiagnosisViewModel
 from obd_diag.ui.window import load_main_window, set_style
 from tests.samples import full_session, minimal_session
 from tests.ui.conftest import FakeBackend, SyncRunner
+from tests.ui.test_live_viewmodel import _find_item
 
 
 class Ui:
@@ -86,6 +87,15 @@ def test_scan_fills_list_and_detail(qtbot: QtBot, ui: Ui) -> None:
     assert ui.prop("detailCode", "text") == "P0420"
     assert ui.prop("detailTitle", "text").startswith("Katalysatorwirkungsgrad")
     assert ui.prop("detailCost", "text") == "ca. 600–2500 €"  # noqa: RUF001
+    # ohne Readiness ist die Kontrollleuchte unbekannt: gespeichert = bei Gelegenheit prüfen
+    assert ui.prop("detailUrgency", "text").startswith("Dringlichkeit: Bei Gelegenheit prüfen.")
+    assert ui.prop("detailUrgency", "kind") == "warn"
+    for name, text in (
+        ("codeUrgency_P0420_stored", "Bei Gelegenheit prüfen"),
+        ("codeUrgency_U0100_permanent", "Bald in die Werkstatt"),
+    ):
+        chip = _find_item(ui.window.contentItem(), name)  # Delegat der Liste
+        assert chip is not None and chip.property("text") == text
     assert "Protokoll: ISO 15765-4 (CAN 11/500)" in ui.prop("statusLine", "text")
     assert ui.prop("clearButton", "enabled") is True
     ui.vm.setProperty("selectedIndex", 1)

@@ -4,7 +4,7 @@ import gc
 import math
 import threading
 import time
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -19,6 +19,7 @@ from PySide6.QtQuick import QQuickItem, QQuickWindow
 from pytestqt.qtbot import QtBot
 
 from obd_diag.protocol.pids import PidSpec
+from obd_diag.services.alarms import DEFAULT_THRESHOLDS, VOLTAGE_KEY, Alarm, Threshold
 from obd_diag.services.live import DEFAULT_KEYS, LiveSample, LiveSetup, SelectionError
 from obd_diag.transport import TransportError
 from obd_diag.ui.backend import Backend, LiveResult
@@ -28,6 +29,7 @@ from obd_diag.ui.viewmodels.live import (
     HISTORY,
     NO_VALUE,
     RECORD_KEY,
+    THRESHOLDS_KEY,
     LiveViewModel,
     elapsed_text,
     number_text,
@@ -75,6 +77,7 @@ class FakeLive:
         self.recording = recording
         self.calls: list[tuple[str, int, list[str] | None, float, bool]] = []
         self.skip_unsupported: list[bool] = []
+        self.thresholds: list[dict[str, Threshold] | None] = []
         self.threads: list[int] = []
         self.delivered = threading.Event()
 
@@ -91,7 +94,9 @@ class FakeLive:
         on_sample: Callable[[LiveSample], None],
         should_stop: Callable[[], bool],
         skip_unsupported: bool = False,
+        thresholds: Mapping[str, Threshold] | None = None,
     ) -> LiveResult:
+        self.thresholds.append(None if thresholds is None else dict(thresholds))
         self.calls.append((port, baud, None if keys is None else list(keys), interval, record))
         self.skip_unsupported.append(skip_unsupported)
         self.threads.append(threading.get_ident())
@@ -185,6 +190,85 @@ def test_elapsed_text() -> None:
     assert elapsed_text(0) == "0:00"
     assert elapsed_text(75.9) == "1:15"
     assert elapsed_text(3725) == "1:02:05"
+
+
+# --- Warnschwellen ---
+
+
+def test_thresholds_default_edit_persist_and_reset(fake_backend: FakeBackend) -> None:
+    _diagnosis, vm = _vms(fake_backend, FakeLive())
+    assert vm.thresholds == DEFAULT_THRESHOLDS
+    rows = {r["key"]: r for r in vm.property("thresholdRows")}
+    # Bordspannung, die ausgewählten Werte und alle mit Schwelle
+    assert next(iter(rows)) == VOLTAGE_KEY
+    assert {"rpm", "coolant_temp", "oil_temp", "control_voltage"} <= rows.keys()
+    assert (rows[VOLTAGE_KEY]["lowText"], rows[VOLTAGE_KEY]["highText"]) == ("11,8", "15,5")
+    assert (rows["rpm"]["lowText"], rows["rpm"]["highText"]) == ("", "")
+
+    assert vm.setThreshold("coolant_temp", "", "105,5") == ""
+    assert vm.setThreshold("rpm", "", "4500") == ""
+    assert vm.setThreshold("oil_temp", "", "") == ""  # abgeschaltet
+    assert vm.setThreshold("rpm", "5000", "4500").startswith("untere Schwelle 5000,0")
+    assert vm.setThreshold("rpm", "x", "") == "Bitte eine Zahl eingeben."
+    assert vm.setThreshold("nonsense", "", "1") == "unbekannter Wert: nonsense"
+    expected = {**DEFAULT_THRESHOLDS, "coolant_temp": Threshold(high=105.5)}
+    expected["rpm"] = Threshold(high=4500)
+    del expected["oil_temp"]
+    assert vm.thresholds == expected
+
+    # gespeichert: ein neues View-Model liest sie wieder
+    _diagnosis, again = _vms(fake_backend, FakeLive())
+    assert again.thresholds == expected
+    again.resetThresholds()
+    assert again.thresholds == DEFAULT_THRESHOLDS
+    _diagnosis, third = _vms(fake_backend, FakeLive())
+    assert third.thresholds == DEFAULT_THRESHOLDS
+
+
+def test_broken_threshold_setting_falls_back_to_defaults(fake_backend: FakeBackend) -> None:
+    QSettings(SETTINGS_ORG, SETTINGS_APP).setValue(THRESHOLDS_KEY, "{kaputt")
+    _diagnosis, vm = _vms(fake_backend, FakeLive())
+    assert vm.thresholds == DEFAULT_THRESHOLDS
+
+
+def test_alarms_reach_tiles_and_banner_texts(qtbot: QtBot, fake_backend: FakeBackend) -> None:
+    hot = replace(
+        sample(0, voltage=11.0),
+        values={"coolant_temp": 117.0, "rpm": 850.0, "speed": 0.0},
+        alarms=(Alarm("coolant_temp", 117.0, "high", 115.0), Alarm(VOLTAGE_KEY, 11.0, "low", 11.8)),
+    )
+    live = FakeLive([hot, sample(1)])
+    _diagnosis, vm = _vms(fake_backend, live)
+    vm.start("/dev/ttyUSB0", 38400)
+    qtbot.waitUntil(lambda: vm.property("sampleCount") == 2)
+    assert live.thresholds == [DEFAULT_THRESHOLDS]  # an den Job übergeben
+    # nach der zweiten Runde (ohne Warnung) ist alles wieder normal
+    assert _entry(vm, "coolant_temp")["alarm"] == ""
+    assert vm.property("alarmTexts") == []
+    assert vm.property("voltageAlarm") is False
+
+    live = FakeLive([hot])
+    _diagnosis, vm = _vms(fake_backend, live)
+    vm.start("/dev/ttyUSB0", 38400)
+    qtbot.waitUntil(lambda: vm.property("sampleCount") == 1)
+    tile = _entry(vm, "coolant_temp")
+    assert (tile["alarm"], tile["alarmText"]) == ("high", "über 115 °C")
+    assert _entry(vm, "rpm")["alarm"] == ""
+    assert vm.property("alarmTexts") == [
+        "Kühlmitteltemperatur 117 °C über 115 °C",
+        "Bordspannung 11 V unter 11,8 V",
+    ]
+    assert vm.property("voltageAlarm") is True
+
+
+def test_thresholds_locked_while_running(fake_backend: FakeBackend) -> None:
+    runner = HoldingRunner()
+    _diagnosis, vm = _vms(fake_backend, FakeLive(), runner)
+    vm.start("/dev/ttyUSB0", 38400)
+    assert vm.setThreshold("rpm", "", "4000") == "Während der Abfrage nicht änderbar."
+    vm.resetThresholds()
+    assert "rpm" not in vm.thresholds
+    runner.finish()
 
 
 # --- Ablauf ---
@@ -563,4 +647,34 @@ def test_live_checkbox_toggles_selection(qtbot: QtBot, live_ui: LiveUi) -> None:
     assert "maf" in live_ui.live.property("selectedKeys")
     live_ui.live.resetSelection()
     assert check.property("checked") is False  # Bindung bleibt nach dem Klick erhalten
+    assert live_ui.warnings == []
+
+
+def test_live_threshold_dialog_and_alarm_tile(
+    qtbot: QtBot, live_ui: LiveUi, live_fake: FakeLive
+) -> None:
+    live_ui.find("viewTabs").setProperty("currentIndex", 4)
+    live_ui.find("liveThresholdsButton").clicked.emit()  # type: ignore[attr-defined]
+    qtbot.waitUntil(lambda: live_ui.prop("liveThresholdDialog", "opened") is True, timeout=5000)
+    high = live_ui.find("liveThresholdHigh_coolant_temp")
+    assert high.property("text") == "115"
+    assert live_ui.prop("liveThresholdHigh_voltage", "text") == "15,5"
+    high.setProperty("text", "100")
+    high.editingFinished.emit()  # type: ignore[attr-defined]
+    assert live_ui.live.thresholds["coolant_temp"] == Threshold(high=100)
+    live_ui.find("liveThresholdDialog").close()  # type: ignore[attr-defined]
+
+    hot = replace(sample(0), alarms=(Alarm("coolant_temp", 80.0, "high", 75.0),))
+    live_fake.samples = [hot]
+    live_ui.find("liveStartButton").clicked.emit()  # type: ignore[attr-defined]
+    qtbot.waitUntil(lambda: live_ui.prop("liveAlarmBanner", "visible") is True, timeout=5000)
+    assert live_ui.prop("liveAlarmBanner", "text") == (
+        "Warnschwelle überschritten: Kühlmitteltemperatur 80 °C über 75 °C"
+    )
+    assert live_ui.prop("liveAlarm_coolant_temp", "visible") is True
+    assert live_ui.prop("liveAlarm_coolant_temp", "text") == "⚠ über 75 °C"
+    assert live_ui.prop("liveAlarm_rpm", "visible") is False
+    assert live_ui.prop("liveThresholdsButton", "enabled") is False
+    assert live_fake.thresholds[0] is not None
+    assert live_fake.thresholds[0]["coolant_temp"] == Threshold(high=100)
     assert live_ui.warnings == []

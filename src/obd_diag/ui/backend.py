@@ -9,7 +9,7 @@ Auch der Fehlercode-Katalog wird je Job geöffnet: SQLite-Verbindungen gehören 
 Thread, der sie angelegt hat, und Jobs laufen nicht im GUI-Thread.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +21,7 @@ from obd_diag.i18n import tr
 from obd_diag.protocol.elm327 import Elm327
 from obd_diag.protocol.pids import PidSpec
 from obd_diag.services.adapter_check import AdapterReport, check_adapter
+from obd_diag.services.alarms import Threshold
 from obd_diag.services.clear import ClearResult, clear_codes
 from obd_diag.services.live import (
     LiveRecorder,
@@ -77,6 +78,7 @@ class LiveFunction(Protocol):
         on_sample: Callable[[LiveSample], None],
         should_stop: Callable[[], bool],
         skip_unsupported: bool = False,
+        thresholds: Mapping[str, Threshold] | None = None,
     ) -> LiveResult: ...
 
 
@@ -171,6 +173,7 @@ def live_port(
     on_sample: Callable[[LiveSample], None],
     should_stop: Callable[[], bool],
     skip_unsupported: bool = False,
+    thresholds: Mapping[str, Threshold] | None = None,
     trace: bool = False,
 ) -> LiveResult:
     """Live-Werte (Mode 01) lesen, bis ``should_stop`` True liefert; nur lesend.
@@ -179,6 +182,7 @@ def live_port(
     Werte, soweit unterstützt; keiner davon: ``SelectionError``). Mit ``record`` wird
     jede Runde sofort in eine neue CSV-Datei geschrieben. Wird schon während der
     Initialisierung gestoppt, endet der Job ohne Abfrage und ohne Aufzeichnung.
+    ``thresholds``: Warnschwellen wie bei ``run_live``.
     """
     with open_serial(port, baud, _trace_path(trace)) as transport:
         elm = Elm327(transport)
@@ -198,6 +202,7 @@ def live_port(
                 should_stop=should_stop,
                 interval=interval,
                 recorder=recorder,
+                thresholds=thresholds,
             )
         return LiveResult(count, path)
 

@@ -129,7 +129,12 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   Schreiben ohne Überschreiben), `setup_check.py` (`run_setup_check`: PySide6/Katalog,
   Zugriff und Gruppe je Port über injizierbaren `Host`, Baudraten 38400/115200 nur mit
   `Elm327.initialize`), `live.py` (`prepare_live`, `select_pids`, `run_live`
-  mit injizierbarer Uhr, `LiveRecorder` CSV unter `recordings/`).
+  mit injizierbarer Uhr, `LiveRecorder` CSV unter `recordings/`), `alarms.py`
+  (Warnschwellen je Live-Wert, `DEFAULT_THRESHOLDS`, Schlüssel `voltage` = `ATRV`;
+  `run_live(thresholds=…)` füllt `LiveSample.alarms`, CSV-Spalte „Warnungen“, CLI
+  `--alarm KEY=UNTEN:OBEN`/`--no-alarms`, GUI QSettings `live/warnschwellen`),
+  `urgency.py` (Dringlichkeit je Code aus Art, MIL und wenigen J2012-Codes; nur
+  berechnet, nicht in Sitzungen gespeichert).
 - `data/` – `dtc_catalog.py` (SQLite, read-only), `catalog_build.py`, `wmi.py`
   (WMI → Hersteller, ISO-3780-Länderbereiche; Quellen im Modul).
 - `export/report.py` – PDF (ReportLab) und CSV.

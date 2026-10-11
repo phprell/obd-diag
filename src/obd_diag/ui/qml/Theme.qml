@@ -97,6 +97,23 @@ QtObject {
         return "#7c3aed"
     }
 
+    // Dringlichkeit eines Codes (services/urgency.py): stop, soon, check, watch
+    function urgencyText(urgency) {
+        if (urgency === "stop" || urgency === "soon")
+            return errorText
+        if (urgency === "check")
+            return warnText
+        return muted
+    }
+
+    function urgencyBg(urgency) {
+        if (urgency === "stop" || urgency === "soon")
+            return errorBg
+        if (urgency === "check")
+            return warnBg
+        return background
+    }
+
     function likelihoodColor(likelihood) {
         if (likelihood === "high")
             return errorText

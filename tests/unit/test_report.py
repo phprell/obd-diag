@@ -55,6 +55,15 @@ def test_csv_bom_delimiter_and_rows(tmp_path: Path) -> None:
     unknown = records[4]
     assert unknown["Titel"] == unknown["Ursachen"] == unknown["Kosten"] == ""
     assert unknown["FIN"] == "WVWZZZ1KZ6W123456"
+    # Dringlichkeit zuletzt, je Code über alle Arten (P0420 auch permanent), MIL an
+    assert header[-1] == "Dringlichkeit"
+    assert [r["Dringlichkeit"] for r in records] == [
+        "Bald in die Werkstatt",
+        "Bald in die Werkstatt",
+        "Beobachten",
+        "Bald in die Werkstatt",
+        "Beobachten",
+    ]
 
 
 def test_csv_without_codes_has_only_header(tmp_path: Path) -> None:
@@ -123,6 +132,10 @@ def test_pdf_full_session(tmp_path: Path, font: str) -> None:
         "Prüfziffer",
         f"Erstellt mit obd-diag {__version__}; Fehlercode-Texte: OBDex (CC0)",
         "Seite 1 von",
+        "Bald in die Werkstatt Readiness (Eigendiagnosen",  # Kurzübersicht, letzte Spalte
+        "Dringlichkeit: Bald in die Werkstatt. Verbrennungsaussetzer.",
+        "Dringlichkeit: Beobachten. Ausstehend: einmal erkannt",
+        "keine Ferndiagnose",
     ):
         assert expected in text, expected
     assert "Warnung" not in text

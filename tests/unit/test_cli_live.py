@@ -135,9 +135,9 @@ def test_record_to_automatic_path(car: Car, capsys: pytest.CaptureFixture[str]) 
     files = list((car.data / "obd-diag" / "recordings").glob("live-*.csv"))
     assert len(files) == 1
     assert files[0].read_text(encoding="utf-8-sig").splitlines() == [
-        "Zeit (s);Motordrehzahl (1/min);Geschwindigkeit (km/h);Bordspannung (V)",
-        "0;1726;50;12,4",
-        "1;1726;50;12,4",
+        "Zeit (s);Motordrehzahl (1/min);Geschwindigkeit (km/h);Bordspannung (V);Warnungen",
+        "0;1726;50;12,4;",
+        "1;1726;50;12,4;",
     ]
     err = capsys.readouterr().err
     assert err.endswith(f"Beendet nach 2 Runden.\nAufzeichnung: {files[0]}\n")
