@@ -28,7 +28,7 @@ Ergebnisse.
 ```
 
 **Werte.** Jede PID hat eine feste Umrechnung, z. B. `410C1AF8` → (256 · 0x1A + 0xF8) / 4
-= 1726 1/min. Alle 116 Werte mit Formel: {doc}`pids`.
+= 1726 1/min. Alle 140 Werte mit Formel: {doc}`pids`.
 
 **Readiness (PID 01).** Vier Datenbytes A bis D:
 

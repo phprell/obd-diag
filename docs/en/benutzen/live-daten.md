@@ -22,8 +22,8 @@ While driving, only a passenger should operate this.
 
 ## Which values
 
-116 values from 82 mode 01 PIDs according to SAE J1979, among them engine speed,
-speed, temperatures, load, air flow, manifold and rail pressure, EGR, fuel trim, oxygen
+140 values from 87 mode 01 PIDs according to SAE J1979, among them engine speed,
+speed, temperatures, load, air flow, manifold, rail and boost pressure, AdBlue, EGR, fuel trim, oxygen
 sensors 1–8, torque, fuel level, fuel rate and odometer. The complete list with key,
 formula and value range is in {doc}`../technik/pids`.
 
@@ -51,7 +51,8 @@ formula and value range is in {doc}`../technik/pids`.
 - If the adapter reports a bus error for every value for three rounds (e.g. ignition
   off), the query ends with an error message. `NO DATA`, `?` and rejections do not
   count as bus errors.
-- Only `01xx` and `ATRV` are sent.
+- Only `01xx` and `ATRV` are sent, plus `ATH1`/`ATH0` (headers on and off) when
+  multi-frame responses of several control modules get mixed up.
 
 ## Recording
 

@@ -104,7 +104,21 @@ def test_every_supported_value_has_an_answer() -> None:
             max_samples=1,
         )
     missing = {key for key, value in samples[0].values.items() if value is None}
-    assert missing == {"maf_b"}  # Sensor B meldet das Steuergerät als nicht vorhanden
+    # Sensoren und Bänke, die das Steuergerät im Statusbyte als nicht vorhanden meldet
+    assert missing == {
+        "maf_b",
+        *(f"intake_temp_{s}" for s in ("b1s3", "b2s1", "b2s2", "b2s3")),
+        "commanded_throttle_b",
+        "relative_throttle_b",
+        "commanded_fuel_rail_pressure_b",
+        "fuel_rail_pressure_b",
+        "fuel_rail_temp_b",
+        "commanded_boost_b",
+        "boost_b",
+    }
+    assert samples[0].values["boost_a"] == 100
+    assert samples[0].values["fuel_rail_pressure_a"] == 27950
+    assert samples[0].values["reagent_level"] == pytest.approx(70.2, abs=0.01)
 
 
 def test_only_allowed_commands_are_sent(tmp_path: Path) -> None:

@@ -35,16 +35,29 @@ from obd_diag import i18n  # noqa: E402
 from obd_diag.protocol.pids import PIDS, PidSpec  # noqa: E402
 from tests.command_spec import CommandSpec, load_spec  # noqa: E402
 
-_LETTERS = "ABCDEFGH"
+_LETTERS = "ABCDEFGHIJK"
+
+
+def _bytes(first: int, count: int) -> str:
+    """``count`` Datenbytes ab ``first`` als J1979-Summe, z. B. ``256B + C``."""
+    weights = {2: ["256", ""], 4: ["2^24 ", "2^16 ", "2^8 ", ""]}[count]
+    letters = _LETTERS[first : first + count]
+    return " + ".join(w + letter for w, letter in zip(weights, letters, strict=True))
+
 
 # Ausdrücke im Quelltext der Lambdas -> J1979-Schreibweise; Reihenfolge zählt.
-_REPLACEMENTS: list[tuple[str, str]] = [
-    (r'int\.from_bytes\(d\[:2\], "big", signed=True\)', "(256A + B, vorzeichenbehaftet)"),
-    (r'int\.from_bytes\(d\[:4\], "big"\)', "(2^24 A + 2^16 B + 2^8 C + D)"),
-    (r"_word\(d\[1:3\]\)", "(256B + C)"),
-    (r"_word\(d\[3:5\]\)", "(256D + E)"),
-    (r"_word\(d\)", "(256A + B)"),
-    (r"d\[(\d)\]", "{letter}"),
+_REPLACEMENTS: list[tuple[str, Callable[[re.Match[str]], str]]] = [
+    (
+        r'int\.from_bytes\(d\[:2\], "big", signed=True\)',
+        lambda m: "(256A + B, vorzeichenbehaftet)",
+    ),
+    (
+        r'int\.from_bytes\(d\[(\d*):(\d+)\], "big"\)',
+        lambda m: f"({_bytes(int(m[1] or 0), int(m[2]) - int(m[1] or 0))})",
+    ),
+    (r"_word\(d\[(\d+):(\d+)\]\)", lambda m: f"({_bytes(int(m[1]), 2)})"),
+    (r"_word\(d\)", lambda m: "(256A + B)"),
+    (r"d\[(\d+)\]", lambda m: _LETTERS[int(m[1])]),
 ]
 
 
@@ -69,10 +82,7 @@ def _lambda_source(func: Callable[..., object]) -> str:
 
 def _translate(expression: str) -> str:
     for pattern, replacement in _REPLACEMENTS:
-        if "{letter}" in replacement:
-            expression = re.sub(pattern, lambda m: _LETTERS[int(m.group(1))], expression)
-        else:
-            expression = re.sub(pattern, replacement, expression)
+        expression = re.sub(pattern, replacement, expression)
     if "d[" in expression or "_" in expression or "(d" in expression:
         raise ValueError(f"Formel nicht übersetzbar: {expression}")
     return expression

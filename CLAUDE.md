@@ -101,8 +101,9 @@ Funktionen: Fehlercodes (Mode 03/07/0A) mit deutschem Klartext, Readiness (Mode 
 PID 01, Otto + Diesel), Freeze Frame (Mode 02), FIN (Mode 09 PID 02) mit Offline-
 Dekodierung, sicheres Löschen, Sitzungen als JSON, PDF-Bericht und CSV, Adapter-
 Mitschnitt, GUI mit Tabs (Fehlercodes / Readiness / Freeze Frame / Fahrzeug /
-Live-Daten), helles und dunkles Design. Live-Daten: 116 Werte aus 82 Mode-01-PIDs
-(auch Lambdasonden 1–8, Nachkat-Trimm, Drehmomentstufen, 66/67), CSV-Aufzeichnung,
+Live-Daten), helles und dunkles Design. Live-Daten: 140 Werte aus 87 Mode-01-PIDs
+(auch Lambdasonden 1–8, Nachkat-Trimm, Drehmomentstufen, 66/67, 68/6C/6D/70/85
+am Auto noch ungeprüft), CSV-Aufzeichnung,
 Kacheln mit Verlaufskurve, CLI `obd-diag live`.
 
 ## Aufbau (src/obd_diag)
@@ -204,7 +205,8 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   läuft, ist `DiagnosisViewModel.blocked` gesetzt (Scan, Löschen, Export gesperrt,
   sonst stauten sie sich im einen Thread); Live startet nicht, solange die Diagnose
   `busy` ist. `app.py` stoppt Live vor `runner.wait()`.
-- **Live-Daten**: nur `01xx` und `ATRV`. Ein nicht lesbarer Wert ergibt `None` in der
+- **Live-Daten**: nur `01xx` und `ATRV` (dazu `ATH1`/`ATH0`, wenn sich mehrteilige
+  Antworten mehrerer Steuergeräte vermischen, wie beim Scan). Ein nicht lesbarer Wert ergibt `None` in der
   Runde, `TransportError` bricht ab, ebenso `MAX_FAILED_ROUNDS` (3) Runden, in denen
   jeder Wert an einem Adapterfehler scheitert (`?`/`NO DATA`/`7F` zählen nicht). Unter
   11,8 V nur alle 5 s abfragen und dann `ATRV` jede Runde (sonst jede zehnte); unlesbares
@@ -256,9 +258,10 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   auf alle FINs mit 1–5 angewendet. CAN-Plausibilitätsgrenze „ab 2000“ ist geschätzt.
 - Wird `ATRV` nicht unterstützt, ist Löschen trotzdem erlaubt (nur bekannte niedrige
   Spannung blockiert) – bewusst, ggf. mit dem Nutzer klären.
-- Nicht aufgenommen sind PIDs mit Statusbyte, deren Aufbau in freien Quellen nicht
-  eindeutig ist (68–7F, u. a. 70 Ladedruck, 7A–7C Partikelfilter); Liste im Docstring
-  von `protocol/pids.py`. Erst mit der Norm (J1979-DA) oder echten Antworten angehen.
+- PIDs 68, 6C, 6D, 70, 85 (meldet der W177) sind nach OBDb + DashLogic dekodiert, aber
+  ohne echte Antwort: beim nächsten Autotest `live --pids` mit diesen Werten mitschneiden.
+  Nicht aufgenommen: übrige Statusbyte-PIDs (69, 7A–7C Partikelfilter u. a.) und
+  Bitfelder 88/92; Liste im Docstring von `protocol/pids.py`.
 - Nächste Roadmap-Schritte: v0.3+ Bluetooth LE, OBDb-Profile (CC-BY-SA beachten),
   SocketCAN/UDS mit Steuergeräte-Erkennung. Entwurf samt Sicherheitskonzept
   (Freigabeliste, gesperrte Dienste, Adresssuche nur im Diagnosebereich) steht im

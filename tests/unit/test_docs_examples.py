@@ -190,8 +190,9 @@ def test_real_car_supported_pids() -> None:
     assert parse_supported(0x00, bytes.fromhex("98180011")) == {1, 4, 5, 0x0C, 0x0D, 0x1C, 0x20}
     assert parse_supported(0x60, bytes.fromhex("05190001")) == {0x66, 0x68, 0x6C, 0x6D, 0x70, 0x80}
     assert parse_supported(0x80, bytes.fromhex("09004000")) == {0x85, 0x88, 0x92}
-    offered = {0x68, 0x6C, 0x6D, 0x70, 0x85, 0x88, 0x92}
-    assert not offered & {spec.pid for spec in PIDS.values()}  # „liest obd-diag noch nicht“
+    known = {spec.pid for spec in PIDS.values()}
+    assert {0x68, 0x6C, 0x6D, 0x70, 0x85} <= known  # „liest obd-diag inzwischen“
+    assert not {0x88, 0x92} & known  # „bleiben draußen“
 
 
 def test_real_car_values() -> None:

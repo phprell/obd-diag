@@ -26,7 +26,7 @@ Ausführliche Dokumentation (Benutzen, Wie es funktioniert, Entwickeln):
   Diagnosesitzungen als JSON, PDF-Bericht und CSV, Adapter-Mitschnitt, Oberfläche
   mit hellem und dunklem Design.
 - **v0.2** (Version 0.2.0, Änderungen in [CHANGELOG.md](CHANGELOG.md)): Live-Daten nach SAE
-  J1979 (116 Werte aus 82 PIDs, darunter alle Lambdasonden), Aufzeichnung als CSV,
+  J1979 (140 Werte aus 87 PIDs, darunter alle Lambdasonden), Aufzeichnung als CSV,
   Reiter „Live-Daten“ und `obd-diag live`.
 - **Deutsch und Englisch** (noch nicht veröffentlicht, siehe CHANGELOG): Oberfläche
   (*Optionen → Sprache / Language*), Kommandozeile (`--lang de|en`), PDF-Bericht, CSV,
@@ -477,9 +477,9 @@ Zeit (s)  Motordrehzahl (1/min)  Geschwindigkeit (km/h)  Kühlmitteltemperatur (
      1.0                   1731                      51                         86  …          14.1
 ```
 
-- **Werte:** 116 Werte aus 82 Mode-01-PIDs nach SAE J1979 (`protocol/pids.py`), u. a.
+- **Werte:** 140 Werte aus 87 Mode-01-PIDs nach SAE J1979 (`protocol/pids.py`), u. a.
   Drehzahl, Geschwindigkeit, Kühlmittel-, Ansaugluft- und Öltemperatur, Last,
-  Luftmasse, Saugrohr- und Raildruck, AGR, Lambda-Sollwert, Kraftstofftrimm (auch
+  Luftmasse, Saugrohr-, Rail- und Ladedruck, AdBlue, AGR, Lambda-Sollwert, Kraftstofftrimm (auch
   Nachkat), Lambdasonden 1–8 (Schmal- und Breitband), Drehmomentstufen,
   Tankfüllstand, Kraftstoffverbrauch und Kilometerstand. Liefert eine PID mehrere
   Werte (z. B. Sondenspannung und Trimm), wird sie je Runde nur einmal abgefragt.
@@ -503,7 +503,8 @@ Zeit (s)  Motordrehzahl (1/min)  Geschwindigkeit (km/h)  Kühlmitteltemperatur (
   Englisch `,` und Dezimalpunkt); erste Spalte
   `Zeit (s)`, dann je Wert `Name (Einheit)`, zuletzt `Bordspannung (V)`. Jede Zeile
   wird sofort geschrieben, ein Abbruch verliert also nichts.
-- **Nur lesend:** gesendet werden nur `01xx` und `ATRV`.
+- **Nur lesend:** gesendet werden nur `01xx` und `ATRV` (dazu `ATH1`/`ATH0`, wenn sich
+  mehrteilige Antworten mehrerer Steuergeräte vermischen).
 
 Während der Fahrt nur durch Beifahrer bedienen. Gegen den Emulator liefert
 `tools/emulator.py` zufällig wechselnde Werte bei laufendem Motor.

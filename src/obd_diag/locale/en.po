@@ -1713,6 +1713,62 @@ msgid "Motordrehmoment Leerlauf"
 msgstr "Engine torque idle"
 
 #: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck A Sollwert"
+msgstr "Commanded fuel rail pressure A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck A"
+msgstr "Fuel rail pressure A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilertemperatur A"
+msgstr "Fuel rail temperature A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck B Sollwert"
+msgstr "Commanded fuel rail pressure B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck B"
+msgstr "Fuel rail pressure B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilertemperatur B"
+msgstr "Fuel rail temperature B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ladedruck A Sollwert"
+msgstr "Commanded boost pressure A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ladedruck A"
+msgstr "Boost pressure A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ladedruck B Sollwert"
+msgstr "Commanded boost pressure B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ladedruck B"
+msgstr "Boost pressure B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Reduktionsmittelverbrauch (Mittel)"
+msgstr "Reagent consumption (average)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Reduktionsmittelbedarf (Mittel)"
+msgstr "Reagent demand (average)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Füllstand Reduktionsmitteltank"
+msgstr "Reagent tank level"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Laufzeit mit NOx-Warnung"
+msgstr "Run time with NOx warning"
+
+#: src/obd_diag/protocol/pids.py
 msgid "Berechnete Motorlast"
 msgstr "Calculated engine load"
 
@@ -1907,6 +1963,46 @@ msgstr "Coolant temperature sensor 2"
 #: src/obd_diag/protocol/pids.py
 msgid "Kilometerstand"
 msgstr "Odometer"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 1, Sensor 1"
+msgstr "Intake air temperature bank 1, sensor 1"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 1, Sensor 2"
+msgstr "Intake air temperature bank 1, sensor 2"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 1, Sensor 3"
+msgstr "Intake air temperature bank 1, sensor 3"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 2, Sensor 1"
+msgstr "Intake air temperature bank 2, sensor 1"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 2, Sensor 2"
+msgstr "Intake air temperature bank 2, sensor 2"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 2, Sensor 3"
+msgstr "Intake air temperature bank 2, sensor 3"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Drosselklappensteller A Sollwert"
+msgstr "Commanded throttle actuator A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Relative Drosselklappenstellung A"
+msgstr "Relative throttle position A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Drosselklappensteller B Sollwert"
+msgstr "Commanded throttle actuator B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Relative Drosselklappenstellung B"
+msgstr "Relative throttle position B"
 
 #: src/obd_diag/protocol/pids.py
 msgid "Lambdasonde {n} Spannung"

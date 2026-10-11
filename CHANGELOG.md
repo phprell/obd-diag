@@ -3,6 +3,18 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
+## Unveröffentlicht
+
+### Neu
+
+- Live-Daten: 24 weitere Werte aus den PIDs `68` (Ansauglufttemperatur je Sensor),
+  `6C` (Drosselklappensteller A/B), `6D` (Raildruck Soll/Ist und Temperatur), `70`
+  (Ladedruck Soll/Ist) und `85` (AdBlue: Verbrauch, Bedarf, Tankfüllstand, Laufzeit mit
+  NOx-Warnung), jetzt 140 Werte aus 87 PIDs. Der Mercedes A 180 d meldet sie als
+  unterstützt; am Auto geprüft sind die Antworten noch nicht. Auch der Demo-Modus zeigt
+  sie. Vermischen sich mehrteilige Antworten mehrerer Steuergeräte, wird die Anfrage mit
+  Headern wiederholt statt den Wert leer zu lassen.
+
 ## 0.2.1 – 2026-10-11
 
 Neu sind Einrichtungs- und Adapter-Check, ein Demo-Modus ohne Auto, die englische
