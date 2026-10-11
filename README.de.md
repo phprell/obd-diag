@@ -177,6 +177,8 @@ verlässlicher.
 Rechte: unter Arch heißt die Gruppe `uucp` (Debian/Ubuntu: `dialout`):
 `sudo usermod -aG uucp $USER` – oder die udev-Regel
 `src/obd_diag/share/70-obd-diag.rules` installieren (das AUR-Paket tut das).
+`obd-diag setup-check` prüft Adapter, Rechte und Baudrate in einem Durchgang (die
+Oberfläche macht das beim ersten Start von selbst).
 
 ### Erster Test am Auto
 

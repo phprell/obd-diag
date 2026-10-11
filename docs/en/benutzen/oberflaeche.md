@@ -112,6 +112,7 @@ action runs on the adapter at a time ({doc}`live-daten`).
 | Open session … | Ctrl+O | view a saved session only; clearing is not possible then |
 | Report as PDF … | Ctrl+P | write a PDF report in the background |
 | Export CSV … | – | one row per trouble code |
+| Options → Check setup … | – | check adapter, permissions and baud rate; opens by itself on the first start ({doc}`installation`) |
 | Options → Explain trouble codes online | – | codes without a catalog text get an unverified short explanation ({doc}`fehlercodes-online`) |
 | Options → Record adapter trace | – | every action writes a trace ({doc}`sitzungen`) |
 | Options → Theme | – | like the system, light or dark |

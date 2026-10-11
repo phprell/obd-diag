@@ -180,6 +180,13 @@ def _isolated_user_dirs(tmp_path_factory: pytest.TempPathFactory) -> Iterator[No
             return
         for fmt in (QSettings.Format.NativeFormat, QSettings.Format.IniFormat):
             QSettings.setPath(fmt, QSettings.Scope.UserScope, str(config))
+        # Kein erster Start: sonst prüfte ``app.main`` von selbst die echten Ports
+        from obd_diag.ui.viewmodels.diagnosis import SETTINGS_APP, SETTINGS_ORG
+        from obd_diag.ui.viewmodels.setup import SETUP_SEEN_KEY
+
+        settings = QSettings(SETTINGS_ORG, SETTINGS_APP)
+        settings.setValue(SETUP_SEEN_KEY, True)
+        settings.sync()
         yield
 
 

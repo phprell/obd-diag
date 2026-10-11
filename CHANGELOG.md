@@ -5,6 +5,12 @@ vor 1.0 kann sich die Bedienung noch ändern.
 
 ## Unreleased
 
+- Einrichtung prüfen: `obd-diag setup-check` und in der Oberfläche *Optionen →
+  Einrichtung prüfen …* (beim ersten Start von selbst). Findet die Adapter, prüft die
+  Zugriffsrechte und nennt die nötige Gruppe (`uucp` auf Arch, `dialout` auf
+  Debian/Ubuntu) samt Befehl, probiert 38400 und 115200 Baud (nur Adapter-Befehle) und
+  erinnert an Zündung und HS-CAN-Schalter. Die Oberfläche übernimmt Port und Baudrate.
+
 - Englische Oberfläche: Sprache unter „Optionen → Sprache / Language“ wählbar, Wechsel
   sofort ohne Neustart. Beim ersten Start gilt die Systemsprache (Deutsch nur bei
   deutschem System, sonst Englisch).
