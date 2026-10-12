@@ -83,3 +83,14 @@ Bei neuen Funktionen gehört die passende Seite unter „Benutzen“ in denselbe
 Änderungen an der Oberfläche die Bilder neu erzeugen und einchecken. Byte-Beispiele auf
 den Technik-Seiten prüft `tests/unit/test_docs_examples.py` gegen die Parser; wer ein
 Beispiel ändert, ändert den Test mit.
+
+## Release
+
+Version in `pyproject.toml` und `src/obd_diag/__init__.py` setzen, Abschnitt
+`## X.Y.Z – Datum` in `CHANGELOG.md` schreiben und die Version auch in die
+AppStream-Datei `src/obd_diag/share/io.github.phprell.obd_diag.metainfo.xml` eintragen.
+Nach dem Merge den Tag `vX.Y.Z` auf `main` pushen. `.github/workflows/release.yml` prüft
+dann Tag und Versionen, baut Katalog, sdist, Wheel, AUR-Paket und Flatpak
+(`.github/workflows/packaging.yml`, auch bei jedem PR), legt das GitHub-Release mit dem
+Changelog-Abschnitt an und lädt auf PyPI hoch. Paketvorlagen: `packaging/aur/PKGBUILD`,
+`packaging/flatpak/`.

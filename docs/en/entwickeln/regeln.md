@@ -85,3 +85,14 @@ New functions bring the matching page under “Usage” in the same PR. After ch
 the user interface, generate the pictures again and check them in. Byte examples on
 the technical pages are checked against the parsers by
 `tests/unit/test_docs_examples.py`; whoever changes an example changes the test too.
+
+## Release
+
+Set the version in `pyproject.toml` and `src/obd_diag/__init__.py`, write a section
+`## X.Y.Z – date` in `CHANGELOG.md` and add the version to the AppStream file
+`src/obd_diag/share/io.github.phprell.obd_diag.metainfo.xml` as well. After the merge,
+push the tag `vX.Y.Z` on `main`. `.github/workflows/release.yml` then checks tag and
+versions, builds catalog, sdist, wheel, AUR package and Flatpak
+(`.github/workflows/packaging.yml`, also on every PR), creates the GitHub release with
+the changelog section and uploads to PyPI. Packaging templates: `packaging/aur/PKGBUILD`,
+`packaging/flatpak/`.

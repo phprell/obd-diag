@@ -84,7 +84,7 @@ class ReadinessStatus:
         Das ist kein AU-Ergebnis: Seit der AU-Richtlinie 2018 (Leitfaden 5.01) gehört zur
         AU immer auch die Endrohrmessung; offene Monitore führen nicht pauschal zum
         Nichtbestehen, und ob einzelne toleriert werden, hängt von Fahrzeug und
-        Prüfablauf ab (siehe README, Abschnitt Readiness).
+        Prüfablauf ab (siehe Doku, docs/benutzen/readiness.md).
         """
         return all(m.state is not MonitorState.INCOMPLETE for m in self.monitors)
 
