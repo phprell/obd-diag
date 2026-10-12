@@ -49,11 +49,6 @@ Desktop app and command line, in English and German, no account and no cloud.
 | **Battery test** | resting voltage, dip while cranking, charging voltage |
 | **Reports** | PDF report, CSV, saved sessions you can compare later |
 
-Some of these (used-car check, readiness assistant, battery test, control units and test
-results, urgency, session comparison) are new in the upcoming v0.2.2; until it is
-released, [install from source](https://phprell.github.io/obd-diag/en/benutzen/installation.html#from-the-sources)
-to get them.
-
 <table>
   <tr>
     <td width="50%">

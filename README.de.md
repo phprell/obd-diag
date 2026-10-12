@@ -49,11 +49,6 @@ Desktop-Programm und Kommandozeile, auf Deutsch und Englisch, ohne Konto und ohn
 | **Batterietest** | Ruhespannung, Einbruch beim Anlassen, Ladespannung |
 | **Berichte** | PDF-Bericht, CSV, gespeicherte Sitzungen zum späteren Vergleich |
 
-Einiges davon (Gebrauchtwagen-Check, Readiness-Assistent, Batterietest, Steuergeräte und
-Testergebnisse, Dringlichkeit, Sitzungsvergleich) ist neu in der kommenden v0.2.2; bis
-zum Release gibt es das nur bei
-[Installation aus den Quellen](https://phprell.github.io/obd-diag/benutzen/installation.html#aus-den-quellen).
-
 <table>
   <tr>
     <td width="50%">
