@@ -50,7 +50,7 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   einen roten Stand auf main gebracht).
 - `uv run python tools/emulator.py [--stored P0420,P0300 --pending P0171 --engine-off]`
   – ELM327-emulator mit standardgemäßen Antworten; zeigt das pty (z. B. /dev/pts/5)
-- `uv run obd-diag {info,adapter,scan,diagnose,readiness,used-car,vin,ecus,tests,clear,live,ports,export} --port … [--trace]`,
+- `uv run obd-diag {info,adapter,scan,diagnose,readiness,used-car,vin,ecus,tests,clear,live,ports,export,compare} --port … [--trace]`,
   `uv run obd-diag setup-check [--port …]` (Einrichtung: Rechte, Gruppe, Baudrate)
   (`live --list`, `--pids rpm,speed`, `--interval`, `--duration`, `--record [DATEI.csv]`)
 - `uv run obd-diag-gui`
@@ -132,7 +132,8 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   `check_readiness`; CLI `obd-diag readiness`, GUI-Karte im Readiness-Reiter),
   `vehicle.py` (`read_vin`, `decode_vin`, `lookup_vpic`), `dtc_online.py`
   (`lookup_online`, `search_url`; Herstellerdatei nur laut FIN, Cache je Commit), `session.py`
-  (`run_diagnosis`, JSON speichern/laden), `storage.py` (XDG-Pfade, atomares
+  (`run_diagnosis`, JSON speichern/laden), `compare.py` (`compare_sessions`: Sitzungsvergleich,
+  je Abschnitt eine Funktion in `SECTIONS`, neue Sitzungsdaten dort anhängen), `storage.py` (XDG-Pfade, atomares
   Schreiben ohne Überschreiben), `setup_check.py` (`run_setup_check`: PySide6/Katalog,
   Zugriff und Gruppe je Port über injizierbaren `Host`, Baudraten 38400/115200 nur mit
   `Elm327.initialize`), `live.py` (`prepare_live`, `select_pids`, `run_live`
@@ -144,7 +145,8 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   (WMI → Hersteller, ISO-3780-Länderbereiche; Quellen im Modul).
 - `export/report.py` – PDF (ReportLab) und CSV.
 - `ui/` – `app.py`, `window.py`, `backend.py` (`live_port`), `jobs.py`, `theme.py`,
-  `viewmodels/` (`diagnosis.py`, `live.py`, `setup.py`: Dialog „Einrichtung prüfen“, öffnet
+  `viewmodels/` (`diagnosis.py`, `live.py`, `compare.py`: Sitzungsvergleich, Datei → Mit Sitzung vergleichen …,
+  `setup.py`: Dialog „Einrichtung prüfen“, öffnet
   sich bis zum ersten Schließen beim Start, QSettings `einrichtung/geprueft`; `tests/ui/conftest.py`
   setzt den Schlüssel, damit Tests nie echte Ports prüfen), `qml/` (`LiveView.qml` u. a.).
   `cli.py` – alle Befehle.

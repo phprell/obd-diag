@@ -126,6 +126,7 @@ denn am Adapter läuft immer nur eine Aktion ({doc}`live-daten`).
 | --- | --- | --- |
 | Sitzung speichern | Strg+S | Diagnose als JSON ablegen, Pfad wird angezeigt |
 | Sitzung öffnen … | Strg+O | gespeicherte Sitzung nur ansehen; Löschen geht dann nicht |
+| Mit Sitzung vergleichen … | – | angezeigte Diagnose mit einer gespeicherten vergleichen ({doc}`sitzungen`) |
 | Bericht als PDF … | Strg+P | PDF-Bericht im Hintergrund schreiben |
 | CSV exportieren … | – | eine Zeile pro Fehlercode |
 | Optionen → Einrichtung prüfen … | – | Adapter, Zugriffsrechte und Baudrate prüfen; öffnet sich beim ersten Start von selbst ({doc}`installation`) |

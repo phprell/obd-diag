@@ -44,6 +44,14 @@ from obd_diag.services.clear import (
     clear_enabled,
     clearable_codes,
 )
+from obd_diag.services.compare import (
+    DIFFERENT_VEHICLE_WARNING,
+    ChangeKind,
+    SessionComparison,
+    change_text,
+    compare_sessions,
+    comparison_to_dict,
+)
 from obd_diag.services.diagnostics import (
     LOW_VOLTAGE,
     DiagnosticCode,
@@ -748,6 +756,57 @@ def _run_export(args: argparse.Namespace, parser: argparse.ArgumentParser) -> in
     return 0
 
 
+# --- Sitzungsvergleich ---------------------------------------------------------------
+
+_CHANGE_MARKS = {
+    ChangeKind.ADDED: "+",
+    ChangeKind.REMOVED: "-",
+    ChangeKind.CHANGED: "~",
+    ChangeKind.UNCHANGED: "=",
+}
+
+
+def _print_comparison(comparison: SessionComparison, before: Path, after: Path) -> None:
+    _labelled(
+        [
+            (tr("Vorher"), f"{comparison.before.created:%Y-%m-%d %H:%M}  {before}"),
+            (tr("Nachher"), f"{comparison.after.created:%Y-%m-%d %H:%M}  {after}"),
+        ]
+    )
+    if comparison.same_vehicle is False:
+        print(tr("Warnung: {message}").format(message=tr(DIFFERENT_VEHICLE_WARNING)))
+    if not comparison.has_differences:
+        print()
+        print(tr("Keine Unterschiede."))
+    for section in comparison.sections:
+        if not section.changes:
+            continue
+        print()
+        print(f"{section.title}:")
+        for c in section.changes:
+            print(f"  {_CHANGE_MARKS[c.kind]} {c.subject}: {change_text(c)}")
+
+
+def _run_compare(args: argparse.Namespace) -> int:
+    from obd_diag.services.session import load_session
+
+    try:
+        first, second = load_session(args.first), load_session(args.second)
+    except OSError as e:
+        _error(f"{e.filename or ''}: {e.strerror or e}")
+        return 1
+    except ValueError as e:
+        _error(e)
+        return 1
+    comparison = compare_sessions(first, second)
+    if args.json:
+        print(json.dumps(comparison_to_dict(comparison), ensure_ascii=False, indent=2))
+        return 0
+    paths = (args.second, args.first) if comparison.swapped else (args.first, args.second)
+    _print_comparison(comparison, *paths)
+    return 0
+
+
 # --- Live-Daten ---------------------------------------------------------------------
 
 LIVE_SAFETY_NOTE = N_("Hinweis: Während der Fahrt nur durch Beifahrer bedienen.")
@@ -1116,6 +1175,17 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--csv", type=Path, metavar=csv_metavar, help=csv_help)
     # für Fehlermeldungen mit der Aufrufzeile von ``export``
     export_parser.set_defaults(export_parser=export_parser)
+    compare_parser = sub.add_parser(
+        "compare",
+        parents=[common],
+        help=tr(
+            "zwei gespeicherte Diagnosesitzungen vergleichen: neue und verschwundene "
+            "Fehlercodes, Readiness, Freeze Frame (die ältere gilt als vorher)"
+        ),
+    )
+    compare_parser.add_argument("first", type=Path, metavar=tr("SESSION1.json"))
+    compare_parser.add_argument("second", type=Path, metavar=tr("SESSION2.json"))
+    compare_parser.add_argument("--json", action="store_true", help=json_help)
     return parser
 
 
@@ -1171,6 +1241,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_setup_check(args)
         elif args.command == "export":
             return _run_export(args, args.export_parser)
+        elif args.command == "compare":
+            return _run_compare(args)
     except (TransportError, ElmError) as e:
         _error(e)
         if isinstance(e, NoConnectionError):

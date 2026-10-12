@@ -41,6 +41,48 @@ Die Sitzung ist sprachneutral bis auf die Fehlercode-Texte: Die stehen in der Sp
 des Scans. Alles andere (Monitornamen, Beschriftungen) erscheint beim Öffnen oder
 Exportieren in der eingestellten Sprache.
 
+## Sitzungen vergleichen
+
+Zwei gespeicherte Sitzungen zeigen, was sich zwischen zwei Diagnosen geändert hat, etwa
+vor und nach einer Reparatur oder ein paar Fahrten nach dem Löschen. Der Vergleich
+arbeitet nur mit den Dateien und spricht das Fahrzeug nicht an.
+
+```sh
+obd-diag compare ~/.local/share/obd-diag/sessions/session-20261007-143205.json \
+    ~/.local/share/obd-diag/sessions/session-20261010-091512.json
+```
+
+```text
+Vorher:  2026-10-07 14:32  …/session-20261007-143205.json
+Nachher: 2026-10-10 09:15  …/session-20261010-091512.json
+
+Fehlercodes:
+  + P0171: neu: gespeichert
+  - P0300  Zufällige/mehrfache Zylinder-Verbrennungsaussetzer erkannt: entfällt (vorher: gespeichert)
+  = P0420  Katalysatorwirkungsgrad unter Schwellwert (Bank 1): weiterhin gespeichert, permanent
+
+Readiness:
+  ~ Katalysator: nicht abgeschlossen → abgeschlossen
+```
+
+Die ältere Sitzung gilt als „vorher“, die Reihenfolge der Dateien ist egal. `+` ist neu,
+`-` entfallen, `~` geändert, `=` unverändert. Verglichen werden:
+
+- **Fehlercodes:** neue, entfallene und weiterhin vorhandene Codes, dazu Wechsel der Art
+  (z. B. ausstehend → gespeichert).
+- **Readiness:** Motorkontrollleuchte, gemeldete Codezahl, jeder Monitor und „Alle Tests
+  abgeschlossen“.
+- **Freeze Frame:** auslösender Code und Messwerte.
+- **Zähler seit dem Löschen** (Gebrauchtwagen-Check): Warmläufe, Strecke und Zeit seit
+  dem Löschen sowie mit Warnleuchte. Fallen die Zähler seit dem Löschen, wurde
+  dazwischen gelöscht; das ist rot markiert.
+- **Fahrzeug und Verbindung:** FIN (bei verschiedener FIN warnt obd-diag), Adapter,
+  Protokoll und Bordspannung (Unterschiede ab 0,1 V).
+
+`--json` gibt den Vergleich maschinenlesbar aus. In der Oberfläche vergleicht „Datei →
+Mit Sitzung vergleichen …“ die angezeigte Diagnose mit einer gespeicherten Datei;
+Verbesserungen erscheinen grün, Verschlechterungen rot.
+
 ## PDF-Bericht und CSV
 
 ```sh

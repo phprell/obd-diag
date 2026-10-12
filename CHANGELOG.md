@@ -19,6 +19,12 @@ vor 1.0 kann sich die Bedienung noch ändern.
   des PDF-Berichts; in der Oberfläche stehen die Steuergeräte im Reiter *Fahrzeug*, die
   Testergebnisse im neuen Reiter *Testergebnisse*. Gelesen wird mit Headern (`ATH1`), damit
   jeder Wert dem richtigen Steuergerät zugeordnet ist. Die Demo zeigt erfundene Beispielwerte.
+- Sitzungsvergleich: `obd-diag compare ALT.json NEU.json` bzw. in der Oberfläche *Datei →
+  Mit Sitzung vergleichen …* zeigt, was sich zwischen zwei gespeicherten Diagnosen
+  geändert hat: neue, entfallene und weiterhin vorhandene Fehlercodes, Readiness-Monitore,
+  Kontrollleuchte, Freeze Frame, Zähler seit dem Löschen, FIN, Protokoll und
+  Bordspannung (`--json` für Skripte).
+  Arbeitet nur mit den Dateien, das Fahrzeug wird nicht angesprochen.
 
 - Gebrauchtwagen-Check: `obd-diag used-car`, Reiter „Gebrauchtwagen“ in der Oberfläche
   und ein Abschnitt im PDF-Bericht zeigen, ob die Fehlercodes vor kurzem gelöscht wurden.

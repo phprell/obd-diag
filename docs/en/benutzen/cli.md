@@ -19,6 +19,7 @@ language of all output ({doc}`sprache`).
 | `obd-diag tests` | test results with limits ({doc}`steuergeraete-tests`) | Mode 06 |
 | `obd-diag live` | show and record live data | Mode 01 |
 | `obd-diag export` | saved session as PDF/CSV | nothing |
+| `obd-diag compare` | compare two saved sessions ({doc}`sitzungen`) | nothing |
 | `obd-diag clear` | clear trouble codes (locked) | Mode 04 |
 
 ## Examples

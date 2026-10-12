@@ -42,6 +42,49 @@ The session is language-neutral apart from the trouble code texts: those are sto
 the language of the scan. Everything else (monitor names, labels) is shown in the
 current language when the session is opened or exported.
 
+## Comparing sessions
+
+Two saved sessions show what changed between two diagnoses, for example before and
+after a repair or a few drives after clearing. The comparison only works on the files
+and does not talk to the vehicle.
+
+```sh
+obd-diag compare ~/.local/share/obd-diag/sessions/session-20261007-143205.json \
+    ~/.local/share/obd-diag/sessions/session-20261010-091512.json
+```
+
+```text
+Before: 2026-10-07 14:32  …/session-20261007-143205.json
+After:  2026-10-10 09:15  …/session-20261010-091512.json
+
+Trouble codes:
+  + P0171: new: stored
+  - P0300  Zufällige/mehrfache Zylinder-Verbrennungsaussetzer erkannt: gone (before: stored)
+  = P0420  Katalysatorwirkungsgrad unter Schwellwert (Bank 1): still stored, permanent
+
+Readiness:
+  ~ Catalyst: incomplete → complete
+```
+
+The older session counts as "before"; the order of the files does not matter. `+` is
+new, `-` gone, `~` changed, `=` unchanged. Trouble code titles stay in the language of
+the scan. Compared are:
+
+- **Trouble codes:** new, gone and remaining codes, plus changes of kind (e.g.
+  pending → stored).
+- **Readiness:** check engine light, reported code count, every monitor and "All tests
+  complete".
+- **Freeze frame:** triggering code and measured values.
+- **Counters since clearing** (used-car check): warm-ups, distance and time since
+  clearing and with the warning light on. If the counters since clearing went down,
+  the codes were cleared in between; this is marked red.
+- **Vehicle and connection:** VIN (obd-diag warns if the VINs differ), adapter, protocol
+  and battery voltage (differences of 0.1 V or more).
+
+`--json` prints the comparison in machine-readable form. In the GUI, "File → Compare
+with session …" compares the displayed diagnosis with a saved file; improvements are
+shown in green, deteriorations in red.
+
 ## PDF report and CSV
 
 ```sh
