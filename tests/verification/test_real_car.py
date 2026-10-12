@@ -53,13 +53,30 @@ COUNTERS = ("0130", "0131", "014E", "0121", "014D")
 
 
 def _diagnosis(name: str) -> Session:
-    """``run_diagnosis`` über den Mitschnitt; die Zähler-Anfragen danach ergeben NO DATA."""
+    """``run_diagnosis`` über den Mitschnitt; Zähler, Mode 09 und Mode 06 danach: NO DATA."""
     entries = read_trace(TRACES / name)
     for cmd in COUNTERS:
         entries += [(">>", f"{cmd}\r".encode()), ("<<", b"NO DATA\r\r>")]
+    entries += _NOT_RECORDED
     session = run_diagnosis(Elm327(ReplayTransport(entries)), None)
     assert session.clear_counters == ClearCounters()
     return session
+
+
+# Die Diagnose-Mitschnitte enden mit 0902; Mode 09 (0900) und Mode 06 (0600) gab es damals
+# noch nicht. Hier folgen sie als NO DATA, ohne zu behaupten, das Auto hätte so geantwortet.
+_NOT_RECORDED = [
+    (direction, data)
+    for cmd in (b"0900", b"0600")
+    for direction, data in (
+        (">>", b"ATH1\r"),
+        ("<<", b"OK\r\r>"),
+        (">>", cmd + b"\r"),
+        ("<<", b"NO DATA\r\r>"),
+        (">>", b"ATH0\r"),
+        ("<<", b"OK\r\r>"),
+    )
+]
 
 
 def test_diagnosis_replays_with_expected_result() -> None:

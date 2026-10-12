@@ -15,6 +15,7 @@ FreezeFrameView 1.0 FreezeFrameView.qml
 VehicleView 1.0 VehicleView.qml
 UsedCarView 1.0 UsedCarView.qml
 LiveView 1.0 LiveView.qml
+TestResultsView 1.0 TestResultsView.qml
 AdapterDialog 1.0 AdapterDialog.qml
 SetupDialog 1.0 SetupDialog.qml
 ReadinessAssist 1.0 ReadinessAssist.qml

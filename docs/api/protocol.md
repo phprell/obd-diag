@@ -29,3 +29,13 @@
 
 ```{automodule} obd_diag.protocol.pids
 ```
+
+## `obd_diag.protocol.vehicle_info`
+
+```{automodule} obd_diag.protocol.vehicle_info
+```
+
+## `obd_diag.protocol.monitor_tests`
+
+```{automodule} obd_diag.protocol.monitor_tests
+```

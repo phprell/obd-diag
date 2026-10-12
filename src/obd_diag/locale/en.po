@@ -170,6 +170,10 @@ msgid "aus"
 msgstr "off"
 
 #: src/obd_diag/cli.py
+msgid "Steuergeräte (Mode 09):"
+msgstr "Control units (mode 09):"
+
+#: src/obd_diag/cli.py
 msgid "muss größer als 0 sein"
 msgstr "must be greater than 0"
 
@@ -276,6 +280,14 @@ msgid "Freeze Frame: keiner gespeichert."
 msgstr "Freeze frame: none stored."
 
 #: src/obd_diag/cli.py
+msgid "Steuergeräte (Mode 09): nicht verfügbar."
+msgstr "Control units (mode 09): not available."
+
+#: src/obd_diag/cli.py
+msgid "Testergebnisse (Mode 06): nicht verfügbar."
+msgstr "Test results (mode 06): not available."
+
+#: src/obd_diag/cli.py
 msgid "Hinweis: {message}"
 msgstr "Note: {message}"
 
@@ -325,8 +337,8 @@ msgid "ohne Rückfrage löschen"
 msgstr "clear without asking"
 
 #: src/obd_diag/cli.py
-msgid "vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN, Gebrauchtwagen-Check (nur lesend)"
-msgstr "full diagnosis: trouble codes, readiness, freeze frame, VIN, used-car check (read-only)"
+msgid "vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN, Gebrauchtwagen-Check, Steuergeräte und Testergebnisse (nur lesend)"
+msgstr "full diagnosis: trouble codes, readiness, freeze frame, VIN, used-car check, control units and test results (read-only)"
 
 #: src/obd_diag/cli.py
 msgid "Sitzung als JSON ausgeben"
@@ -351,6 +363,14 @@ msgstr "read the VIN (mode 09) and decode it"
 #: src/obd_diag/cli.py
 msgid "diese FIN dekodieren, ohne Adapter"
 msgstr "decode this VIN, without an adapter"
+
+#: src/obd_diag/cli.py
+msgid "Steuergeräte (Mode 09): Name, Kalibrierungs-IDs, CVN und Überwachungszähler"
+msgstr "control units (mode 09): name, calibration IDs, CVN and monitoring counters"
+
+#: src/obd_diag/cli.py
+msgid "Testergebnisse der Abgas-Eigendiagnose mit Grenzwerten (Mode 06, nur CAN)"
+msgstr "test results of the emission self-diagnosis with limits (mode 06, CAN only)"
 
 #: src/obd_diag/cli.py
 msgid "Live-Daten (Mode 01) fortlaufend anzeigen und aufzeichnen; Ende mit Strg+C"
@@ -498,6 +518,35 @@ msgid "Freeze Frame (ausgelöst durch {code}):"
 msgstr "Freeze frame (triggered by {code}):"
 
 #: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "Kalibrierungs-ID"
+msgstr "Calibration ID"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "CVN"
+msgstr "CVN"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "{raw} (Rohwert)"
+msgstr "{raw} (raw value)"
+
+#: src/obd_diag/cli.py
+msgid "Testergebnisse (Mode 06, {n} Test, davon {failed} nicht bestanden):"
+msgid_plural "Testergebnisse (Mode 06, {n} Tests, davon {failed} nicht bestanden):"
+msgstr[0] "Test results (mode 06, {n} test, {failed} of them failed):"
+msgstr[1] "Test results (mode 06, {n} tests, {failed} of them failed):"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "Grenzen {low} bis {high}"
+msgstr "limits {low} to {high}"
+
+#: src/obd_diag/cli.py
 msgid "Fahrzeug liefert keine FIN (Mode 09 PID 02)."
 msgstr "Vehicle does not report a VIN (mode 09 PID 02)."
 
@@ -547,6 +596,15 @@ msgstr "Reported trouble codes: {count}"
 #: src/obd_diag/cli.py
 msgid "unbekannten Code"
 msgstr "unknown code"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "Überwachungszähler"
+msgstr "Monitoring counters"
+
+#: src/obd_diag/cli.py
+msgid "keine weiteren Angaben"
+msgstr "no further information"
 
 #: src/obd_diag/cli.py
 msgid "PDF-Bericht: {path}"
@@ -604,6 +662,16 @@ msgid "Abhilfe: {command}"
 msgstr "Fix: {command}"
 
 #: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "{cycles} Fahrzyklen, {ignitions} Zündungen"
+msgstr "{cycles} driving cycles, {ignitions} ignitions"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "Steuergerät {ecu}"
+msgstr "Control unit {ecu}"
+
+#: src/obd_diag/cli.py
 msgid "Bordspannung {voltage:.1f} V unter {minimum:.1f} V, Abfrage nur alle {seconds:g} s."
 msgstr "Battery voltage {voltage:.1f} V below {minimum:.1f} V, querying only every {seconds:g} s."
 
@@ -614,6 +682,11 @@ msgstr "Show them with --list, choose with --pids."
 #: src/obd_diag/cli.py
 msgid "in dieser Fahrt: {state}"
 msgstr "this drive: {state}"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "{completed} von {conditions}"
+msgstr "{completed} of {conditions}"
 
 #: src/obd_diag/data/wmi.py
 msgid "Volkswagen Nutzfahrzeuge"
@@ -1461,6 +1534,34 @@ msgid "Betriebszustand des Motors in dem Moment, in dem der Fehlercode gesetzt w
 msgstr "Engine operating conditions at the moment the trouble code was set."
 
 #: src/obd_diag/export/report.py
+msgid "Steuergeräte (Mode 09)"
+msgstr "Control units (mode 09)"
+
+#: src/obd_diag/export/report.py
+msgid "Kalibrierungs-ID und CVN kennzeichnen den Software-Stand eines Steuergeräts. Überwachungszähler: wie oft ein Test abgeschlossen wurde und wie oft die Bedingungen dafür gegeben waren."
+msgstr "Calibration ID and CVN identify the software version of a control unit. Monitoring counters: how often a test was completed and how often the conditions for it were met."
+
+#: src/obd_diag/export/report.py
+msgid "Testergebnisse (Mode 06)"
+msgstr "Test results (mode 06)"
+
+#: src/obd_diag/export/report.py
+msgid "Monitor · Test"
+msgstr "Monitor · test"
+
+#: src/obd_diag/export/report.py
+msgid "Wert"
+msgstr "Value"
+
+#: src/obd_diag/export/report.py
+msgid "Grenzen"
+msgstr "Limits"
+
+#: src/obd_diag/export/report.py
+msgid "Bestanden heißt: Der Messwert liegt innerhalb der Grenzen, die das Steuergerät selbst meldet. Kein Ergebnis: meist ist der Test seit dem letzten Löschen noch nicht gelaufen. Tests ab Nummer 80 legt der Hersteller fest."
+msgstr "Passed means: the measured value lies within the limits reported by the control unit itself. No result: usually the test has not run since the codes were last cleared. Tests from number 80 are defined by the manufacturer."
+
+#: src/obd_diag/export/report.py
 msgid "Erstellt mit obd-diag {version}; {source}"
 msgstr "Created with obd-diag {version}; {source}"
 
@@ -1499,6 +1600,14 @@ msgstr "Possible causes (likelihood)"
 #: src/obd_diag/export/report.py
 msgid "Freeze Frame nicht verfügbar."
 msgstr "Freeze frame not available."
+
+#: src/obd_diag/export/report.py
+msgid "Steuergeräte-Angaben nicht verfügbar."
+msgstr "Control unit information not available."
+
+#: src/obd_diag/export/report.py
+msgid "Testergebnisse nicht verfügbar."
+msgstr "Test results not available."
 
 #: src/obd_diag/export/report.py
 msgid "Ausgelesen am {when}"
@@ -1545,8 +1654,16 @@ msgid "Ausgelöst durch"
 msgstr "Triggered by"
 
 #: src/obd_diag/export/report.py
-msgid "Wert"
-msgstr "Value"
+msgid "abgeschlossen / Bedingungen"
+msgstr "completed / conditions"
+
+#: src/obd_diag/export/report.py
+msgid "Quote"
+msgstr "Ratio"
+
+#: src/obd_diag/export/report.py
+msgid "{low} bis {high}"
+msgstr "{low} to {high}"
 
 #: src/obd_diag/export/report.py
 msgid "Online-Erklärung (ungeprüft):"
@@ -1660,6 +1777,162 @@ msgstr "consecutive frame {seq:X} instead of {expected:X} from {header}: frames 
 #: src/obd_diag/protocol/headers.py
 msgid "unbekanntes PCI-Byte {pci:02X}: {line}"
 msgstr "unknown PCI byte {pci:02X}: {line}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Lambdasonde Bank {bank} Sensor {sensor}"
+msgstr "Oxygen sensor bank {bank} sensor {sensor}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Lambdasondenheizung Bank {bank} Sensor {sensor}"
+msgstr "Oxygen sensor heater bank {bank} sensor {sensor}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Tankentlüftung: Deckel offen / 0,150 Zoll"
+msgstr "EVAP: cap off / 0.150 inch"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Tankentlüftung: Leck 0,090 Zoll"
+msgstr "EVAP: leak 0.090 inch"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Tankentlüftung: Leck 0,040 Zoll"
+msgstr "EVAP: leak 0.040 inch"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Tankentlüftung: Leck 0,020 Zoll"
+msgstr "EVAP: leak 0.020 inch"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Spülluftstrom Tankentlüftung"
+msgstr "EVAP purge flow"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Verbrennungsaussetzer allgemein"
+msgstr "Misfire, general"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Spannungsschwelle fett nach mager"
+msgstr "Rich to lean threshold voltage"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Spannungsschwelle mager nach fett"
+msgstr "Lean to rich threshold voltage"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Untere Spannung für Umschaltzeit"
+msgstr "Low voltage for switch time"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Obere Spannung für Umschaltzeit"
+msgstr "High voltage for switch time"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Umschaltzeit fett nach mager"
+msgstr "Rich to lean switch time"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Umschaltzeit mager nach fett"
+msgstr "Lean to rich switch time"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Kleinste Spannung im Testzyklus"
+msgstr "Minimum voltage in test cycle"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Größte Spannung im Testzyklus"
+msgstr "Maximum voltage in test cycle"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Zeit zwischen Umschaltungen"
+msgstr "Time between transitions"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Sensorperiode"
+msgstr "Sensor period"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Aussetzer, Mittel der letzten zehn Fahrzyklen"
+msgstr "Misfires, average of the last ten driving cycles"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Aussetzer im letzten/aktuellen Fahrzyklus"
+msgstr "Misfires in the last/current driving cycle"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "bestanden"
+msgstr "passed"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "nicht bestanden"
+msgstr "failed"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "kein Ergebnis"
+msgstr "no result"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Katalysator Bank {n}"
+msgstr "Catalyst bank {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Abgasrückführung (AGR) Bank {n}"
+msgstr "Exhaust gas recirculation (EGR) bank {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Nockenwellenverstellung (VVT) Bank {n}"
+msgstr "Variable valve timing (VVT) bank {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Beheizter Katalysator Bank {n}"
+msgstr "Heated catalyst bank {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Sekundärluft {n}"
+msgstr "Secondary air {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Kraftstoffsystem Bank {n}"
+msgstr "Fuel system bank {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Ladedruckregelung Bank {n}"
+msgstr "Boost pressure control bank {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "NOx-Speicherkatalysator Bank {n}"
+msgstr "NOx adsorber bank {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "NOx-/SCR-Katalysator Bank {n}"
+msgstr "NOx/SCR catalyst bank {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Verbrennungsaussetzer Zylinder {n}"
+msgstr "Misfire cylinder {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Partikelfilter Bank {n}"
+msgstr "Particulate filter bank {n}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Monitor {mid:02X}"
+msgstr "Monitor {mid:02X}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Test {tid:02X}"
+msgstr "Test {tid:02X}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "Herstellertest {tid:02X}"
+msgstr "Manufacturer test {tid:02X}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "06{mid:02X}: Antwort passt nicht zum Format: {data}"
+msgstr "06{mid:02X}: response does not match the format: {data}"
+
+#: src/obd_diag/protocol/monitor_tests.py
+msgid "06{mid:02X}: Ergebnis für MID {other:02X}"
+msgstr "06{mid:02X}: result for MID {other:02X}"
 
 #: src/obd_diag/protocol/obd.py
 msgid "allgemein abgelehnt"
@@ -2003,6 +2276,111 @@ msgstr "Catalyst temperature bank 2, sensor 2"
 msgid "unbekannter Live-Wert {key}; bekannt sind: {known}"
 msgstr "unknown live value {key}; known values: {known}"
 
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Katalysator Bank 1"
+msgstr "Catalyst bank 1"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Katalysator Bank 2"
+msgstr "Catalyst bank 2"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Lambdasonde Bank 1"
+msgstr "Oxygen sensor bank 1"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Lambdasonde Bank 2"
+msgstr "Oxygen sensor bank 2"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Abgasrückführung (AGR) / VVT"
+msgstr "Exhaust gas recirculation (EGR) / VVT"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Sekundärluft"
+msgstr "Secondary air"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Tankentlüftung (EVAP)"
+msgstr "Evaporative system (EVAP)"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Lambdasonde nach Kat Bank 1"
+msgstr "Oxygen sensor after catalyst bank 1"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Lambdasonde nach Kat Bank 2"
+msgstr "Oxygen sensor after catalyst bank 2"
+
+#: src/obd_diag/protocol/vehicle_info.py
+#: src/obd_diag/services/readiness.py
+msgid "NMHC-Katalysator"
+msgstr "NMHC catalyst"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "NOx-/SCR-Katalysator"
+msgstr "NOx/SCR catalyst"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "NOx-Speicherkatalysator"
+msgstr "NOx adsorber"
+
+#: src/obd_diag/protocol/vehicle_info.py
+#: src/obd_diag/services/readiness.py
+msgid "Partikelfilter"
+msgstr "Particulate filter"
+
+#: src/obd_diag/protocol/vehicle_info.py
+#: src/obd_diag/services/readiness.py
+msgid "Abgassensor"
+msgstr "Exhaust gas sensor"
+
+#: src/obd_diag/protocol/vehicle_info.py
+#: src/obd_diag/services/readiness.py
+msgid "Ladedruck"
+msgstr "Boost pressure"
+
+#: src/obd_diag/protocol/vehicle_info.py
+#: src/obd_diag/services/readiness.py
+msgid "Kraftstoffsystem"
+msgstr "Fuel system"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "keine Antwort 49 {type:02X}"
+msgstr "no response 49 {type:02X}"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Nachrichten 49 {type:02X} unvollständig"
+msgstr "messages 49 {type:02X} incomplete"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "49 0A: {count} Namen statt einem"
+msgstr "49 0A: {count} names instead of one"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "49 {type:02X}: {count} Zählerwerte passen nicht zu J1979"
+msgstr "49 {type:02X}: {count} counter values do not match J1979"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "mehrere Antworten 49 {type:02X} vom selben Steuergerät"
+msgstr "several responses 49 {type:02X} from the same control unit"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Nachricht 49 {type:02X} passt nicht zum Format: {data}"
+msgstr "message 49 {type:02X} does not match the format: {data}"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "Antwort 49 {type:02X} ohne Anzahl"
+msgstr "response 49 {type:02X} without count"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "49 {type:02X}: {count} Elemente zu {size} Bytes angekündigt, {got} Bytes"
+msgstr "49 {type:02X}: {count} items of {size} bytes announced, {got} bytes"
+
+#: src/obd_diag/protocol/vehicle_info.py
+msgid "49 {type:02X}: {got} Bytes sind kein Vielfaches von {size}"
+msgstr "49 {type:02X}: {got} bytes are not a multiple of {size}"
+
 #: src/obd_diag/services/adapter_check.py
 msgid "Geschlossen aus dem Befehlssatz: ATSH und ATCRA selbst sendet der Check nicht, weil sie die Adressierung verstellen. Sicher zeigt es erst die Steuergerätesuche (v0.3)."
 msgstr "Inferred from the command set: the check does not send ATSH and ATCRA themselves because they change the addressing. Only the control unit search (v0.3) will tell for sure."
@@ -2208,10 +2586,6 @@ msgid "Verbrennungsaussetzer"
 msgstr "Misfire"
 
 #: src/obd_diag/services/readiness.py
-msgid "Kraftstoffsystem"
-msgstr "Fuel system"
-
-#: src/obd_diag/services/readiness.py
 msgid "Komponenten"
 msgstr "Components"
 
@@ -2248,24 +2622,8 @@ msgid "Abgasrückführung"
 msgstr "EGR system"
 
 #: src/obd_diag/services/readiness.py
-msgid "NMHC-Katalysator"
-msgstr "NMHC catalyst"
-
-#: src/obd_diag/services/readiness.py
 msgid "NOx-Nachbehandlung (SCR)"
 msgstr "NOx aftertreatment (SCR)"
-
-#: src/obd_diag/services/readiness.py
-msgid "Ladedruck"
-msgstr "Boost pressure"
-
-#: src/obd_diag/services/readiness.py
-msgid "Abgassensor"
-msgstr "Exhaust gas sensor"
-
-#: src/obd_diag/services/readiness.py
-msgid "Partikelfilter"
-msgstr "Particulate filter"
 
 #: src/obd_diag/services/readiness.py
 msgid "keine Readiness-Antwort"
@@ -2983,6 +3341,24 @@ msgstr "Check failed: {error}"
 msgid "Bereit: {port} mit {baud} Baud."
 msgstr "Ready: {port} at {baud} baud."
 
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "Das Fahrzeug meldet Mode 06, aber keine Testergebnisse."
+msgstr "The vehicle reports mode 06, but no test results."
+
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "Alle Tests mit Ergebnis liegen innerhalb der Grenzwerte."
+msgstr "All tests with a result are within their limits."
+
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "Überwachungszähler: {cycles} Fahrzyklen, {ignitions} Zündungen"
+msgstr "Monitoring counters: {cycles} driving cycles, {ignitions} ignitions"
+
+#: src/obd_diag/ui/viewmodels/vehicle_info.py
+msgid "{n} Test außerhalb der Grenzwerte."
+msgid_plural "{n} Tests außerhalb der Grenzwerte."
+msgstr[0] "{n} test outside its limits."
+msgstr[1] "{n} tests outside their limits."
+
 #: src/obd_diag/ui/qml/AdapterDialog.qml
 msgid "Adapter-Check"
 msgstr "Adapter check"
@@ -3102,6 +3478,7 @@ msgstr "Reading trouble codes …"
 #: src/obd_diag/ui/qml/CodeList.qml
 #: src/obd_diag/ui/qml/FreezeFrameView.qml
 #: src/obd_diag/ui/qml/ReadinessView.qml
+#: src/obd_diag/ui/qml/TestResultsView.qml
 #: src/obd_diag/ui/qml/UsedCarView.qml
 #: src/obd_diag/ui/qml/VehicleView.qml
 msgid "Noch nicht verbunden"
@@ -3161,6 +3538,7 @@ msgstr "No freeze frame stored"
 
 #: src/obd_diag/ui/qml/FreezeFrameView.qml
 #: src/obd_diag/ui/qml/ReadinessView.qml
+#: src/obd_diag/ui/qml/TestResultsView.qml
 #: src/obd_diag/ui/qml/VehicleView.qml
 msgid "Nicht verfügbar – Steuergerät hat nicht geantwortet"
 msgstr "Not available: the control unit did not respond"
@@ -3518,6 +3896,22 @@ msgstr "Apply"
 msgid "Schließen"
 msgstr "Close"
 
+#: src/obd_diag/ui/qml/TestResultsView.qml
+msgid "Lese Testergebnisse …"
+msgstr "Reading test results …"
+
+#: src/obd_diag/ui/qml/TestResultsView.qml
+msgid "Nach „Verbinden & Scannen“ stehen hier die Messwerte der Eigendiagnosen (Mode 06) mit ihren Grenzwerten."
+msgstr "After “Connect & scan” this shows the measured values of the self-diagnosis tests (mode 06) with their limits."
+
+#: src/obd_diag/ui/qml/TestResultsView.qml
+msgid "Das Fahrzeug hat keine Testergebnisse (Mode 06) gemeldet. obd-diag liest sie nur bei CAN-Fahrzeugen, etwa ab 2008."
+msgstr "The vehicle did not report any test results (mode 06). obd-diag reads them only from CAN vehicles, roughly from 2008."
+
+#: src/obd_diag/ui/qml/TestResultsView.qml
+msgid "Jeder Test meldet einen Messwert und die Grenzen, innerhalb derer das Steuergerät ihn als in Ordnung bewertet. „Kein Ergebnis“ heißt meist: Der Test ist seit dem letzten Löschen noch nicht gelaufen. Tests ab Nummer 80 legt der Hersteller fest, ihre Bedeutung ist nicht genormt."
+msgstr "Each test reports a measured value and the limits within which the control unit considers it OK. “No result” usually means the test has not run since the codes were last cleared. Tests from number 80 are defined by the manufacturer; their meaning is not standardised."
+
 #: src/obd_diag/ui/qml/UsedCarView.qml
 msgid "Lese Zähler seit dem Löschen …"
 msgstr "Reading counters since clearing …"
@@ -3586,6 +3980,14 @@ msgstr "Model, engine and further details can be looked up at the US authority N
 msgid "Gilt ab dem nächsten Scan; die Antwort wird je FIN lokal gespeichert."
 msgstr "Applies from the next scan; the response is stored locally per VIN."
 
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Steuergerät {address} (Mode 09)"
+msgstr "Control unit {address} (mode 09)"
+
+#: src/obd_diag/ui/qml/VehicleView.qml
+msgid "Überwachungszähler (In-Use Performance): wie oft ein Test abgeschlossen wurde und wie oft die Fahrbedingungen dafür gegeben waren; in Klammern die Quote. Eine niedrige Quote heißt, dass der Test selten zum Zug kommt, nicht dass etwas defekt ist."
+msgstr "Monitoring counters (in-use performance): how often a test was completed and how often the driving conditions for it were met; the ratio in brackets. A low ratio means the test rarely gets a chance to run, not that something is faulty."
+
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Readiness"
 msgstr "Readiness"
@@ -3601,3 +4003,7 @@ msgstr "Used car"
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Live-Daten"
 msgstr "Live data"
+
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Testergebnisse"
+msgstr "Test results"

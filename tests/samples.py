@@ -9,7 +9,9 @@ import dataclasses
 from datetime import UTC, datetime, timedelta, timezone
 
 from obd_diag.data.dtc_catalog import Cause, DtcInfo
+from obd_diag.protocol.monitor_tests import TestResult
 from obd_diag.protocol.obd import FreezeFrame
+from obd_diag.protocol.vehicle_info import EcuInfo, InUsePerformance, PerformanceCounter
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind, DtcLookup, ScanResult
 from obd_diag.services.dtc_online import OnlineExplanation
 from obd_diag.services.readiness import Monitor, MonitorState, ReadinessStatus
@@ -117,6 +119,37 @@ VEHICLE = VinInfo(
 )
 
 
+# Mode 09: Motor (7E8) mit Überwachungszählern (Otto), Getriebe (7E9) ohne Namen
+ECUS = (
+    EcuInfo(
+        ecu="7E8",
+        name="ECM-EngineControl",
+        calibration_ids=("03C906056DK",),
+        cvns=("1234ABCD",),
+        performance=InUsePerformance(
+            compression_ignition=False,
+            obd_conditions=20,
+            ignition_cycles=50,
+            counters=(
+                PerformanceCounter("catalyst_b1", 15, 20),
+                PerformanceCounter("o2_sensor_b1", 18, 20),
+                PerformanceCounter("evap", 0, 0),
+            ),
+        ),
+        supported=(0x02, 0x04, 0x06, 0x08, 0x0A),
+    ),
+    EcuInfo(ecu="7E9", calibration_ids=("09G927750KH",), cvns=("00000F3A",), supported=(4, 6)),
+)
+
+# Mode 06: Lambdasonde bestanden (343,6 mV, 281,1 bis 406,0), Katalysator nicht bestanden
+# (240, Grenze 200), Aussetzer ohne Ergebnis
+TESTS = (
+    TestResult("7E8", 0x01, 0x01, 0x0A, 0x0B00, 0x0900, 0x0D00),
+    TestResult("7E8", 0x21, 0x80, 0x24, 0x00F0, 0x0000, 0x00C8),
+    TestResult("7E8", 0xA2, 0x0C, 0x24, 0, 0, 0),
+)
+
+
 def _info(code: str, catalog: DtcLookup | None) -> DtcInfo | None:
     return catalog.lookup(code, "de") if catalog is not None else INFOS.get(code)
 
@@ -129,8 +162,8 @@ CLEAR_COUNTERS = ClearCounters(
 
 def full_session(catalog: DtcLookup | None = None, *, voltage: float = 12.4) -> Session:
     """Alle Angaben gesetzt: zwei gespeicherte, ein ausstehender, ein permanenter Code
-    (einer davon ohne Katalogeintrag), Readiness, Freeze Frame, FIN und die Zähler für den
-    Gebrauchtwagen-Check (vor kurzem gelöscht)."""
+    (einer davon ohne Katalogeintrag), Readiness, Freeze Frame, FIN, die Zähler für den
+    Gebrauchtwagen-Check (vor kurzem gelöscht), Steuergeräte und Testergebnisse."""
     codes = [
         DiagnosticCode("P0300", DtcKind.STORED, _info("P0300", catalog)),
         DiagnosticCode("P0420", DtcKind.STORED, _info("P0420", catalog)),
@@ -148,6 +181,8 @@ def full_session(catalog: DtcLookup | None = None, *, voltage: float = 12.4) -> 
         freeze_frame=FREEZE_FRAME,
         vehicle=VEHICLE,
         clear_counters=CLEAR_COUNTERS,
+        ecus=ECUS,
+        tests=TESTS,
     )
 
 

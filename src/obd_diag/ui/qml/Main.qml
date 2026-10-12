@@ -392,6 +392,9 @@ ApplicationWindow {
                 port: connectionBar.portText
                 baud: connectionBar.baud
             }
+            TestResultsView {
+                vm: window.vm
+            }
         }
     }
 

@@ -10,8 +10,10 @@ with the mode plus `40` (`01` → `41`), a rejection with `7F` ({doc}`antwortfor
 | 02 | `02 <PID> 00` | `42 <PID> 00 <data>` | freeze frame 00 | `protocol/obd.py` |
 | 03 | `03` | `43 [count] <codes>` | stored trouble codes | `protocol/obd.py`, `dtc_decode.py` |
 | 04 | `04` | `44` | clear trouble codes (locked) | `protocol/obd.py`, `services/clear.py` |
+| 06 | `06 <MID>` | `46 <MID> <TID> <unit> <value> <min> <max> …` | test results (CAN only) | `protocol/monitor_tests.py` |
 | 07 | `07` | `47 [count] <codes>` | pending trouble codes | like 03 |
 | 09 | `0902` | `49 02 01 <17 characters>` | VIN | `services/vehicle.py` |
+| 09 | `0900`, `0904`, `0906`, `0908`, `090A`, `090B` | `49 <type> <count> <data>` | control unit information | `protocol/vehicle_info.py` |
 | 0A | `0A` | `4A [count] <codes>` | permanent trouble codes | like 03 |
 
 The number of codes is only part of the response with CAN ({doc}`antwortformate`).
@@ -92,6 +94,26 @@ According to SAE a scan tool must ask for confirmation first (datasheet p. 35). 
 is locked and only reachable through the procedure under
 {doc}`../benutzen/fehlercodes`; the safeguards are described in {doc}`sicherheit`.
 
+## Mode 06: test results
+
+Like `0100`, `0600` returns a bitmask of the supported monitor IDs (MID) `01` to `20`,
+`0620` the next ones and so on. For each set MID obd-diag requests `06 <MID>`. With CAN
+the response consists of 9-byte blocks, one per test:
+
+```text
+4621 80 24 0064 0000 00C8
+```
+
+`46 21`: response for MID 21 (catalyst bank 1); `80`: test ID (from `80` defined by the
+manufacturer); `24`: unit and scaling (UASID 24: count, factor 1); then value `0064` =
+100, minimum `0000` = 0 and maximum `00C8` = 200: passed. UASIDs from `80` are signed
+(two's complement). The table of units is in SAE J1979 annex E; obd-diag knows the same
+ones as python-OBD. Older protocols respond in a different format without UASID;
+obd-diag does not read mode 06 there.
+
+obd-diag reads mode 06 and mode 09 (except the VIN) with headers switched on (`ATH1`,
+then back to `ATH0`), so that each value is assigned to the right control unit.
+
 ## Mode 09: VIN
 
 `0902` returns the vehicle identification number, with CAN in several frames:
@@ -108,3 +130,20 @@ characters **WVWZZZ1KZ6W123456**. Older protocols return five lines
 `49 02 <1–5> <4 bytes>`, the first padded with `00` at the front. The request is
 exactly `0902`; `09021` (with a wrong response count) can cause problems according to
 the datasheet and is forbidden. The decoding is described in {doc}`fin`.
+
+## Mode 09: control units
+
+`0900` returns a bitmask of the supported InfoTypes per control unit. Of these,
+obd-diag only requests `04` (calibration IDs, 16 ASCII characters each), `06` (CVN,
+4 bytes each), `08` or `0B` (monitoring counters for petrol or diesel, 2 bytes each)
+and `0A` (name, 20 ASCII characters). The byte after the InfoType is the number of data
+items:
+
+```text
+4906019F3E61C2
+```
+
+`49 06`: response to InfoType 06; `01`: one CVN; `9F3E61C2`: the CVN. The monitoring
+counters start with the driving cycles with conditions met and the number of
+ignitions, followed by one pair *completed*, *conditions met* per test. What obd-diag
+shows from this is described in {doc}`../benutzen/steuergeraete-tests`.

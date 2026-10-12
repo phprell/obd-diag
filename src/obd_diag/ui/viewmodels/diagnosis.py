@@ -44,6 +44,7 @@ from obd_diag.ui.viewmodels.session_parts import (
     used_car_entry,
     vehicle_entry,
 )
+from obd_diag.ui.viewmodels.vehicle_info import ecus_entry, results_entry
 
 DEFAULT_PORT = "/dev/ttyUSB0"
 DEFAULT_BAUD = 38400
@@ -337,6 +338,18 @@ class DiagnosisViewModel(QObject):
     @Property(dict, notify=stateChanged)
     def vehicle(self) -> dict[str, Any]:
         return vehicle_entry(self._session.vehicle if self._session is not None else None)
+
+    @Property(dict, notify=stateChanged)
+    def ecus(self) -> dict[str, Any]:
+        """Steuergeräte aus Mode 09 (Name, Kalibrierungs-IDs, CVN, Zähler)."""
+        return ecus_entry(self._session.ecus if self._session is not None else None)
+
+    @Property(dict, notify=stateChanged)
+    def testResults(self) -> dict[str, Any]:
+        """Testergebnisse aus Mode 06, nach Steuergerät gruppiert."""
+        if self._session is None:
+            return results_entry(None)
+        return results_entry(self._session.tests, self._session.ecus)
 
     @Property(str, notify=stateChanged)
     def vehicleText(self) -> str:

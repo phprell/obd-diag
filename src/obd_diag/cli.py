@@ -14,8 +14,17 @@ from obd_diag import __version__
 from obd_diag.data.dtc_catalog import DtcCatalog
 from obd_diag.i18n import LANGUAGES, N_, set_language, system_language, tr, trn
 from obd_diag.protocol.elm327 import Elm327, ElmError, NoConnectionError
+from obd_diag.protocol.monitor_tests import (
+    STATUS_LABELS,
+    TestResult,
+    TestStatus,
+    mid_name,
+    read_test_results,
+    tid_name,
+)
 from obd_diag.protocol.obd import FreezeFrame
 from obd_diag.protocol.pids import PidSpec
+from obd_diag.protocol.vehicle_info import EcuInfo, read_ecu_info
 from obd_diag.services.adapter_check import (
     UDS_NOTE,
     check_adapter,
@@ -482,6 +491,79 @@ def _print_freeze_frame(freeze: FreezeFrame | None) -> None:
             print(f"  {tr(label) + ':':<22} {freeze.values[key]:g} {tr(unit)}")
 
 
+def _print_ecus(ecus: tuple[EcuInfo, ...] | list[EcuInfo] | None) -> None:
+    if ecus is None:
+        print(tr("Steuergeräte (Mode 09): nicht verfügbar."))
+        return
+    print(tr("Steuergeräte (Mode 09):"))
+    for ecu in ecus:
+        print(f"  {ecu.ecu}" + (f"  {ecu.name}" if ecu.name else ""))
+        rows = [(tr("Kalibrierungs-ID"), c) for c in ecu.calibration_ids]
+        rows += [(tr("CVN"), c) for c in ecu.cvns]
+        ipt = ecu.performance
+        if ipt is not None:
+            rows.append(
+                (
+                    tr("Überwachungszähler"),
+                    tr("{cycles} Fahrzyklen, {ignitions} Zündungen").format(
+                        cycles=ipt.obd_conditions, ignitions=ipt.ignition_cycles
+                    ),
+                )
+            )
+            for counter in ipt.counters:
+                ratio = "" if counter.ratio is None else f" ({counter.ratio:.2f})"
+                rows.append(
+                    (
+                        "  " + tr(counter.name),
+                        tr("{completed} von {conditions}").format(
+                            completed=counter.completed, conditions=counter.conditions
+                        )
+                        + ratio,
+                    )
+                )
+        if not rows:
+            rows.append((tr("Hinweis"), tr("keine weiteren Angaben")))
+        _labelled(rows, "    ")
+
+
+def _measure(test: TestResult, value: float | None, raw: int) -> str:
+    if value is None:
+        return tr("{raw} (Rohwert)").format(raw=raw)
+    text = f"{value:.{test.decimals}f}"
+    return f"{text} {test.unit}" if test.unit else text
+
+
+def _print_tests(tests: tuple[TestResult, ...] | list[TestResult] | None) -> None:
+    if tests is None:
+        print(tr("Testergebnisse (Mode 06): nicht verfügbar."))
+        return
+    failed = sum(t.status is TestStatus.FAILED for t in tests)
+    print(
+        trn(
+            "Testergebnisse (Mode 06, {n} Test, davon {failed} nicht bestanden):",
+            "Testergebnisse (Mode 06, {n} Tests, davon {failed} nicht bestanden):",
+            len(tests),
+        ).format(n=len(tests), failed=failed)
+    )
+    ecu = None
+    for test in tests:
+        if test.ecu != ecu:
+            ecu = test.ecu
+            print("  " + tr("Steuergerät {ecu}").format(ecu=ecu))
+        limits = tr("Grenzen {low} bis {high}").format(
+            low=_measure(test, test.minimum, test.min_raw),
+            high=_measure(test, test.maximum, test.max_raw),
+        )
+        print(f"    {mid_name(test.mid)} · {tid_name(test.tid)}")
+        if test.status is TestStatus.NO_RESULT:
+            print(f"      {tr(STATUS_LABELS[test.status])}")
+            continue
+        print(
+            f"      {_measure(test, test.value, test.value_raw)}  ({limits})  "
+            f"{tr(STATUS_LABELS[test.status])}"
+        )
+
+
 _LEVEL_MARKS = {Level.WARNING: "[!]", Level.INFO: "[i]", Level.OK: "[ok]"}
 
 
@@ -532,6 +614,10 @@ def _print_session(session: Session, *, web_search: bool = False) -> None:
     print()
     check = assess(session.clear_counters, session.scan, session.readiness)
     _print_used_car(session.clear_counters, check)
+    print()
+    _print_ecus(session.ecus)
+    print()
+    _print_tests(session.tests)
 
 
 def _export(session: Session, pdf: Path | None, csv: Path | None) -> None:
@@ -597,6 +683,45 @@ def _run_vin(args: argparse.Namespace) -> int:
     else:
         _print_vehicle(info)
     return 0
+
+
+def _run_ecus(args: argparse.Namespace) -> int:
+    with _transport(args) as transport:
+        elm = Elm327(transport)
+        elm.initialize()
+        elm.protocol()
+        ecus = read_ecu_info(elm)
+    if args.json:
+        data = None if ecus is None else [dataclasses.asdict(e) for e in ecus]
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+    else:
+        _print_ecus(ecus)
+    return 0 if ecus is not None else 1
+
+
+def _run_tests(args: argparse.Namespace) -> int:
+    with _transport(args) as transport:
+        elm = Elm327(transport)
+        elm.initialize()
+        elm.protocol()
+        tests = read_test_results(elm)
+    if args.json:
+        data = None if tests is None else [_test_json(t) for t in tests]
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+    else:
+        _print_tests(tests)
+    return 0 if tests is not None else 1
+
+
+def _test_json(test: TestResult) -> dict[str, object]:
+    return {
+        **dataclasses.asdict(test),
+        "value": test.value,
+        "min": test.minimum,
+        "max": test.maximum,
+        "unit": test.unit,
+        "status": test.status.value,
+    }
 
 
 def _run_export(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
@@ -871,7 +996,7 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[connection],
         help=tr(
             "vollständige Diagnose: Fehlercodes, Readiness, Freeze Frame, FIN, "
-            "Gebrauchtwagen-Check (nur lesend)"
+            "Gebrauchtwagen-Check, Steuergeräte und Testergebnisse (nur lesend)"
         ),
     )
     diagnose_parser.add_argument(
@@ -913,6 +1038,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     vin_parser.add_argument("--json", action="store_true", help=json_help)
     vin_parser.add_argument("--online-vin", action="store_true", help=online_help)
+    ecus_parser = sub.add_parser(
+        "ecus",
+        parents=[connection],
+        help=tr("Steuergeräte (Mode 09): Name, Kalibrierungs-IDs, CVN und Überwachungszähler"),
+    )
+    ecus_parser.add_argument("--json", action="store_true", help=json_help)
+    tests_parser = sub.add_parser(
+        "tests",
+        parents=[connection],
+        help=tr("Testergebnisse der Abgas-Eigendiagnose mit Grenzwerten (Mode 06, nur CAN)"),
+    )
+    tests_parser.add_argument("--json", action="store_true", help=json_help)
     live_parser = sub.add_parser(
         "live",
         parents=[connection],
@@ -1022,6 +1159,10 @@ def main(argv: list[str] | None = None) -> int:
             _run_used_car(args)
         elif args.command == "vin":
             return _run_vin(args)
+        elif args.command == "ecus":
+            return _run_ecus(args)
+        elif args.command == "tests":
+            return _run_tests(args)
         elif args.command == "live":
             return _run_live(args)
         elif args.command == "ports":

@@ -225,6 +225,80 @@ allowed:
     page: 32
     quote: "It is obtained with mode 09, PID 02, and should be requested with: >09 02"
 
+  # Weitere InfoTypes von Service $09 (Steuergeräte-Angaben). Die InfoTypes selbst nennt
+  # nur J1979; bestätigt über Wikipedia „OBD-II PIDs“, Service 09 (abgerufen 2026-10-11).
+  # Die Zähler-InfoTypes 01/03/05/07/09 (nur J1850/ISO 9141/KWP) braucht obd-diag nicht.
+  - command: "0900"
+    reaches_vehicle: true
+    writes: false
+    meaning: "Service $09, InfoType 00: unterstützte InfoTypes 01 bis 20"
+    meaning_en: "Service $09, InfoType 00: supported InfoTypes 01 to 20"
+    source: ELM327DSJ
+    page: 31
+    quote: "09 - request vehicle information"
+  - command: "0904"
+    reaches_vehicle: true
+    writes: false
+    meaning: "Service $09, InfoType 04: Kalibrierungs-IDs (Software-Stand) je Steuergerät"
+    meaning_en: "Service $09, InfoType 04: calibration IDs (software version) per control unit"
+    source: ELM327DSJ
+    page: 43
+    quote: "ask the vehicle for the Calibration ID (09 04)"
+  - command: "0906"
+    reaches_vehicle: true
+    writes: false
+    meaning: "Service $09, InfoType 06: Kalibrierungs-Prüfnummern (CVN) je Steuergerät"
+    meaning_en: "Service $09, InfoType 06: calibration verification numbers (CVN) per control unit"
+    source: ELM327DSJ
+    page: 31
+    quote: "09 - request vehicle information"
+    note: >-
+      Wikipedia, OBD-II PIDs, Service 09 PID 06: „Calibration Verification Numbers (CVN)“.
+  - command: "0908"
+    reaches_vehicle: true
+    writes: false
+    meaning: "Service $09, InfoType 08: Überwachungszähler (In-Use Performance), Ottomotor"
+    meaning_en: "Service $09, InfoType 08: monitoring counters (in-use performance), spark ignition"
+    source: ELM327DSJ
+    page: 31
+    quote: "09 - request vehicle information"
+    note: >-
+      Wikipedia, OBD-II PIDs, Service 09 PID 08: „In-use performance tracking for spark
+      ignition vehicles“.
+  - command: "090A"
+    reaches_vehicle: true
+    writes: false
+    meaning: "Service $09, InfoType 0A: Name des Steuergeräts"
+    meaning_en: "Service $09, InfoType 0A: name of the control unit"
+    source: ELM327DSJ
+    page: 31
+    quote: "09 - request vehicle information"
+    note: >-
+      Wikipedia, OBD-II PIDs, Service 09 PID 0A: „ECU name“.
+  - command: "090B"
+    reaches_vehicle: true
+    writes: false
+    meaning: "Service $09, InfoType 0B: Überwachungszähler (In-Use Performance), Dieselmotor"
+    meaning_en: "Service $09, InfoType 0B: monitoring counters (in-use performance), compression ignition"
+    source: ELM327DSJ
+    page: 31
+    quote: "09 - request vehicle information"
+    note: >-
+      Wikipedia, OBD-II PIDs, Service 09 PID 0B: „In-use performance tracking for
+      compression ignition vehicles“.
+  - pattern: "06[0-9A-F]{2}"
+    reaches_vehicle: true
+    writes: false
+    meaning: "Service $06: Testergebnisse der Eigendiagnose je Monitor-ID (00/20/… unterstützte MIDs)"
+    meaning_en: "Service $06: self-diagnosis test results per monitor ID (00/20/… supported MIDs)"
+    source: ELM327DSJ
+    page: 31
+    quote: "06 - test results, non-continuously monitored"
+    note: >-
+      Bei CAN (ISO 15765-4) nach J1979 mit Monitor-ID (OBDMID) als einzigem Parameter; nur
+      lesend, ändert nichts im Steuergerät (Wikipedia, OBD-II PIDs: „Test results, other
+      component/system monitoring“).
+
   # --- der einzige schreibende Befehl -------------------------------------------------
   - command: "04"
     reaches_vehicle: true

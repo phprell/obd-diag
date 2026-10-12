@@ -48,6 +48,10 @@ CAN_CAR_FULL = {
     "014E": "414E0050",
     "0121": "4121000C",
     "014D": "414D0014",
+    # Mode 09 (außer der FIN) und Mode 06 unterstützt dieses Fahrzeug nicht; mit Headern
+    # antworten sie, wenn ``headers_on`` ECU_INFO_HEADERS bzw. MONITOR_TESTS_HEADERS hat
+    "0900": "NO DATA",
+    "0600": "NO DATA",
 }
 
 # Adapter-Check (nur Adapter-Befehle): ein echter ELM327 v2.1 mit den Antwortformaten des
@@ -68,6 +72,58 @@ ADAPTER_V21 = {
     "ATAMC": "0A",
 }
 ADAPTER_V15 = {**ADAPTER_V21, "ATZ": "ELM327 v1.5", "ATI": "ELM327 v1.5", "ATAMC": "?"}
+
+
+def can_lines(header: str, payload: str) -> str:
+    """Antwortzeilen mit Header (``ATH1``, Leerzeichen) einer Nachricht nach ISO 15765-2:
+    Einzel-Frame bis 7 Bytes, sonst erster Frame und Folge-Frames."""
+    data = bytes.fromhex(payload)
+    if len(data) <= 7:
+        frames = [bytes([len(data)]) + data]
+    else:
+        frames = [bytes([0x10 | len(data) >> 8, len(data) & 0xFF]) + data[:6]]
+        for n, i in enumerate(range(6, len(data), 7), 1):
+            frames.append(bytes([0x20 | n % 16]) + data[i : i + 7])
+    return "\r".join(f"{header} {frame.hex(' ').upper()}" for frame in frames)
+
+
+def _text(text: str, size: int) -> str:
+    return text.encode("ascii").ljust(size, b"\0").hex()
+
+
+# Mode 09 eines CAN-Fahrzeugs (11 Bit) mit Motor (7E8) und Getriebe (7E9), nur mit Headern
+# (``FakeTransport(headers_on=...)``). 0904 ist das Beispiel aus dem Datenblatt ELM327DSJ
+# S. 43, wörtlich (CALID 56028949AC und 56028954AC). Unterstützt: 7E8 02/04/06/08/0A,
+# 7E9 04/06/0A. Überwachungszähler (Otto, 20 Werte) des Motors: OBDCOND 20, IGNCNTR 50,
+# dann Katalysator Bank 1 15 von 20, Bank 2 0 von 0, Lambdasonde 18 von 20 usw.
+IPT_SPARK = (20, 50, 15, 20, 0, 0, 18, 20, 0, 0, 5, 20, 0, 0, 3, 19, 17, 20, 0, 0)
+ECU_INFO_HEADERS = {
+    "0900": can_lines("7E8", "490055400000") + "\r" + can_lines("7E9", "490014400000"),
+    "0904": (
+        "7E8 10 13 49 04 01 35 36 30\r7E8 21 32 38 39 34 39 41 43\r"
+        "7E9 10 13 49 04 01 35 36 30\r7E8 22 00 00 00 00 00 00 31\r"
+        "7E9 21 32 38 39 35 34 41 43\r7E9 22 00 00 00 00 00 00 00"
+    ),
+    "0906": can_lines("7E8", "49060112 34AB CD") + "\r" + can_lines("7E9", "4906010000 0F3A"),
+    "0908": can_lines("7E8", "490814" + "".join(f"{v:04X}" for v in IPT_SPARK)),
+    "090A": can_lines("7E8", "490A01" + _text("ECM\0-EngineControl", 20))
+    + "\r"
+    + can_lines("7E9", "490A01" + _text("TCM\0-TransmissionCtl", 20)),
+}
+
+# Mode 06 desselben Fahrzeugs, nur mit Headern: MIDs 01, 02 (Lambdasonde Bank 1) und 21
+# (Katalysator Bank 1). 0601 mit zwei Tests (genormte TIDs 01 und 05), 0602 lehnt das
+# Steuergerät ab, 0621 liegt außerhalb der Grenzen.
+MONITOR_TESTS_HEADERS = {
+    "0600": can_lines("7E8", "4600C0000001"),
+    "0620": can_lines("7E8", "462080000000"),
+    "0601": can_lines(
+        "7E8",
+        "46" + "01010A" + "0B00" + "0900" + "0D00" + "010510" + "0050" + "0000" + "0064",
+    ),
+    "0602": can_lines("7E8", "7F0612"),
+    "0621": can_lines("7E8", "4621" + "8024" + "00F0" + "0000" + "00C8"),
+}
 
 # Antworten, die nach bestätigtem Mode 04 gelten (``FakeTransport(after_clear=...)``)
 CLEARED = {"03": "4300", "07": "4700", "020200": "4202000000"}

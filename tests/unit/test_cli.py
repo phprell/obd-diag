@@ -331,7 +331,8 @@ def test_diagnose_table(
         "      dem Löschen.\n"
     ) in out
     assert "  [!] Die Motorkontrollleuchte ist an. Gefahren mit Warnleuchte: 12 km, 20\n" in out
-    assert out.endswith("Fehlercodes gelöscht wurden.\n")
+    assert "Fehlercodes gelöscht wurden.\n\nSteuergeräte (Mode 09): nicht verfügbar.\n" in out
+    assert out.endswith("\nTestergebnisse (Mode 06): nicht verfügbar.\n")
     assert "04" not in full_car[0].sent
     assert not (tmp_path / "data").exists()  # ohne --save wird nichts gespeichert
 
@@ -366,6 +367,7 @@ def test_diagnose_without_optional_parts(
     assert "Readiness: nicht verfügbar (PID 01 nicht beantwortet).\n" in out
     assert "Freeze Frame: keiner gespeichert.\n" in out
     assert "Gebrauchtwagen-Check: Auffällig\n" in out  # Zähler ohne Readiness
+    assert out.endswith("Testergebnisse (Mode 06): nicht verfügbar.\n")
 
 
 def test_diagnose_pdf_and_csv(
