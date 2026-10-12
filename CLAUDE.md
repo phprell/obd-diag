@@ -146,7 +146,9 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   `run_live(thresholds=…)` füllt `LiveSample.alarms`, CSV-Spalte „Warnungen“, CLI
   `--alarm KEY=UNTEN:OBEN`/`--no-alarms`, GUI QSettings `live/warnschwellen`),
   `urgency.py` (Dringlichkeit je Code aus Art, MIL und wenigen J2012-Codes; nur
-  berechnet, nicht in Sitzungen gespeichert).
+  berechnet, nicht in Sitzungen gespeichert), `battery.py` (`run_battery_test`: Batterie-
+  und Anlasstest, ATRV schnell + PID 42 als Bezug, injizierbare Uhr; Tests mit
+  `tests/battery_fakes.py`, Demo mit `engine_start`).
 - `data/` – `dtc_catalog.py` (SQLite, read-only), `catalog_build.py`, `wmi.py`
   (WMI → Hersteller, ISO-3780-Länderbereiche; Quellen im Modul).
 - `export/report.py` – PDF (ReportLab) und CSV.

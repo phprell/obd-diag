@@ -240,7 +240,7 @@ def _uses(name: str, *, attribute_only: bool = False) -> set[str]:
         # clear_codes: nur die Kommandozeile (nach Rückfrage) und die GUI (nach Dialog)
         ("clear_codes", {"cli.py:_run_clear", "ui/backend.py:clear_port"}),
         # Live-Daten: nur Kommandozeile und GUI-Backend starten die Abfrage, und nur der
-        # Live-Dienst fragt Werte ab.
+        # Live-Dienst (und für einzelne Werte Diagnose und Batterietest) fragt Werte ab.
         ("run_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
         ("prepare_live", {"cli.py:_run_live", "ui/backend.py:live_port"}),
         (
@@ -248,6 +248,9 @@ def _uses(name: str, *, attribute_only: bool = False) -> set[str]:
             {
                 "services/live.py:_read_values",
                 "services/diagnostics.py:check_low_voltage",  # PID 42 bei niedrigem ATRV
+                # Batterietest: PID 42 als Bezug, Kühlmitteltemperatur für die Grenze
+                "services/battery.py:_read_ecu_voltage",
+                "services/battery.py:_read_coolant",
                 "protocol/pids.py:read_value",
             },
         ),

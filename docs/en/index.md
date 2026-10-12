@@ -66,6 +66,7 @@ benutzen/readiness
 benutzen/gebrauchtwagen
 benutzen/steuergeraete-tests
 benutzen/live-daten
+benutzen/batterie
 benutzen/sitzungen
 benutzen/probleme
 ```

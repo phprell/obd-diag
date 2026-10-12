@@ -35,7 +35,12 @@ vor 1.0 kann sich die Bedienung noch ändern.
   Kühlmittel über 115 °C, Motoröl über 130 °C, Bord- und Steuergerätespannung unter
   11,8 V oder über 15,5 V. Überschrittene Werte sind markiert (`!`, rote Kachel), die CSV
   hat dafür die neue letzte Spalte „Warnungen“. Gesendet wird dafür nichts zusätzlich.
-
+- Batterie- und Anlasstest: `obd-diag battery` bzw. *Optionen → Batterie- und
+  Anlasstest …* misst die Ruhespannung, den Einbruch beim Anlassen (Motor startet man
+  selbst auf Aufforderung) und die Ladespannung im Leerlauf und bewertet sie mit
+  dokumentierten Richtwerten (Grenze beim Anlassen nach Temperatur). Die Spannung kommt
+  beim Anlassen in schneller Folge vom Adapter (`ATRV`), um die Abweichung zum
+  Steuergerät (PID 42) korrigiert. Nur lesend, keine neuen Befehle; auch im Demo-Modus.
 - Gebrauchtwagen-Check: `obd-diag used-car`, Reiter „Gebrauchtwagen“ in der Oberfläche
   und ein Abschnitt im PDF-Bericht zeigen, ob die Fehlercodes vor kurzem gelöscht wurden.
   Gelesen werden die Zähler, die das Löschen auf null setzt (Mode 01 PID 30 Warmläufe,

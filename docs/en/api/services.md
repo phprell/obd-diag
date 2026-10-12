@@ -49,3 +49,8 @@
 
 ```{automodule} obd_diag.services.used_car
 ```
+
+## `obd_diag.services.battery`
+
+```{automodule} obd_diag.services.battery
+```

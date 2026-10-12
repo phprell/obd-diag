@@ -42,6 +42,10 @@ Warnleuchte, Warmläufe und Strecke seit dem Löschen, Fahrpedal, Luftmasse). Da
 meldet sie als unterstützt; im Demo-Modus stehen dort erfundene, plausible Werte. Der
 Gebrauchtwagen-Check ist deshalb „unauffällig“ (40 Warmläufe und 3000 km seit dem Löschen).
 
+Für den {doc}`batterie` steht der Motor des Demo-Fahrzeugs zuerst und springt etwa 3 s
+nach der Aufforderung von selbst an. Diese Spannungen sind erfunden, aber an die
+Mitschnitte angelehnt: Ruhe 12,55 V, Einbruch auf 9,5 V laut Adapter, Ladung 14,8 V.
+
 ```{image} ../_static/screenshots/demo-live-daten-light.png
 :alt: Live-Daten im Demo-Modus: Drehzahl um 860/min, Kühlmittel 62 °C
 :class: only-light
