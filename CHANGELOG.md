@@ -3,7 +3,12 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
-## Unveröffentlicht
+## 0.2.2 – 2026-10-12
+
+Neu sind Auswertungen aus den Daten, die das Tool schon liest: Gebrauchtwagen-Check,
+Readiness-Assistent, Steuergeräte und Testergebnisse (Mode 09/06), Dringlichkeit je
+Fehlercode, Warnschwellen, Batterie- und Anlasstest, Sitzungsvergleich und 24 weitere
+Live-Werte. Alles bleibt nur lesend; Löschen ist weiter gesperrt.
 
 ### Neu
 

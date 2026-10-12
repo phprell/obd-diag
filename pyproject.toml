@@ -1,6 +1,6 @@
 [project]
 name = "obd-diag"
-version = "0.2.1"
+version = "0.2.2"
 description = "Read-only OBD-II diagnostics for Linux with ELM327-compatible adapters"
 readme = "README.md"
 requires-python = ">=3.12"
