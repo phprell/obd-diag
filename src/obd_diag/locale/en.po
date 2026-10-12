@@ -486,8 +486,8 @@ msgstr "Protocol"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
-#: src/obd_diag/services/compare.py
 #: src/obd_diag/services/alarms.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Bordspannung"
 msgstr "Battery voltage"
@@ -1664,6 +1664,7 @@ msgid "Monitor · Test"
 msgstr "Monitor · test"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/ui/qml/LiveView.qml
 msgid "Wert"
 msgstr "Value"
 
@@ -1785,9 +1786,6 @@ msgstr "Ratio"
 #: src/obd_diag/export/report.py
 msgid "{low} bis {high}"
 msgstr "{low} to {high}"
-#: src/obd_diag/ui/qml/LiveView.qml
-msgid "Wert"
-msgstr "Value"
 
 #: src/obd_diag/export/report.py
 msgid "Online-Erklärung (ungeprüft):"
@@ -2732,6 +2730,7 @@ msgstr "expected KEY=LOW:HIGH, e.g. coolant_temp=:110: {text}"
 #: src/obd_diag/services/alarms.py
 msgid "untere Schwelle {low} muss kleiner sein als obere {high}"
 msgstr "lower threshold {low} must be less than upper {high}"
+
 #: src/obd_diag/services/battery.py
 msgid "Richtwerte für 12-V-Bleibatterien. Kurz nach einer Fahrt zeigt die Ruhespannung zu viel; am aussagekräftigsten ist der Test nach einigen Stunden Standzeit."
 msgstr "Guide values for 12 V lead-acid batteries. Shortly after a drive the resting voltage reads too high; the test is most meaningful after the car has stood for a few hours."
@@ -4505,10 +4504,6 @@ msgstr "Check"
 #: src/obd_diag/ui/qml/SetupDialog.qml
 msgid "Übernehmen"
 msgstr "Apply"
-
-#: src/obd_diag/ui/qml/SetupDialog.qml
-msgid "Schließen"
-msgstr "Close"
 
 #: src/obd_diag/ui/qml/TestResultsView.qml
 msgid "Lese Testergebnisse …"

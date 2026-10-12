@@ -22,8 +22,8 @@ from PySide6.QtQuickControls2 import QQuickStyle
 
 from obd_diag import i18n
 from obd_diag.ui.theme import DesignController
-from obd_diag.ui.viewmodels.compare import CompareViewModel
 from obd_diag.ui.viewmodels.battery import BatteryViewModel
+from obd_diag.ui.viewmodels.compare import CompareViewModel
 from obd_diag.ui.viewmodels.diagnosis import SETTINGS_APP, SETTINGS_ORG, DiagnosisViewModel
 from obd_diag.ui.viewmodels.live import LiveViewModel
 from obd_diag.ui.viewmodels.setup import SetupViewModel
