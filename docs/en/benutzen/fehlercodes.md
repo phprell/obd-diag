@@ -25,6 +25,26 @@ If a control unit answers with “mode not supported” (`7F 0A 11`), it has no 
 this kind. Any other rejection is an error and is never shown as “no codes”
 ({doc}`../technik/antwortformate`).
 
+## Urgency
+
+Every code gets a rough rating in four levels: on the command line below the code, in
+the window as a label in the list and with its reason in the detail view, in the PDF
+report next to the code and in the summary, in the CSV as the last column. It is based
+only on the type of code, the warning light (readiness, PID 01; not read by `scan`) and
+a few codes whose meaning is the same for all manufacturers under SAE J2012. The first
+matching rule applies:
+
+| Level | When |
+| --- | --- |
+| Avoid driving | `P0217` coolant over temperature, `P0218` transmission fluid over temperature, `P0524` oil pressure too low |
+| Visit a workshop soon | misfire `P0300`–`P0312` or airbag `B0001`–`B0099`, stored or permanent; every permanent code; stored with the warning light on |
+| Check when convenient | stored, warning light off or not read |
+| Keep an eye on it | pending only |
+
+This is not a remote diagnosis: OBD does not tell whether the warning light flashes
+(misfires that damage the catalytic converter), and manufacturer-specific codes such as
+`U1218` fall under the general rules. If you notice anything unusual, ask a workshop.
+
 ## Clearing
 
 :::{warning}

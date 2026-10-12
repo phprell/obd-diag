@@ -298,8 +298,8 @@ def test_live_csv_in_english(tmp_path: Path) -> None:
     recorder.add(LiveSample(1.5, {"rpm": 812.25}, 12.4, False))
     recorder.close()
     assert path.read_text(encoding="utf-8-sig").splitlines() == [
-        "Time (s),Engine speed (rpm),Battery voltage (V)",
-        "1.5,812.25,12.4",
+        "Time (s),Engine speed (rpm),Battery voltage (V),Warnings",
+        "1.5,812.25,12.4,",
     ]
 
 

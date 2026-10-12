@@ -50,7 +50,16 @@ def test_scan_table(
     assert "Protokoll:    ISO 15765-4 (CAN 11/500)" in out
     assert "Bordspannung: 12.4 V" in out
     assert "Batteriespannung niedrig" not in out
-    assert "Gespeichert:\n  P0133  Lambdasonde reagiert zu langsam\n  P0300  (keine" in out
+    # darunter je Code die Dringlichkeit; ohne Readiness ist die Kontrollleuchte unbekannt
+    assert (
+        "Gespeichert:\n  P0133  Lambdasonde reagiert zu langsam\n"
+        "         Dringlichkeit: Bei Gelegenheit prüfen. Gespeichert; ob die Kontrollleuchte"
+    ) in out
+    assert (
+        "  P0300  (keine Beschreibung im Katalog)\n"
+        "         Dringlichkeit: Bald in die Werkstatt. Verbrennungsaussetzer."
+    ) in out
+    assert "\nDringlichkeit insgesamt: Bald in die Werkstatt\nHinweis: Die Dringlichkeit" in out
     assert "Ausstehend:\n  P0133  Lambdasonde" in out
     assert "Permanent:" not in out
 
@@ -533,11 +542,17 @@ def test_scan_online_codes(
     assert [u.rsplit("/", 1)[1] for u in urls] == ["p_codes.txt"]  # ohne FIN kein Hersteller
     assert (
         "  P0300  (keine Beschreibung im Katalog)\n"
+        "         Dringlichkeit: Bald in die Werkstatt. Verbrennungsaussetzer."
+    ) in out
+    assert (
+        "Werkstatt.\n"
         "         Online, ungeprüft: Random/Multiple Cylinder Misfire Detected\n"
         "         Quelle: Wal33D/dtc-database (MIT), p_codes.txt, https://github.com/" in out
     )
     assert "         Im Web suchen: https://duckduckgo.com/?q=OBD+P0300\n" in out
-    assert "P0133  Lambdasonde reagiert zu langsam\n  P0300" in out  # Katalogtext ohne Link
+    # Katalogtext ohne Link
+    assert "P0133  Lambdasonde reagiert zu langsam\n         Dringlichkeit: Bei" in out
+    assert "q=OBD+P0133" not in out
 
 
 def test_scan_online_codes_without_network(

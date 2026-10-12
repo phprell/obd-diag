@@ -220,6 +220,14 @@ msgid "CSV, eine Zeile pro Fehlercode"
 msgstr "CSV, one row per trouble code"
 
 #: src/obd_diag/cli.py
+msgid "Dringlichkeit: {label}. {reason}"
+msgstr "Urgency: {label}. {reason}"
+
+#: src/obd_diag/cli.py
+msgid "(keine Beschreibung im Katalog)"
+msgstr "(no description in the catalog)"
+
+#: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/ui/qml/CodeList.qml
 msgid "Keine Fehlercodes gespeichert."
@@ -416,6 +424,14 @@ msgid "als CSV aufzeichnen (ohne DATEI: unter $XDG_DATA_HOME/obd-diag/recordings
 msgstr "record as CSV (without FILE: under $XDG_DATA_HOME/obd-diag/recordings); existing files are never overwritten"
 
 #: src/obd_diag/cli.py
+msgid "SCHLÜSSEL=UNTEN:OBEN"
+msgstr "KEY=LOW:HIGH"
+
+#: src/obd_diag/cli.py
+msgid "ohne die vorgegebenen Warnschwellen (nur die mit --alarm gesetzten)"
+msgstr "without the default warning thresholds (only those set with --alarm)"
+
+#: src/obd_diag/cli.py
 msgid "angeschlossene Adapter auflisten"
 msgstr "list connected adapters"
 
@@ -467,6 +483,7 @@ msgstr "Protocol"
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/services/compare.py
+#: src/obd_diag/services/alarms.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Bordspannung"
 msgstr "Battery voltage"
@@ -605,12 +622,12 @@ msgstr[0] "Stopped after {n} round."
 msgstr[1] "Stopped after {n} rounds."
 
 #: src/obd_diag/cli.py
-msgid "(keine Beschreibung im Katalog)"
-msgstr "(no description in the catalog)"
-
-#: src/obd_diag/cli.py
 msgid "Warnung: {message}"
 msgstr "Warning: {message}"
+
+#: src/obd_diag/cli.py
+msgid "Dringlichkeit insgesamt: {label}"
+msgstr "Overall urgency: {label}"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
@@ -659,6 +676,10 @@ msgid "CSV: {path}"
 msgstr "CSV: {path}"
 
 #: src/obd_diag/cli.py
+msgid "unbekannter Wert: {key} (Schlüssel zeigt --list, Bordspannung: {voltage})"
+msgstr "unknown value: {key} (--list shows the keys, supply voltage: {voltage})"
+
+#: src/obd_diag/cli.py
 msgid "Bordspannung wieder ausreichend."
 msgstr "Battery voltage sufficient again."
 
@@ -671,6 +692,10 @@ msgid "Abstand der Abfragerunden (Standard {default:g}, mindestens {minimum:g})"
 msgstr "interval between query rounds (default {default:g}, at least {minimum:g})"
 
 #: src/obd_diag/cli.py
+msgid "Warnschwelle setzen, z. B. coolant_temp=:110 (leere Seite: keine Grenze, SCHLÜSSEL=: schaltet die Warnung ab; mehrfach möglich). Vorgabe: {defaults}"
+msgstr "set a warning threshold, e.g. coolant_temp=:110 (empty side: no limit, KEY=: turns the warning off; may be repeated). Defaults: {defaults}"
+
+#: src/obd_diag/cli.py
 msgid "Im Web suchen: {url}"
 msgstr "Search the web: {url}"
 
@@ -680,8 +705,13 @@ msgid "Sitzung gespeichert: {path}"
 msgstr "Session saved: {path}"
 
 #: src/obd_diag/cli.py
+#: src/obd_diag/services/alarms.py
 msgid "keine Zahl: {text}"
 msgstr "not a number: {text}"
+
+#: src/obd_diag/cli.py
+msgid "{name} wieder im Bereich."
+msgstr "{name} back within range."
 
 #: src/obd_diag/cli.py
 msgid "Adapter: {adapter}, Protokoll: {protocol}"
@@ -1499,6 +1529,10 @@ msgid "Datum"
 msgstr "Date"
 
 #: src/obd_diag/export/report.py
+msgid "Dringlichkeit"
+msgstr "Urgency"
+
+#: src/obd_diag/export/report.py
 msgid "Gespeicherte Fehlercodes"
 msgstr "Stored trouble codes"
 
@@ -1688,6 +1722,10 @@ msgid "Nach dem Löschen von Fehlercodes stehen die Monitore wieder auf „nicht
 msgstr "After clearing trouble codes the monitors are back to “incomplete”; they only complete after several drives."
 
 #: src/obd_diag/export/report.py
+msgid "Dringlichkeit: {label}."
+msgstr "Urgency: {label}."
+
+#: src/obd_diag/export/report.py
 msgid "Vermutlich herstellerspezifischer Code; Bedeutung in den Unterlagen des Herstellers nachschlagen."
 msgstr "Probably a manufacturer-specific code; look up its meaning in the manufacturer's documentation."
 
@@ -1714,6 +1752,9 @@ msgstr "Ratio"
 #: src/obd_diag/export/report.py
 msgid "{low} bis {high}"
 msgstr "{low} to {high}"
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Wert"
+msgstr "Value"
 
 #: src/obd_diag/export/report.py
 msgid "Online-Erklärung (ungeprüft):"
@@ -2639,6 +2680,26 @@ msgstr "{voltage}: adapter is probably not plugged into the car"
 msgid "{voltage}: niedrig, Batterie laden"
 msgstr "{voltage}: low, charge the battery"
 
+#: src/obd_diag/services/alarms.py
+msgid "{name} {value} {unit} über {limit} {unit}"
+msgstr "{name} {value} {unit} above {limit} {unit}"
+
+#: src/obd_diag/services/alarms.py
+msgid "{name} {value} {unit} unter {limit} {unit}"
+msgstr "{name} {value} {unit} below {limit} {unit}"
+
+#: src/obd_diag/services/alarms.py
+msgid "Schwelle muss eine Zahl sein"
+msgstr "Threshold must be a number"
+
+#: src/obd_diag/services/alarms.py
+msgid "Form SCHLÜSSEL=UNTEN:OBEN erwartet, z. B. coolant_temp=:110: {text}"
+msgstr "expected KEY=LOW:HIGH, e.g. coolant_temp=:110: {text}"
+
+#: src/obd_diag/services/alarms.py
+msgid "untere Schwelle {low} muss kleiner sein als obere {high}"
+msgstr "lower threshold {low} must be less than upper {high}"
+
 #: src/obd_diag/services/clear.py
 msgid "Löschen ist vorerst deaktiviert: Erst muss das Lesen an einem echten Fahrzeug geprüft sein. Es wurde nichts gesendet."
 msgstr "Clearing is disabled for now: reading must first be verified on a real vehicle. Nothing was sent."
@@ -2765,6 +2826,10 @@ msgstr "{problem} (available: {offered})"
 #: src/obd_diag/services/live.py
 msgid "Bordspannung (V)"
 msgstr "Battery voltage (V)"
+
+#: src/obd_diag/services/live.py
+msgid "Warnungen"
+msgstr "Warnings"
 
 #: src/obd_diag/services/live.py
 msgid "unbekannte Werte: {keys}"
@@ -3090,6 +3155,66 @@ msgstr "{error}. Is another program using the adapter?"
 #: src/obd_diag/transport/trace.py
 msgid "kein freier Dateiname für {stem} in {directory}"
 msgstr "no free file name for {stem} in {directory}"
+
+#: src/obd_diag/services/urgency.py
+msgid "Die Dringlichkeit ist eine grobe Einordnung aus Code, Art und Kontrollleuchte, keine Ferndiagnose. Im Zweifel und bei spürbaren Auffälligkeiten (Geräusche, Geruch, Leistungsverlust, Warnmeldungen im Kombiinstrument) eine Werkstatt fragen."
+msgstr "The urgency is a rough rating from the code, its type and the warning light, not a remote diagnosis. If in doubt, or if you notice anything (noises, smell, loss of power, warnings in the instrument cluster), ask a workshop."
+
+#: src/obd_diag/services/urgency.py
+msgid "Verbrennungsaussetzer. Blinkt die Kontrollleuchte, kann der Katalysator Schaden nehmen: dann nur langsam und ohne Last weiterfahren, am besten gleich in die Werkstatt."
+msgstr "Misfire. If the warning light flashes, the catalytic converter can be damaged: then drive only slowly and without load, ideally straight to a workshop."
+
+#: src/obd_diag/services/urgency.py
+msgid "Rückhaltesystem (Airbag, Gurtstraffer): Es kann im Ernstfall ausfallen."
+msgstr "Restraint system (airbag, belt tensioner): it may fail in a crash."
+
+#: src/obd_diag/services/urgency.py
+msgid "Permanenter Code: Das Steuergerät hat die Kontrollleuchte eingeschaltet. Er verschwindet erst, wenn die Eigendiagnose den Fehler als behoben erkennt."
+msgstr "Permanent code: the control unit has switched on the warning light. It only disappears once the self-test recognizes the fault as fixed."
+
+#: src/obd_diag/services/urgency.py
+msgid "Gespeichert, und die Kontrollleuchte ist an."
+msgstr "Stored, and the warning light is on."
+
+#: src/obd_diag/services/urgency.py
+msgid "Gespeichert, die Kontrollleuchte ist aus."
+msgstr "Stored, the warning light is off."
+
+#: src/obd_diag/services/urgency.py
+msgid "Gespeichert; ob die Kontrollleuchte an ist, wurde nicht gelesen."
+msgstr "Stored; whether the warning light is on was not read."
+
+#: src/obd_diag/services/urgency.py
+msgid "Ausstehend: einmal erkannt, aber noch nicht bestätigt. Nach einigen Fahrten erneut lesen."
+msgstr "Pending: detected once but not yet confirmed. Read again after a few drives."
+
+#: src/obd_diag/services/urgency.py
+msgid "Beobachten"
+msgstr "Keep an eye on it"
+
+#: src/obd_diag/services/urgency.py
+msgid "Bei Gelegenheit prüfen"
+msgstr "Check when convenient"
+
+#: src/obd_diag/services/urgency.py
+msgid "Bald in die Werkstatt"
+msgstr "Visit a workshop soon"
+
+#: src/obd_diag/services/urgency.py
+msgid "Möglichst nicht weiterfahren"
+msgstr "Avoid driving"
+
+#: src/obd_diag/services/urgency.py
+msgid "Der Motor meldet Übertemperatur. Weiterfahren kann den Motor schwer beschädigen; anhalten, Motor abstellen, Kühlmittel prüfen (erst nach dem Abkühlen öffnen)."
+msgstr "The engine reports overheating. Driving on can seriously damage the engine; stop, switch off the engine, check the coolant (open only once it has cooled down)."
+
+#: src/obd_diag/services/urgency.py
+msgid "Das Getriebe meldet Übertemperatur. Weiterfahren kann das Getriebe beschädigen; anhalten und abkühlen lassen."
+msgstr "The transmission reports overheating. Driving on can damage the transmission; stop and let it cool down."
+
+#: src/obd_diag/services/urgency.py
+msgid "Der Motoröldruck ist zu niedrig. Weiterfahren kann den Motor schwer beschädigen; anhalten, Motor abstellen, Ölstand prüfen."
+msgstr "The engine oil pressure is too low. Driving on can seriously damage the engine; stop, switch off the engine, check the oil level."
 
 #: src/obd_diag/services/used_car.py
 msgid "Gebrauchtwagen-Check"
@@ -3476,6 +3601,22 @@ msgstr[0] "{n} code still present."
 msgstr[1] "{n} codes still present."
 
 #: src/obd_diag/ui/viewmodels/live.py
+msgid "über {limit}"
+msgstr "above {limit}"
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "unter {limit}"
+msgstr "below {limit}"
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Während der Abfrage nicht änderbar."
+msgstr "Cannot be changed while reading."
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Bitte eine Zahl eingeben."
+msgstr "Please enter a number."
+
+#: src/obd_diag/ui/viewmodels/live.py
 msgid "Bitte mindestens einen Wert auswählen."
 msgstr "Please select at least one value."
 
@@ -3484,6 +3625,10 @@ msgid "Live-Daten beendet nach {n} Runde."
 msgid_plural "Live-Daten beendet nach {n} Runden."
 msgstr[0] "Live data stopped after {n} round."
 msgstr[1] "Live data stopped after {n} rounds."
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "unbekannter Wert: {key}"
+msgstr "unknown value: {key}"
 
 #: src/obd_diag/ui/viewmodels/live.py
 msgid "Auswahl nicht möglich: {error}"
@@ -3630,6 +3775,10 @@ msgid "Code in der Liste auswählen"
 msgstr "Select a code in the list"
 
 #: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Dringlichkeit: %1. %2"
+msgstr "Urgency: %1. %2"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
 msgid "Für diesen Code gibt es keinen Eintrag im Offline-Katalog. Herstellerspezifische Codes (z. B. P1xxx, U1xxx) sind dort oft nicht enthalten; die Bedeutung steht in den Unterlagen des Herstellers."
 msgstr "There is no entry for this code in the offline catalog. Manufacturer-specific codes (e.g. P1xxx, U1xxx) are often missing there; their meaning is in the manufacturer's documentation."
 
@@ -3676,6 +3825,10 @@ msgstr "Difficulty"
 #: src/obd_diag/ui/qml/CodeDetail.qml
 msgid "Richtwert für Teile und Arbeit, je nach Fahrzeug und Werkstatt."
 msgstr "Estimate for parts and labour, depending on vehicle and workshop."
+
+#: src/obd_diag/ui/qml/CodeList.qml
+msgid "Dringlichkeit: %1"
+msgstr "Urgency: %1"
 
 #: src/obd_diag/ui/qml/CodeList.qml
 msgid "Lese Fehlercodes …"
@@ -3810,6 +3963,10 @@ msgid "Jede Runde sofort in eine neue CSV-Datei schreiben"
 msgstr "Write every round straight into a new CSV file"
 
 #: src/obd_diag/ui/qml/LiveView.qml
+msgid "Warnschwellen …"
+msgstr "Warning thresholds …"
+
+#: src/obd_diag/ui/qml/LiveView.qml
 msgid "Bordspannung %1"
 msgstr "Battery voltage %1"
 
@@ -3824,6 +3981,10 @@ msgstr "%1 rounds"
 #: src/obd_diag/ui/qml/LiveView.qml
 msgid "Während der Fahrt nur durch Beifahrer bedienen. Wer fährt, achtet auf den Verkehr, nicht auf den Bildschirm."
 msgstr "While driving, only a passenger should operate this. The driver watches the traffic, not the screen."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Warnschwelle überschritten: %1"
+msgstr "Warning threshold exceeded: %1"
 
 #: src/obd_diag/ui/qml/LiveView.qml
 msgid "Bordspannung niedrig (%1): die Abfrage ist gedrosselt, um die Batterie zu schonen."
@@ -3864,6 +4025,34 @@ msgstr "No live data yet"
 #: src/obd_diag/ui/qml/LiveView.qml
 msgid "Port oben wählen, Werte auswählen und „Start“ drücken. Gelesen wird nur (Mode 01); am Fahrzeug wird nichts verändert."
 msgstr "Choose the port above, select values and press “Start”. Read-only (mode 01); nothing is changed on the vehicle."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Warnschwellen"
+msgstr "Warning thresholds"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Liegt ein Wert unter „unter“ oder über „über“, wird die Kachel rot markiert und die Warnung in der Aufzeichnung vermerkt. Leeres Feld: keine Grenze. Die Vorgaben sind grobe Richtwerte; was für das Fahrzeug normal ist, steht in seinen Unterlagen."
+msgstr "If a value is below “below” or above “above”, its tile turns red and the warning is noted in the recording. Empty field: no limit. The defaults are rough guide values; what is normal for the vehicle is in its documentation."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "unter"
+msgstr "below"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "über"
+msgstr "above"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Untere Schwelle für %1"
+msgstr "Lower threshold for %1"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Obere Schwelle für %1"
+msgstr "Upper threshold for %1"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Vorgaben wiederherstellen"
+msgstr "Restore defaults"
 
 #: src/obd_diag/ui/qml/LiveView.qml
 msgid "gesehen %1 bis %2"

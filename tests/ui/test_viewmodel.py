@@ -129,6 +129,25 @@ def test_model_roles() -> None:
     assert model.data(model.index(5), roles["code"]) is None
 
 
+def test_model_urgency_per_code_with_mil() -> None:
+    model = CodeListModel()
+    codes = [
+        DiagnosticCode("P0420", DtcKind.PENDING, P0420),
+        DiagnosticCode("P0420", DtcKind.STORED),
+    ]
+    model.set_codes(codes, mil_on=True)
+    roles = {bytes(name.data()).decode(): role for role, name in model.roleNames().items()}
+    # beide Zeilen gleich bewertet: gespeichert bei eingeschalteter Kontrollleuchte
+    for row in (0, 1):
+        assert model.data(model.index(row), roles["urgency"]) == "soon"
+        assert model.data(model.index(row), roles["urgencyLabel"]) == "Bald in die Werkstatt"
+    assert model.data(model.index(0), roles["urgencyReason"]).startswith("Gespeichert, und")
+    entry = model.entry(0)
+    assert entry is not None and "keine Ferndiagnose" in entry["urgencyNote"]
+    model.set_codes(codes[:1])  # ohne Readiness, nur ausstehend
+    assert model.data(model.index(0), roles["urgency"]) == "watch"
+
+
 def test_cost_text() -> None:
     assert cost_text(None) == ""
     assert cost_text((60, 250)) == "ca. 60–250 €"  # noqa: RUF001

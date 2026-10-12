@@ -78,6 +78,27 @@ Rectangle {
                         wrapMode: Text.Wrap
                     }
 
+                    // Dringlichkeit: Stufe und Begründung, darunter der Hinweis zur Einordnung
+                    Banner {
+                        objectName: "detailUrgency"
+                        Layout.fillWidth: true
+                        kind: {
+                            const u = pane.entry.urgency ?? ""
+                            return u === "stop" || u === "soon" ? "error" : u === "check" ? "warn" : "info"
+                        }
+                        text: pane.hasEntry
+                              ? qsTr("Dringlichkeit: %1. %2").arg(pane.entry.urgencyLabel).arg(pane.entry.urgencyReason)
+                              : ""
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        visible: pane.hasEntry
+                        text: pane.entry.urgencyNote ?? ""
+                        color: Theme.muted
+                        font.pixelSize: 12
+                        wrapMode: Text.Wrap
+                    }
+
                     Banner {
                         Layout.fillWidth: true
                         kind: "info"

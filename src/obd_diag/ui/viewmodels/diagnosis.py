@@ -712,7 +712,11 @@ class DiagnosisViewModel(QObject):
         self._saved_path = path
         codes = session.scan.codes
         vehicle = session.vehicle
-        self._codes.set_codes(codes, vehicle.manufacturer if vehicle is not None else None)
+        self._codes.set_codes(
+            codes,
+            vehicle.manufacturer if vehicle is not None else None,
+            session.readiness.mil_on if session.readiness is not None else None,
+        )
         self._monitors.set_monitors(
             session.readiness.monitors if session.readiness is not None else ()
         )

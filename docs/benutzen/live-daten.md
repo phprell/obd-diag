@@ -55,10 +55,39 @@ vollständige Liste mit Schlüssel, Formel und Wertebereich steht unter
 - Gesendet werden nur `01xx` und `ATRV`, dazu `ATH1`/`ATH0` (Header an und aus), wenn
   sich mehrteilige Antworten mehrerer Steuergeräte vermischen.
 
+## Warnschwellen
+
+Liegt ein Wert unter seiner unteren oder über seiner oberen Schwelle, steht er in der
+Tabelle mit `!`, Beginn und Ende der Warnung meldet ein Hinweis; in der Oberfläche wird
+die Kachel rot und eine Leiste nennt den Wert. Vorgaben (grobe Richtwerte, die im
+normalen Betrieb nicht anschlagen; was für das eigene Auto normal ist, steht in dessen
+Unterlagen):
+
+| Wert | Schlüssel | Warnung |
+| --- | --- | --- |
+| Kühlmitteltemperatur | `coolant_temp` | über 115 °C |
+| Motoröltemperatur | `oil_temp` | über 130 °C |
+| Steuergerätespannung | `control_voltage` | unter 11,8 V, über 15,5 V |
+| Bordspannung (`ATRV`) | `voltage` | unter 11,8 V, über 15,5 V |
+
+```sh
+obd-diag live --alarm coolant_temp=:105 --alarm rpm=:4500   # obere Grenzen setzen
+obd-diag live --alarm voltage=12,2: --alarm oil_temp=:       # untere Grenze; Warnung aus
+obd-diag live --no-alarms --alarm speed=:130                 # nur diese eine Schwelle
+```
+
+`--alarm SCHLÜSSEL=UNTEN:OBEN` ersetzt die Vorgabe des Werts; eine leere Seite heißt
+keine Grenze, Komma oder Punkt sind als Dezimalzeichen erlaubt. In der Oberfläche
+stellt „Warnschwellen …“ sie je Wert ein; sie bleiben gespeichert und gelten ab dem
+nächsten Start. Geprüft werden nur die ohnehin gelesenen Werte, gesendet wird dafür
+nichts.
+
 ## Aufzeichnung
 
 `--record` schreibt eine CSV unter `~/.local/share/obd-diag/recordings/`
 (`live-JJJJMMTT-HHMMSS.csv`) oder in die angegebene Datei, die nicht überschrieben
 wird. Das Format folgt der Sprache ({doc}`sprache`): UTF-8 mit BOM; auf Deutsch `;` als
-Trennzeichen und Dezimalkomma, auf Englisch `,` und Dezimalpunkt. Erste Spalte `Zeit (s)`, dann je Wert `Name (Einheit)`, zuletzt `Bordspannung (V)`.
+Trennzeichen und Dezimalkomma, auf Englisch `,` und Dezimalpunkt. Erste Spalte `Zeit (s)`, dann je Wert `Name (Einheit)`, `Bordspannung (V)` und zuletzt
+`Warnungen` (überschrittene Schwellen dieser Runde als Text, mehrere durch ` | `
+getrennt, sonst leer).
 Jede Zeile wird sofort geschrieben, ein Abbruch verliert also nichts.

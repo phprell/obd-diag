@@ -79,9 +79,9 @@ def test_cli_live_sends_exactly(monkeypatch: pytest.MonkeyPatch, tmp_path: Path)
     lines = csv_file.read_text(encoding="utf-8-sig").splitlines()
     assert lines[0] == (
         "Zeit (s);Motordrehzahl (1/min);Geschwindigkeit (km/h);Kühlmitteltemperatur (°C);"
-        "Berechnete Motorlast (%);Ansauglufttemperatur (°C);Bordspannung (V)"
+        "Berechnete Motorlast (%);Ansauglufttemperatur (°C);Bordspannung (V);Warnungen"
     )
-    assert lines[1] == "0;1726;50;86;50,196;20;12,4"
+    assert lines[1] == "0;1726;50;86;50,196;20;12,4;"  # Vorgaben: keine Schwelle verletzt
     assert len(lines) == 3
 
 
