@@ -4,8 +4,9 @@ Linux-OBD-II-Diagnose-Tool für ELM327-kompatible Adapter: Kommandozeile und
 PySide6/QML-Oberfläche, Python 3.12+. Repo: github.com/phprell/obd-diag (öffentlich seit 2026-10-09).
 
 Entscheidungen: `docs/adr/` (0001 Schichten, 0002 nur lesend/Freigabeliste, 0003
-Live-Daten, 0004 Online-Erklärungen). Nutzer-Doku: README.md (Englisch) und README.de.md
-(Deutsch; u. a. „Sicherheit: was das Tool senden kann“, „Erster Test am Auto“, „Live-Daten“).
+Live-Daten, 0004 Online-Erklärungen). README.md (Englisch) und README.de.md (Deutsch) sind
+nur eine kurze Startseite für Interessierte mit Bildern aus `.github/assets/readme/` (Demo-
+Modus, `tools/docs_screenshots.py --demo`); alle Einzelheiten stehen in der Sphinx-Doku.
 
 Spezifikation und Roadmap: Claude-Docs-Dokument „OBD-Diagnose – Designvorschlag“
 https://claude.ai/code/artifact/de949a8a-4f58-41b4-a629-6b9d238bdac7 (über den

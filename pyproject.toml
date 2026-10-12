@@ -110,7 +110,7 @@ qt_api = "pyside6"
 
 [tool.mutmut]
 # Mutationstests für Freigabeliste, Löschen, Ablage, Scan, Sitzung, Katalog und Mitschnitt; nur die
-# schnellen Unit-Tests. Aufruf: uv run --with mutmut mutmut run (siehe README).
+# schnellen Unit-Tests. Aufruf: uv run --with mutmut mutmut run (siehe docs/entwickeln/testen.md).
 source_paths = ["src/obd_diag"]
 only_mutate = [
     "src/obd_diag/protocol/elm327.py",
