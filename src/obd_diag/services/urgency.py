@@ -83,7 +83,7 @@ _CRITICAL = {
     ),
 }
 _MISFIRE = re.compile(r"P03(0\d|1[0-2])")
-_RESTRAINT = re.compile(r"B00\d\d")
+_RESTRAINT = re.compile(r"B00(0[1-9]|[1-9]\d)")
 
 _MISFIRE_REASON = N_(
     "Verbrennungsaussetzer. Blinkt die Kontrollleuchte, kann der Katalysator Schaden "

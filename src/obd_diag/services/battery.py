@@ -468,7 +468,8 @@ def crank_verdict(result: BatteryTestResult) -> Verdict:
         return Verdict(Rating.UNKNOWN, tr("kein Anlassen erkannt"))
     limit = crank_limit(result.coolant_temp)
     values = {"voltage": _volts(voltage), "limit": _volts(limit)}
-    if voltage >= limit + CRANK_MARGIN:
+    # gerundet: 9,3 + 0,4 ergibt in Gleitkomma 9,700000000000001
+    if voltage >= round(limit + CRANK_MARGIN, 3):
         return Verdict(Rating.GOOD, tr("{voltage} (Grenze {limit}): gut").format(**values))
     if voltage >= limit:
         return Verdict(
