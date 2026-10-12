@@ -87,15 +87,25 @@ class Alarm:
         )
         return (
             template.format(
-                name=name, value=_number(self.value), limit=_number(self.limit), unit=unit
+                name=name,
+                value=_value_text(self.value, self.limit),
+                limit=_number(self.limit),
+                unit=unit,
             )
             .replace("  ", " ")
             .strip()
         )
 
 
-def _number(value: float) -> str:
-    return str(int(value)) if value == int(value) else decimal(value)
+def _number(value: float, digits: int = 1) -> str:
+    return str(int(value)) if value == int(value) else decimal(value, digits)
+
+
+def _value_text(value: float, limit: float) -> str:
+    """Messwert mit so vielen Stellen (höchstens drei), dass er gerundet nicht der
+    Schwelle gleicht: 11,76 V unter 11,8 V, nicht 11,8 V unter 11,8 V."""
+    digits = next((d for d in (1, 2) if round(value, d) != limit), 3)
+    return _number(value, digits)
 
 
 def check(

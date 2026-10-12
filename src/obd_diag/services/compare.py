@@ -364,7 +364,8 @@ def _compare_connection(before: Session, after: Session) -> list[Change]:
     voltage_differs = (a.voltage is None) != (b.voltage is None) or (
         a.voltage is not None
         and b.voltage is not None
-        and abs(a.voltage - b.voltage) >= VOLTAGE_TOLERANCE
+        # gerundet: 12,5 - 12,4 ergibt in Gleitkomma 0,0999…, ein ganzer ATRV-Schritt
+        and round(abs(a.voltage - b.voltage), 6) >= VOLTAGE_TOLERANCE
     )
     if voltage_differs:
         if b.low_voltage and not a.low_voltage:
