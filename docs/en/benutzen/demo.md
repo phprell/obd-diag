@@ -42,6 +42,10 @@ warm-ups and distance since clearing, accelerator pedal, air mass). The car repo
 as supported; in demo mode they hold made-up, plausible values. The used-car check is
 therefore “inconspicuous” (40 warm-ups and 3000 km since clearing).
 
+For the {doc}`batterie`, the demo vehicle's engine is off at first and starts by itself
+about 3 s after the prompt. These voltages are made up but modelled on the traces: rest
+12.55 V, a dip to 9.5 V according to the adapter, charging 14.8 V.
+
 ```{image} ../_static/screenshots/demo-live-daten-light.png
 :alt: Live data in demo mode: engine speed around 860 rpm, coolant 62 °C
 :class: only-light

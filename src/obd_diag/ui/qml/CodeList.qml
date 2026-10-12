@@ -59,6 +59,8 @@ Rectangle {
             required property int index
             required property string code
             required property string kind
+            required property string urgency
+            required property string urgencyLabel
             required property string title
             required property bool hasInfo
 
@@ -113,6 +115,19 @@ Rectangle {
                     elide: Text.ElideRight
                     color: row.hasInfo ? palette.text : Theme.muted
                     font.italic: !row.hasInfo
+                }
+                Chip {
+                    objectName: "codeUrgency_" + row.code + "_" + row.kind
+                    Layout.alignment: Qt.AlignVCenter
+                    text: row.urgencyLabel
+                    textColor: Theme.urgencyText(row.urgency)
+                    fill: Theme.urgencyBg(row.urgency)
+                    ToolTip.visible: chipHover.hovered
+                    ToolTip.delay: 600
+                    ToolTip.text: qsTr("Dringlichkeit: %1").arg(row.urgencyLabel)
+                    HoverHandler {
+                        id: chipHover
+                    }
                 }
             }
         }

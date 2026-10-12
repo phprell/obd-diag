@@ -30,7 +30,8 @@ website.
 
 On the left the codes, grouped into stored, pending and permanent; on the right the
 explanation of the selected code with causes and their likelihood, symptoms and cost
-range from the offline catalog ({doc}`fehlercodes`). If a code is missing from the
+range from the offline catalog ({doc}`fehlercodes`). A label per code shows the
+urgency, the detail view its reason. If a code is missing from the
 catalog, “Search the web” opens a web search in the browser; with “Explain trouble
 codes online” an unverified short explanation appears there as well
 ({doc}`fehlercodes-online`).
@@ -118,6 +119,7 @@ flagged.
 Choose values (the ones the vehicle supports appear after the first start), interval
 0.5, 1 or 2 s, optionally “Record (CSV)”, then Start. One tile per value with the
 current value, the smallest and largest value seen and a curve of the last 120 values.
+“Warning thresholds …” sets limits per value; when one is exceeded, the tile turns red.
 While live data is running, scan, clearing and export are locked, because only one
 action runs on the adapter at a time ({doc}`live-daten`).
 
@@ -127,6 +129,7 @@ action runs on the adapter at a time ({doc}`live-daten`).
 | --- | --- | --- |
 | Save session | Ctrl+S | store the diagnosis as JSON, the path is shown |
 | Open session … | Ctrl+O | view a saved session only; clearing is not possible then |
+| Compare with session … | – | compare the displayed diagnosis with a saved one ({doc}`sitzungen`) |
 | Report as PDF … | Ctrl+P | write a PDF report in the background |
 | Export CSV … | – | one row per trouble code |
 | Options → Check setup … | – | check adapter, permissions and baud rate; opens by itself on the first start ({doc}`installation`) |

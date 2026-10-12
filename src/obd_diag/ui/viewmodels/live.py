@@ -9,6 +9,7 @@ Jede Abfrage bekommt eine laufende Nummer; Rückmeldungen einer älteren Abfrage
 erst nach dem Start einer neuen ankommen, werden verworfen.
 """
 
+import json
 import math
 import threading
 from collections import deque
@@ -33,12 +34,23 @@ from PySide6.QtGui import QDesktopServices
 
 from obd_diag.i18n import decimal, tr, trn
 from obd_diag.protocol.pids import PIDS, PidSpec
+from obd_diag.services.alarms import (
+    DEFAULT_THRESHOLDS,
+    VOLTAGE_KEY,
+    VOLTAGE_LABEL,
+    Alarm,
+    Threshold,
+    parse_number,
+    thresholds_from_json,
+    thresholds_to_json,
+)
 from obd_diag.services.live import (
     DEFAULT_INTERVAL,
     DEFAULT_KEYS,
     LiveSample,
     LiveSetup,
     SelectionError,
+    alarm_text,
     recording_dir,
 )
 from obd_diag.ui.backend import Backend, LiveResult
@@ -56,6 +68,7 @@ NO_VALUE = "–"  # noqa: RUF001  (Anzeige für „nicht lesbar“)
 
 RECORD_KEY = "live/aufzeichnen"
 INTERVAL_KEY = "live/intervall"
+THRESHOLDS_KEY = "live/warnschwellen"  # JSON wie ``alarms.thresholds_to_json``
 
 
 def number_text(value: float | None) -> str:
@@ -77,6 +90,19 @@ def elapsed_text(seconds: float) -> str:
     return f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes}:{secs:02d}"
 
 
+def limit_text(value: float | None) -> str:
+    """Schwelle für das Eingabefeld: leer ohne Grenze, sonst wie ``number_text``."""
+    return "" if value is None else number_text(value)
+
+
+def alarm_side_text(alarm: Alarm | None, unit: str) -> str:
+    """Kurzform für die Kachel, z. B. „über 115 °C“; leer ohne Warnung."""
+    if alarm is None:
+        return ""
+    template = tr("über {limit}") if alarm.side == "high" else tr("unter {limit}")
+    return template.format(limit=f"{number_text(alarm.limit)} {unit}".strip())
+
+
 def spec_entry(spec: PidSpec) -> dict[str, Any]:
     return {"key": spec.key, "name": spec.name, "unit": tr(spec.unit)}
 
@@ -90,9 +116,11 @@ class _Value:
         self.low: float | None = None
         self.high: float | None = None
         self.history: deque[float] = deque(maxlen=HISTORY)  # NaN = nicht lesbar
+        self.alarm: Alarm | None = None  # Warnschwelle in der letzten Runde überschritten
 
-    def add(self, value: float | None) -> None:
+    def add(self, value: float | None, alarm: Alarm | None = None) -> None:
         self.value = value
+        self.alarm = alarm
         self.history.append(math.nan if value is None else value)
         if value is not None:
             self.low = value if self.low is None else min(self.low, value)
@@ -114,6 +142,8 @@ class _Value:
             "lowText": number_text(self.low),
             "highText": number_text(self.high),
             "history": list(self.history),
+            "alarm": self.alarm.side if self.alarm is not None else "",  # "low"/"high"
+            "alarmText": alarm_side_text(self.alarm, tr(spec.unit)),
         }
 
 
@@ -131,6 +161,8 @@ _ROLE_NAMES = (
     "lowText",
     "highText",
     "history",
+    "alarm",
+    "alarmText",
 )
 _ROLES = {Qt.ItemDataRole.UserRole + 1 + i: name for i, name in enumerate(_ROLE_NAMES)}
 
@@ -158,9 +190,10 @@ class LiveValueModel(QAbstractListModel):
         self.endResetModel()
         self.countChanged.emit()
 
-    def add_sample(self, values: dict[str, float | None]) -> None:
+    def add_sample(self, values: dict[str, float | None], alarms: Sequence[Alarm] = ()) -> None:
+        by_key = {alarm.key: alarm for alarm in alarms}
         for row, item in enumerate(self._values):
-            item.add(values.get(item.spec.key))
+            item.add(values.get(item.spec.key), by_key.get(item.spec.key))
             self._entries[row] = item.entry()
         if self._values:
             self.dataChanged.emit(self.index(0), self.index(len(self._values) - 1))
@@ -218,6 +251,7 @@ class LiveViewModel(QObject):
     availableChanged = Signal()
     selectionChanged = Signal()
     settingsChanged = Signal()
+    thresholdsChanged = Signal()
     sampleChanged = Signal()
     liveFinished = Signal(str)  # Pfad der Aufzeichnung oder leer
     jobFailed = Signal(str)
@@ -240,6 +274,8 @@ class LiveViewModel(QObject):
         self._relay.started.connect(self._on_started, Qt.ConnectionType.QueuedConnection)
         self._relay.sample.connect(self._on_sample, Qt.ConnectionType.QueuedConnection)
         diagnosis.stateChanged.connect(self.stateChanged)
+        # Die Zeilen der Warnschwellen folgen der Auswahl
+        self.selectionChanged.connect(self.thresholdsChanged)
 
         self._run_id = 0
         self._stop_event = threading.Event()
@@ -252,6 +288,8 @@ class LiveViewModel(QObject):
         self._elapsed = 0.0
         self._voltage: float | None = None
         self._throttled = False
+        self._alarms: tuple[Alarm, ...] = ()
+        self._pids: list[PidSpec] = []  # die laufende bzw. letzte Abfrage
 
         # Vor der ersten Verbindung: alle bekannten Werte; danach die unterstützten
         self._available: list[PidSpec] = list(PIDS.values())
@@ -262,6 +300,25 @@ class LiveViewModel(QObject):
         self._recording = self._settings.value(RECORD_KEY, False, type=bool) is True
         stored = self._settings.value(INTERVAL_KEY, DEFAULT_INTERVAL, type=float)
         self._interval = float(stored) if stored in INTERVALS else DEFAULT_INTERVAL
+        self._thresholds = self._load_thresholds()
+
+    def _load_thresholds(self) -> dict[str, Threshold]:
+        """Gespeicherte Warnschwellen; nie geändert (oder unlesbar): die Vorgaben."""
+        stored = self._settings.value(THRESHOLDS_KEY, None)
+        if not isinstance(stored, str):
+            return dict(DEFAULT_THRESHOLDS)
+        try:
+            return thresholds_from_json(json.loads(stored))
+        except ValueError:
+            return dict(DEFAULT_THRESHOLDS)
+
+    def _save_thresholds(self) -> None:
+        self._settings.setValue(THRESHOLDS_KEY, json.dumps(thresholds_to_json(self._thresholds)))
+        self._settings.sync()
+
+    @property
+    def thresholds(self) -> dict[str, Threshold]:
+        return dict(self._thresholds)
 
     # --- Eigenschaften ---------------------------------------------------------
 
@@ -276,7 +333,12 @@ class LiveViewModel(QObject):
 
     @Property(bool, notify=stateChanged)
     def canStart(self) -> bool:
-        return not self._running and not self._diagnosis.property("busy")
+        # ``blocked`` auch durch den Batterietest (ein Thread für alles am Adapter)
+        return (
+            not self._running
+            and not self._diagnosis.property("busy")
+            and not self._diagnosis.property("blocked")
+        )
 
     @Property(QObject, constant=True)
     def values(self) -> LiveValueModel:
@@ -326,6 +388,36 @@ class LiveViewModel(QObject):
     @Property(bool, notify=sampleChanged)
     def throttled(self) -> bool:
         return self._throttled
+
+    @Property(bool, notify=sampleChanged)
+    def voltageAlarm(self) -> bool:
+        """Bordspannung jenseits ihrer Warnschwelle (letzte Runde)."""
+        return any(alarm.key == VOLTAGE_KEY for alarm in self._alarms)
+
+    @Property(list, notify=sampleChanged)
+    def alarmTexts(self) -> list[str]:
+        """Überschrittene Warnschwellen der letzten Runde als Text, leer ohne Warnung."""
+        return [alarm_text(alarm, self._pids) for alarm in self._alarms]
+
+    @Property(list, notify=thresholdsChanged)
+    def thresholdRows(self) -> list[dict[str, Any]]:
+        """Zeilen für den Dialog „Warnschwellen“: Bordspannung, dann jeder ausgewählte
+        Wert und jeder mit Schwelle, in der Reihenfolge der Auswahlliste."""
+        rows = [self._threshold_row(VOLTAGE_KEY, tr(VOLTAGE_LABEL), "V")]
+        for spec in PIDS.values():
+            if spec.key in self._selected or spec.key in self._thresholds:
+                rows.append(self._threshold_row(spec.key, spec.name, tr(spec.unit)))
+        return rows
+
+    def _threshold_row(self, key: str, name: str, unit: str) -> dict[str, Any]:
+        threshold = self._thresholds.get(key, Threshold())
+        return {
+            "key": key,
+            "name": name,
+            "unit": unit,
+            "lowText": limit_text(threshold.low),
+            "highText": limit_text(threshold.high),
+        }
 
     @Property(str, notify=stateChanged)
     def recordingPath(self) -> str:
@@ -377,6 +469,50 @@ class LiveViewModel(QObject):
     interval = Property(float, _get_interval, _set_interval, notify=settingsChanged)
 
     # --- Aktionen ------------------------------------------------------------
+
+    @Slot(str, str, str, result=str)
+    def setThreshold(self, key: str, low_text: str, high_text: str) -> str:
+        """Warnschwelle eines Werts setzen (leere Felder: keine Grenze) und speichern.
+
+        Liefert eine Fehlermeldung oder leer; bei einem Fehler bleibt die alte Schwelle.
+        Während der Abfrage nicht änderbar (sie gilt ab dem nächsten Start). Meldet
+        ``thresholdsChanged`` bewusst nicht: die Zeilen des Dialogs würden sonst neu
+        aufgebaut, und das Feld, in das der Nutzer gerade wechselt, verlöre den Fokus.
+        """
+        if self._running:
+            return tr("Während der Abfrage nicht änderbar.")
+        if key != VOLTAGE_KEY and key not in PIDS:
+            return tr("unbekannter Wert: {key}").format(key=key)
+        try:
+            low, high = parse_number(low_text), parse_number(high_text)
+        except ValueError:
+            return tr("Bitte eine Zahl eingeben.")
+        try:
+            threshold = Threshold(low, high)
+        except ValueError as e:
+            return str(e)
+        if threshold == self._thresholds.get(key, Threshold()):
+            return ""
+        if threshold.empty:
+            self._thresholds.pop(key, None)
+        else:
+            self._thresholds[key] = threshold
+        self._save_thresholds()
+        return ""
+
+    @Slot()
+    def reloadThresholds(self) -> None:
+        """Dialog neu füllen (beim Öffnen; verwirft ungültige Eingaben von vorher)."""
+        self.thresholdsChanged.emit()
+
+    @Slot()
+    def resetThresholds(self) -> None:
+        """Zurück zu den vorgegebenen Warnschwellen."""
+        if self._running:
+            return
+        self._thresholds = dict(DEFAULT_THRESHOLDS)
+        self._save_thresholds()
+        self.thresholdsChanged.emit()
 
     @Slot(str, bool)
     def setSelected(self, key: str, selected: bool) -> None:
@@ -438,6 +574,7 @@ class LiveViewModel(QObject):
         self._elapsed = 0.0
         self._voltage = None
         self._throttled = False
+        self._alarms = ()
         self._values.set_pids([])
         self._diagnosis.set_blocked(True)
         self.stateChanged.emit()
@@ -446,6 +583,7 @@ class LiveViewModel(QObject):
         relay = self._relay
         backend = self._backend
         interval, record = self._interval, self._recording
+        thresholds = dict(self._thresholds)
         # Vor der ersten Verbindung zeigt die Liste alle Werte; was das Fahrzeug davon
         # nicht kann, wird dann weggelassen statt die Abfrage abzulehnen.
         skip_unsupported = not self._supported_known
@@ -462,6 +600,7 @@ class LiveViewModel(QObject):
                 on_sample=lambda sample: relay.sample.emit(run_id, sample),
                 should_stop=stop.is_set,
                 skip_unsupported=skip_unsupported,
+                thresholds=thresholds,
             )
 
         self._runner.run(
@@ -491,6 +630,7 @@ class LiveViewModel(QObject):
         """Nach einem Sprachwechsel: Namen der Werte und Zahlen neu ausgeben."""
         self._values.retranslate()
         self.availableChanged.emit()
+        self.thresholdsChanged.emit()
         self.sampleChanged.emit()
         self.stateChanged.emit()
 
@@ -521,13 +661,15 @@ class LiveViewModel(QObject):
         if run_id != self._run_id:
             return
         self._values.set_pids(pids)
+        self._pids = list(pids)
         self._recording_path = str(path) if path is not None else ""
         self.stateChanged.emit()
 
     def _on_sample(self, run_id: int, sample: LiveSample) -> None:
         if run_id != self._run_id:
             return
-        self._values.add_sample(sample.values)
+        self._values.add_sample(sample.values, sample.alarms)
+        self._alarms = sample.alarms
         self._samples += 1
         self._elapsed = sample.elapsed
         self._voltage = sample.voltage

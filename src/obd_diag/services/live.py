@@ -11,7 +11,7 @@ die ``01xx``-Anfragen aus ``protocol.pids``.
 
 import csv
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
@@ -21,6 +21,8 @@ from obd_diag.i18n import csv_delimiter, language, tr
 from obd_diag.protocol import pids as pid_table
 from obd_diag.protocol.elm327 import Elm327, ElmError, UnknownCommandError
 from obd_diag.protocol.pids import PidSpec
+from obd_diag.services.alarms import VOLTAGE_KEY, VOLTAGE_LABEL, Alarm, Threshold
+from obd_diag.services.alarms import check as check_alarms
 from obd_diag.services.diagnostics import LOW_VOLTAGE, check_low_voltage
 from obd_diag.services.storage import data_dir
 from obd_diag.transport.trace import new_free_path
@@ -50,6 +52,7 @@ class LiveSample:
     values: dict[str, float | None]  # PidSpec.key -> Wert; None = diesmal nicht lesbar
     voltage: float | None  # zuletzt gelesene Bordspannung (ATRV), None = unbekannt
     throttled: bool  # True, wenn wegen niedriger Spannung gedrosselt wird
+    alarms: tuple[Alarm, ...] = ()  # überschrittene Warnschwellen dieser Runde
 
 
 @dataclass(frozen=True)
@@ -147,8 +150,9 @@ class LiveRecorder:
     """Schreibt Live-Werte als CSV (UTF-8 mit BOM; Trennzeichen und Dezimalzeichen nach
     der Sprache wie export: Deutsch Semikolon und Komma, Englisch Komma und Punkt).
 
-    Kopfzeile: ``Zeit (s)``, dann je Wert ``Name (Einheit)``, zuletzt ``Bordspannung (V)``
-    (in der eingestellten Sprache).
+    Kopfzeile: ``Zeit (s)``, dann je Wert ``Name (Einheit)``, ``Bordspannung (V)`` und
+    zuletzt ``Warnungen`` (in der eingestellten Sprache). Die Warnungen einer Runde
+    stehen als Text in einer Zelle, mehrere durch `` | `` getrennt.
     Nicht lesbare Werte bleiben leere Zellen. Jede Zeile wird sofort geschrieben
     (flush), damit ein Abbruch nichts verliert. Die Datei wird beim Erzeugen exklusiv
     angelegt; existiert sie schon, gibt es ``FileExistsError`` (nie überschreiben).
@@ -163,6 +167,7 @@ class LiveRecorder:
             tr("Zeit (s)"),
             *(f"{p.name} ({tr(p.unit)})" for p in self.pids),
             tr("Bordspannung (V)"),
+            tr("Warnungen"),
         ]
         self._writer.writerow(header)
         self._file.flush()
@@ -173,6 +178,7 @@ class LiveRecorder:
             _csv_number(sample.elapsed),
             *(_csv_number(sample.values.get(p.key)) for p in self.pids),
             _csv_number(sample.voltage),
+            " | ".join(alarm_text(alarm, self.pids) for alarm in sample.alarms),
         ]
         self._writer.writerow(row)
         self._file.flush()
@@ -190,6 +196,16 @@ class LiveRecorder:
         tb: TracebackType | None,
     ) -> None:
         self.close()
+
+
+def alarm_text(alarm: Alarm, pids: Sequence[PidSpec]) -> str:
+    """Text einer Warnung in der eingestellten Sprache, Name und Einheit aus ``pids``."""
+    if alarm.key == VOLTAGE_KEY:
+        return alarm.text(tr(VOLTAGE_LABEL), "V")
+    for spec in pids:
+        if spec.key == alarm.key:
+            return alarm.text(spec.name, tr(spec.unit))
+    return alarm.text(alarm.key, "")
 
 
 def recording_dir() -> Path:
@@ -238,6 +254,7 @@ def run_live(
     interval: float = DEFAULT_INTERVAL,
     max_samples: int | None = None,
     recorder: LiveRecorder | None = None,
+    thresholds: Mapping[str, Threshold] | None = None,
     clock: Callable[[], float] = time.monotonic,
     sleep: Callable[[float], None] = time.sleep,
 ) -> int:
@@ -258,6 +275,8 @@ def run_live(
     lesbar, bleibt die Drosselung, wie sie war (eine schwache Batterie wird davon nicht
     besser). Runden beginnen im Abstand ``interval`` ab Rundenbeginn; dauert eine Runde
     länger, folgt die nächste sofort.
+    Mit ``thresholds`` (``services.alarms``) trägt jede Runde die überschrittenen
+    Warnschwellen in ``LiveSample.alarms``; gesendet wird dafür nichts.
     Liefert die Anzahl der Runden.
     """
     groups: dict[int, list[PidSpec]] = {}
@@ -290,7 +309,8 @@ def run_live(
                     "(Zündung aus?): {error}"
                 ).format(rounds=failed_rounds, error=errors[-1])
             )
-        sample = LiveSample(round_start - start, values, voltage, throttled)
+        alarms = () if not thresholds else check_alarms(values, voltage, thresholds)
+        sample = LiveSample(round_start - start, values, voltage, throttled, alarms)
         if recorder is not None:
             recorder.add(sample)
         on_sample(sample)

@@ -295,7 +295,11 @@ def test_live_idle_reproduces_recorded_csv(tmp_path: Path) -> None:
         return [line.split(";") for line in text.splitlines()]
 
     expected = rows((TRACES / "live_idle.csv").read_text(encoding="utf-8-sig"))
-    actual = rows(path.read_text(encoding="utf-8-sig"))
+    # Die Spalte „Warnungen“ kam nach der Fahrt hinzu; ohne Schwellen bleibt sie leer.
+    recorded = rows(path.read_text(encoding="utf-8-sig"))
+    assert recorded[0][-1] == "Warnungen"
+    assert all(r[-1] == "" for r in recorded[1:])
+    actual = [r[:-1] for r in recorded]
     assert actual[0] == expected[0]
     assert [r[1:] for r in actual[1:]] == [r[1:] for r in expected[1:]]
     assert [float(r[0].replace(",", ".")) for r in expected[1:]] == pytest.approx(

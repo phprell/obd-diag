@@ -456,9 +456,10 @@ def test_recorder_writes_csv_like_export(tmp_path: Path) -> None:
     assert raw.startswith(b"\xef\xbb\xbf")  # BOM für Excel
     assert raw.count(b"\r\n") == 3
     assert raw.decode("utf-8-sig").splitlines() == [
-        "Zeit (s);Motordrehzahl (1/min);Geschwindigkeit (km/h);Motorlast (%);Bordspannung (V)",
-        "0;1726;;50,196;12,4",
-        "0,25;1726;;50,196;12,4",
+        "Zeit (s);Motordrehzahl (1/min);Geschwindigkeit (km/h);Motorlast (%);Bordspannung (V);"
+        "Warnungen",
+        "0;1726;;50,196;12,4;",
+        "0,25;1726;;50,196;12,4;",
     ]
 
 
@@ -469,9 +470,9 @@ def test_recorder_number_format(tmp_path: Path) -> None:
         recorder.add(LiveSample(0.0004, {"coolant_temp": -0.0001}, 13.95, True))
         recorder.add(LiveSample(2.0, {}, 12.0, False))  # fehlender Schlüssel: leer
     assert path.read_text(encoding="utf-8-sig").splitlines()[1:] == [
-        "1234,568;-40;",
-        "0;0;13,95",
-        "2;;12",
+        "1234,568;-40;;",
+        "0;0;13,95;",
+        "2;;12;",
     ]
 
 
@@ -481,10 +482,10 @@ def test_recorder_flushes_every_row(tmp_path: Path) -> None:
     try:
         assert (
             path.read_bytes()
-            == "\ufeffZeit (s);Motordrehzahl (1/min);Bordspannung (V)\r\n".encode()
+            == "\ufeffZeit (s);Motordrehzahl (1/min);Bordspannung (V);Warnungen\r\n".encode()
         )
         recorder.add(LiveSample(0.0, {"rpm": 800.0}, 14.1, False))
-        assert path.read_bytes().endswith(b"\r\n0;800;14,1\r\n")
+        assert path.read_bytes().endswith(b"\r\n0;800;14,1;\r\n")
     finally:
         recorder.close()
 

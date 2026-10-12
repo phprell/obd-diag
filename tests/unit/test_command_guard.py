@@ -19,6 +19,8 @@ aus dem Code abgeschrieben:
 - ``06 MID``: unterstützte Monitor-IDs (``0600``, ``0620`` …) und Testergebnisse je MID
   (Service $06), ebenfalls mit Headern.
 - ``04``: Löschen (Service $04), der einzige schreibende Befehl.
+- Batterietest: ``ATRV`` in schneller Folge, dazu ``010C`` Drehzahl, ``0105``
+  Kühlmitteltemperatur und ``0142`` Steuergerätespannung (Service $01).
 - Adapter-Check: ``ATI`` Kennung, ``AT@1`` Beschreibung, ``ATRV``, ``ATPPS``
   Parameterübersicht, ``ATIGN`` Zündungseingang, ``ATRD`` Nutzerspeicher lesen,
   ``ATAMC`` Aktivitätszähler; alles Adapter-Befehle, die nur lesen (S. 12 bis 28).
@@ -47,6 +49,7 @@ from obd_diag.protocol.elm327 import (
 )
 from obd_diag.services import (
     adapter_check,
+    battery,
     clear,
     diagnostics,
     readiness,
@@ -55,8 +58,10 @@ from obd_diag.services import (
     used_car,
     vehicle,
 )
+from obd_diag.services.battery import BatteryTestRefused
 from obd_diag.services.clear import ClearRefused
 from obd_diag.transport import TransportError
+from tests.battery_fakes import SimClock
 from tests.fakes import (
     CAN_CAR_ENGINE_OFF,
     CAN_CAR_FULL,
@@ -303,6 +308,20 @@ def test_refused_clear_sends_only_reads(tmp_path: Path) -> None:
     assert all(is_read_only(c) for c in _sent(elm))
 
 
+def _battery_test(elm: Elm327) -> object:
+    clock = SimClock()  # Befehle kosten keine Zeit, nur die Pausen zwischen Messungen
+    return battery.run_battery_test(elm, clock=clock, sleep=clock.sleep, start_timeout=1.0)
+
+
+def test_battery_test_sends_only_reads() -> None:
+    elm = _elm(CAN_CAR_ENGINE_OFF)
+    _battery_test(elm)
+    sent = _sent(elm)
+    assert sent[:12] == [*INIT, *PROTOCOL, "010C", "0105", "0142"]
+    assert set(sent) == {*INIT, *PROTOCOL, "010C", "0105", "0142", "ATRV"}
+    assert all(is_read_only(c) for c in sent)
+
+
 # --- Kommandozeile -----------------------------------------------------------------
 
 
@@ -358,17 +377,22 @@ _READ_CALLS: list[Callable[[Elm327], object]] = [
     monitor_tests.read_test_results,
     lambda e: e.protocol(),
     adapter_check.check_adapter,
+    _battery_test,
     readiness_assist.check_readiness,
 ]
 
 
 @given(
-    st.dictionaries(st.sampled_from([*DIAGNOSIS, "0141", "0202", *ADAPTER_CHECK]), _GARBAGE),
+    st.dictionaries(
+        st.sampled_from([*DIAGNOSIS, "0141", "0202", *ADAPTER_CHECK, "010C", "0105", "0142"]),
+        _GARBAGE,
+    ),
     st.sampled_from(range(len(_READ_CALLS))),
 )
 def test_read_paths_never_write_even_on_broken_answers(broken: dict[str, str], which: int) -> None:
     transport = WireCheckingTransport({**CAN_CAR_FULL, **broken})
-    with contextlib.suppress(ElmError, ValueError, TransportError):  # Abbruch ist in Ordnung
+    # Abbruch ist in Ordnung
+    with contextlib.suppress(ElmError, ValueError, TransportError, BatteryTestRefused):
         _READ_CALLS[which](Elm327(transport))
     assert CLEAR_COMMAND not in transport.sent
     assert all(is_read_only(c) for c in transport.sent), transport.sent

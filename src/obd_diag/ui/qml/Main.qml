@@ -16,6 +16,10 @@ ApplicationWindow {
     readonly property var language: languageController
     // SetupViewModel (ui/window.py): Einrichtung prüfen
     readonly property var setupVm: setupCheck
+    // CompareViewModel (ui/window.py): Sitzungsvergleich
+    readonly property var compareVm: sessionCompare
+    // BatteryViewModel (ui/window.py): Batterie- und Anlasstest
+    readonly property var batteryVm: batteryTest
 
     width: 1000
     height: 700
@@ -122,6 +126,12 @@ ApplicationWindow {
                 action: openAction
             }
             MenuItem {
+                objectName: "compareMenuItem"
+                text: qsTr("Mit Sitzung vergleichen …")
+                enabled: window.vm.hasResult && !window.vm.busy
+                onTriggered: compareFileDialog.open()
+            }
+            MenuItem {
                 objectName: "saveMenuItem"
                 action: saveAction
             }
@@ -170,6 +180,15 @@ ApplicationWindow {
                 text: qsTr("Adapter prüfen …")
                 enabled: !window.vm.busy && !window.vm.blocked
                 onTriggered: window.vm.checkAdapter(connectionBar.portText, connectionBar.baud)
+            }
+            MenuItem {
+                objectName: "batteryMenuItem"
+                text: qsTr("Batterie- und Anlasstest …")
+                onTriggered: {
+                    batteryDialog.port = connectionBar.portText
+                    batteryDialog.baud = connectionBar.baud
+                    batteryDialog.open()
+                }
             }
             MenuItem {
                 objectName: "traceMenuItem"
@@ -515,6 +534,12 @@ ApplicationWindow {
         vm: window.vm
     }
 
+    BatteryDialog {
+        id: batteryDialog
+        objectName: "batteryDialog"
+        vm: window.batteryVm
+    }
+
     Dialog {
         id: refusedDialog
         objectName: "refusedDialog"
@@ -541,6 +566,29 @@ ApplicationWindow {
         nameFilters: [qsTr("Diagnosesitzungen (*.json)"), qsTr("Alle Dateien (*)")]
         currentFolder: window.vm.sessionFolder
         onAccepted: window.vm.openSession(selectedFile.toString())
+    }
+
+    FileDialog {
+        id: compareFileDialog
+        objectName: "compareFileDialog"
+        title: qsTr("Gespeicherte Sitzung zum Vergleich wählen")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Diagnosesitzungen (*.json)"), qsTr("Alle Dateien (*)")]
+        currentFolder: window.vm.sessionFolder
+        onAccepted: window.compareVm.compareWith(selectedFile.toString())
+    }
+
+    CompareDialog {
+        id: compareDialog
+        objectName: "compareDialog"
+        vm: window.compareVm
+    }
+
+    Connections {
+        target: window.compareVm
+        function onCompared() {
+            compareDialog.open()
+        }
     }
 
     FileDialog {

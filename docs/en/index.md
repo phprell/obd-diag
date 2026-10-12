@@ -26,8 +26,8 @@ traces from other programs and python-OBD ({doc}`entwickeln/testen`).
 | Read the VIN and decode it offline | Mode 09 PID 02 | {doc}`technik/fin` |
 | Control units: name, calibration ID, CVN, monitoring counters | Mode 09 | {doc}`benutzen/steuergeraete-tests` |
 | Test results of the self-tests with limits | Mode 06 | {doc}`benutzen/steuergeraete-tests` |
-| Live data: 116 values from 82 PIDs, CSV recording | Mode 01 | {doc}`benutzen/live-daten` |
-| Save sessions, PDF report, CSV | – | {doc}`benutzen/sitzungen` |
+| Live data: 140 values from 87 PIDs, CSV recording | Mode 01 | {doc}`benutzen/live-daten` |
+| Save and compare sessions, PDF report, CSV | – | {doc}`benutzen/sitzungen` |
 | Clear trouble codes (locked) | Mode 04 | {doc}`benutzen/fehlercodes` |
 
 What obd-diag cannot do: control units outside the standardised emissions diagnostics
@@ -66,6 +66,7 @@ benutzen/readiness
 benutzen/gebrauchtwagen
 benutzen/steuergeraete-tests
 benutzen/live-daten
+benutzen/batterie
 benutzen/sitzungen
 benutzen/probleme
 ```

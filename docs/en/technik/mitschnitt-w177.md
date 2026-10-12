@@ -95,11 +95,11 @@ trace). Together the vehicle offers these PIDs:
 | `0160` | 2 | `66`, `68`, `6C`, `6D`, `70` (one), `80` |
 | `0180` | 2 | `85`, `88`, `92` |
 
-obd-diag does not read `68`, `6C`, `6D`, `70`, `85`, `88` and `92` yet: they are PIDs
-with a status byte whose structure is not unambiguous in free sources (list in the
-docstring of `protocol/pids.py`). That the W177 offers `70` (boost pressure control),
-for example, makes it a good candidate for settling the format later with real
-responses.
+obd-diag now reads `68`, `6C`, `6D`, `70` and `85` (intake air, throttle, rail
+pressure, boost pressure, AdBlue; {doc}`pids`), decoded according to J1979 but without
+a real response from the W177 yet: this trace did not query them. `88` and `92` are
+pure status bit fields and stay out. The next test on the car should record the new
+values.
 
 ## Control module voltage (PID 42)
 

@@ -32,23 +32,27 @@ msgstr "Note"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/services/readiness_assist.py
 msgid "abgeschlossen"
 msgstr "complete"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "nicht abgeschlossen"
 msgstr "incomplete"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "nicht unterstützt"
 msgstr "not supported"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/protocol/elm327.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 #: src/obd_diag/ui/viewmodels/live.py
 #: src/obd_diag/ui/viewmodels/session_parts.py
@@ -104,6 +108,7 @@ msgstr "Commands checked:"
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/services/adapter_check.py
+#: src/obd_diag/services/compare.py
 msgid "ja"
 msgstr "yes"
 
@@ -113,29 +118,34 @@ msgstr "Check scan:"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Motorlast"
 msgstr "Engine load"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/protocol/pids.py
+#: src/obd_diag/services/compare.py
 msgid "Kühlmitteltemperatur"
 msgstr "Coolant temperature"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Drehzahl"
 msgstr "Engine speed"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/protocol/pids.py
+#: src/obd_diag/services/compare.py
 msgid "1/min"
 msgstr "rpm"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/protocol/pids.py
+#: src/obd_diag/services/compare.py
 msgid "Geschwindigkeit"
 msgstr "Speed"
 
@@ -154,17 +164,20 @@ msgstr "Petrol engine"
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/services/adapter_check.py
+#: src/obd_diag/services/compare.py
 msgid "nein"
 msgstr "no"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/session_parts.py
 msgid "an"
 msgstr "on"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/session_parts.py
 msgid "aus"
 msgstr "off"
@@ -207,6 +220,14 @@ msgid "CSV, eine Zeile pro Fehlercode"
 msgstr "CSV, one row per trouble code"
 
 #: src/obd_diag/cli.py
+msgid "Dringlichkeit: {label}. {reason}"
+msgstr "Urgency: {label}. {reason}"
+
+#: src/obd_diag/cli.py
+msgid "(keine Beschreibung im Katalog)"
+msgstr "(no description in the catalog)"
+
+#: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
 #: src/obd_diag/ui/qml/CodeList.qml
 msgid "Keine Fehlercodes gespeichert."
@@ -243,6 +264,7 @@ msgstr "Some codes came back immediately, the fault probably still exists."
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "FIN"
 msgstr "VIN"
 
@@ -296,6 +318,11 @@ msgid "export: --pdf und/oder --csv angeben"
 msgstr "export: specify --pdf and/or --csv"
 
 #: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/compare.py
+msgid "Keine Unterschiede."
+msgstr "No differences."
+
+#: src/obd_diag/cli.py
 #: src/obd_diag/services/live.py
 msgid "Zeit (s)"
 msgstr "Time (s)"
@@ -323,6 +350,10 @@ msgstr "show adapter version and battery voltage"
 #: src/obd_diag/cli.py
 msgid "Adapter-Check: Version, Spannung und unterstützte Befehle prüfen, Urteil für UDS (nur Adapter-Befehle, das Fahrzeug wird nicht angesprochen)"
 msgstr "adapter check: test version, voltage and supported commands, verdict for UDS (adapter commands only, the vehicle is not addressed)"
+
+#: src/obd_diag/cli.py
+msgid "Batterie- und Anlasstest: Ruhespannung, Einbruch beim Anlassen und Ladespannung messen und bewerten; den Motor startet man selbst, wenn der Test dazu auffordert"
+msgstr "Battery and cranking test: measure and rate resting voltage, the dip while cranking and charging voltage; you start the engine yourself when the test asks you to"
 
 #: src/obd_diag/cli.py
 msgid "Fehlercodes lesen (gespeichert, ausstehend, permanent)"
@@ -397,6 +428,14 @@ msgid "als CSV aufzeichnen (ohne DATEI: unter $XDG_DATA_HOME/obd-diag/recordings
 msgstr "record as CSV (without FILE: under $XDG_DATA_HOME/obd-diag/recordings); existing files are never overwritten"
 
 #: src/obd_diag/cli.py
+msgid "SCHLÜSSEL=UNTEN:OBEN"
+msgstr "KEY=LOW:HIGH"
+
+#: src/obd_diag/cli.py
+msgid "ohne die vorgegebenen Warnschwellen (nur die mit --alarm gesetzten)"
+msgstr "without the default warning thresholds (only those set with --alarm)"
+
+#: src/obd_diag/cli.py
 msgid "angeschlossene Adapter auflisten"
 msgstr "list connected adapters"
 
@@ -417,22 +456,38 @@ msgid "SESSION.json"
 msgstr "SESSION.json"
 
 #: src/obd_diag/cli.py
+msgid "zwei gespeicherte Diagnosesitzungen vergleichen: neue und verschwundene Fehlercodes, Readiness, Freeze Frame (die ältere gilt als vorher)"
+msgstr "compare two saved diagnosis sessions: new and cleared trouble codes, readiness, freeze frame (the older one counts as before)"
+
+#: src/obd_diag/cli.py
+msgid "SESSION1.json"
+msgstr "SESSION1.json"
+
+#: src/obd_diag/cli.py
+msgid "SESSION2.json"
+msgstr "SESSION2.json"
+
+#: src/obd_diag/cli.py
 msgid "Fehler: {message}"
 msgstr "Error: {message}"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Adapter"
 msgstr "Adapter"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Protokoll"
 msgstr "Protocol"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/alarms.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Bordspannung"
 msgstr "Battery voltage"
@@ -466,6 +521,31 @@ msgstr "Parameters"
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Für UDS (v0.3)"
 msgstr "For UDS (v0.3)"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/services/battery.py
+msgid "Batterietest abgebrochen"
+msgstr "Battery test cancelled"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "Ruhespannung"
+msgstr "Resting voltage"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "Anlassen"
+msgstr "Cranking"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "Ladespannung"
+msgstr "Charging voltage"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/export/report.py
+msgid "Ergebnis"
+msgstr "Result"
 
 #: src/obd_diag/cli.py
 msgid "Folgende Fehlercodes werden im Steuergerät gelöscht:"
@@ -551,6 +631,16 @@ msgid "Fahrzeug liefert keine FIN (Mode 09 PID 02)."
 msgstr "Vehicle does not report a VIN (mode 09 PID 02)."
 
 #: src/obd_diag/cli.py
+#: src/obd_diag/ui/qml/CompareDialog.qml
+msgid "Vorher"
+msgstr "Before"
+
+#: src/obd_diag/cli.py
+#: src/obd_diag/ui/qml/CompareDialog.qml
+msgid "Nachher"
+msgstr "After"
+
+#: src/obd_diag/cli.py
 msgid "mindestens {seconds:g} Sekunden"
 msgstr "at least {seconds:g} seconds"
 
@@ -561,12 +651,12 @@ msgstr[0] "Stopped after {n} round."
 msgstr[1] "Stopped after {n} rounds."
 
 #: src/obd_diag/cli.py
-msgid "(keine Beschreibung im Katalog)"
-msgstr "(no description in the catalog)"
-
-#: src/obd_diag/cli.py
 msgid "Warnung: {message}"
 msgstr "Warning: {message}"
+
+#: src/obd_diag/cli.py
+msgid "Dringlichkeit insgesamt: {label}"
+msgstr "Overall urgency: {label}"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
@@ -615,6 +705,10 @@ msgid "CSV: {path}"
 msgstr "CSV: {path}"
 
 #: src/obd_diag/cli.py
+msgid "unbekannter Wert: {key} (Schlüssel zeigt --list, Bordspannung: {voltage})"
+msgstr "unknown value: {key} (--list shows the keys, supply voltage: {voltage})"
+
+#: src/obd_diag/cli.py
 msgid "Bordspannung wieder ausreichend."
 msgstr "Battery voltage sufficient again."
 
@@ -623,12 +717,24 @@ msgid "Aufzeichnung: {path}"
 msgstr "Recording: {path}"
 
 #: src/obd_diag/cli.py
+msgid "so lange auf das Anlassen warten (Standard {default:g})"
+msgstr "how long to wait for cranking (default {default:g})"
+
+#: src/obd_diag/cli.py
 msgid "Abstand der Abfragerunden (Standard {default:g}, mindestens {minimum:g})"
 msgstr "interval between query rounds (default {default:g}, at least {minimum:g})"
 
 #: src/obd_diag/cli.py
+msgid "Warnschwelle setzen, z. B. coolant_temp=:110 (leere Seite: keine Grenze, SCHLÜSSEL=: schaltet die Warnung ab; mehrfach möglich). Vorgabe: {defaults}"
+msgstr "set a warning threshold, e.g. coolant_temp=:110 (empty side: no limit, KEY=: turns the warning off; may be repeated). Defaults: {defaults}"
+
+#: src/obd_diag/cli.py
 msgid "Im Web suchen: {url}"
 msgstr "Search the web: {url}"
+
+#: src/obd_diag/cli.py
+msgid "(Zeit: {seconds:.0f} s)"
+msgstr "(time: {seconds:.0f} s)"
 
 #: src/obd_diag/cli.py
 #: src/obd_diag/ui/viewmodels/diagnosis.py
@@ -636,8 +742,13 @@ msgid "Sitzung gespeichert: {path}"
 msgstr "Session saved: {path}"
 
 #: src/obd_diag/cli.py
+#: src/obd_diag/services/alarms.py
 msgid "keine Zahl: {text}"
 msgstr "not a number: {text}"
+
+#: src/obd_diag/cli.py
+msgid "{name} wieder im Bereich."
+msgstr "{name} back within range."
 
 #: src/obd_diag/cli.py
 msgid "Adapter: {adapter}, Protokoll: {protocol}"
@@ -1455,6 +1566,10 @@ msgid "Datum"
 msgstr "Date"
 
 #: src/obd_diag/export/report.py
+msgid "Dringlichkeit"
+msgstr "Urgency"
+
+#: src/obd_diag/export/report.py
 msgid "Gespeicherte Fehlercodes"
 msgstr "Stored trouble codes"
 
@@ -1495,6 +1610,7 @@ msgid "Otto (Monitore für Otto-Motoren)"
 msgstr "Petrol (monitors for spark ignition engines)"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Fehlercodes"
 msgstr "Trouble codes"
@@ -1504,11 +1620,13 @@ msgid "OBD-Diagnosebericht"
 msgstr "OBD diagnosis report"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Fahrzeug"
 msgstr "Vehicle"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Verbindung"
 msgstr "Connection"
 
@@ -1519,10 +1637,6 @@ msgstr "Battery voltage below {voltage} V: results may be unreliable. Charge the
 #: src/obd_diag/export/report.py
 msgid "Readiness (Eigendiagnosen Abgassystem)"
 msgstr "Readiness (emission system self-tests)"
-
-#: src/obd_diag/export/report.py
-msgid "Ergebnis"
-msgstr "Result"
 
 #: src/obd_diag/export/report.py
 #: src/obd_diag/ui/viewmodels/codes.py
@@ -1550,6 +1664,7 @@ msgid "Monitor · Test"
 msgstr "Monitor · test"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/ui/qml/LiveView.qml
 msgid "Wert"
 msgstr "Value"
 
@@ -1622,20 +1737,27 @@ msgid "nein, {count} offen"
 msgstr "no, {count} incomplete"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Kontrollleuchte (MIL)"
 msgstr "Check engine light (MIL)"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Gemeldete Fehlercodes"
 msgstr "Reported trouble codes"
 
 #: src/obd_diag/export/report.py
+#: src/obd_diag/services/compare.py
 msgid "Motorart"
 msgstr "Engine type"
 
 #: src/obd_diag/export/report.py
 msgid "Nach dem Löschen von Fehlercodes stehen die Monitore wieder auf „nicht abgeschlossen“; sie schließen erst nach mehreren Fahrten ab."
 msgstr "After clearing trouble codes the monitors are back to “incomplete”; they only complete after several drives."
+
+#: src/obd_diag/export/report.py
+msgid "Dringlichkeit: {label}."
+msgstr "Urgency: {label}."
 
 #: src/obd_diag/export/report.py
 msgid "Vermutlich herstellerspezifischer Code; Bedeutung in den Unterlagen des Herstellers nachschlagen."
@@ -2023,6 +2145,62 @@ msgid "Motordrehmoment Leerlauf"
 msgstr "Engine torque idle"
 
 #: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck A Sollwert"
+msgstr "Commanded fuel rail pressure A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck A"
+msgstr "Fuel rail pressure A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilertemperatur A"
+msgstr "Fuel rail temperature A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck B Sollwert"
+msgstr "Commanded fuel rail pressure B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilerdruck B"
+msgstr "Fuel rail pressure B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Kraftstoffverteilertemperatur B"
+msgstr "Fuel rail temperature B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ladedruck A Sollwert"
+msgstr "Commanded boost pressure A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ladedruck A"
+msgstr "Boost pressure A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ladedruck B Sollwert"
+msgstr "Commanded boost pressure B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ladedruck B"
+msgstr "Boost pressure B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Reduktionsmittelverbrauch (Mittel)"
+msgstr "Reagent consumption (average)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Reduktionsmittelbedarf (Mittel)"
+msgstr "Reagent demand (average)"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Füllstand Reduktionsmitteltank"
+msgstr "Reagent tank level"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Laufzeit mit NOx-Warnung"
+msgstr "Run time with NOx warning"
+
+#: src/obd_diag/protocol/pids.py
 msgid "Berechnete Motorlast"
 msgstr "Calculated engine load"
 
@@ -2219,6 +2397,46 @@ msgstr "Coolant temperature sensor 2"
 #: src/obd_diag/protocol/pids.py
 msgid "Kilometerstand"
 msgstr "Odometer"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 1, Sensor 1"
+msgstr "Intake air temperature bank 1, sensor 1"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 1, Sensor 2"
+msgstr "Intake air temperature bank 1, sensor 2"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 1, Sensor 3"
+msgstr "Intake air temperature bank 1, sensor 3"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 2, Sensor 1"
+msgstr "Intake air temperature bank 2, sensor 1"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 2, Sensor 2"
+msgstr "Intake air temperature bank 2, sensor 2"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Ansauglufttemperatur Bank 2, Sensor 3"
+msgstr "Intake air temperature bank 2, sensor 3"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Drosselklappensteller A Sollwert"
+msgstr "Commanded throttle actuator A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Relative Drosselklappenstellung A"
+msgstr "Relative throttle position A"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Drosselklappensteller B Sollwert"
+msgstr "Commanded throttle actuator B"
+
+#: src/obd_diag/protocol/pids.py
+msgid "Relative Drosselklappenstellung B"
+msgstr "Relative throttle position B"
 
 #: src/obd_diag/protocol/pids.py
 msgid "Lambdasonde {n} Spannung"
@@ -2493,6 +2711,162 @@ msgstr "{voltage}: adapter is probably not plugged into the car"
 msgid "{voltage}: niedrig, Batterie laden"
 msgstr "{voltage}: low, charge the battery"
 
+#: src/obd_diag/services/alarms.py
+msgid "{name} {value} {unit} über {limit} {unit}"
+msgstr "{name} {value} {unit} above {limit} {unit}"
+
+#: src/obd_diag/services/alarms.py
+msgid "{name} {value} {unit} unter {limit} {unit}"
+msgstr "{name} {value} {unit} below {limit} {unit}"
+
+#: src/obd_diag/services/alarms.py
+msgid "Schwelle muss eine Zahl sein"
+msgstr "Threshold must be a number"
+
+#: src/obd_diag/services/alarms.py
+msgid "Form SCHLÜSSEL=UNTEN:OBEN erwartet, z. B. coolant_temp=:110: {text}"
+msgstr "expected KEY=LOW:HIGH, e.g. coolant_temp=:110: {text}"
+
+#: src/obd_diag/services/alarms.py
+msgid "untere Schwelle {low} muss kleiner sein als obere {high}"
+msgstr "lower threshold {low} must be less than upper {high}"
+
+#: src/obd_diag/services/battery.py
+msgid "Richtwerte für 12-V-Bleibatterien. Kurz nach einer Fahrt zeigt die Ruhespannung zu viel; am aussagekräftigsten ist der Test nach einigen Stunden Standzeit."
+msgstr "Guide values for 12 V lead-acid batteries. Shortly after a drive the resting voltage reads too high; the test is most meaningful after the car has stood for a few hours."
+
+#: src/obd_diag/services/battery.py
+msgid "Fahrzeug steht, Gang in P bzw. Leerlauf, Feststellbremse an. Zündung an, Motor aus, Verbraucher (Licht, Gebläse) aus. Den Motor erst starten, wenn obd-diag dazu auffordert, und laufen lassen, bis der Test fertig ist (etwa 15 s)."
+msgstr "Vehicle stationary, gear in P or neutral, parking brake on. Ignition on, engine off, loads (lights, blower) off. Only start the engine when obd-diag asks you to, and let it run until the test is finished (about 15 s)."
+
+#: src/obd_diag/services/battery.py
+msgid "Batterie und Ladung in Ordnung"
+msgstr "Battery and charging OK"
+
+#: src/obd_diag/services/battery.py
+msgid "Auffällig: Einzelheiten beachten"
+msgstr "Noticeable: see details"
+
+#: src/obd_diag/services/battery.py
+msgid "Mangelhaft: Batterie bzw. Ladung prüfen lassen"
+msgstr "Poor: have the battery or charging checked"
+
+#: src/obd_diag/services/battery.py
+msgid "Keine Bewertung möglich"
+msgstr "No rating possible"
+
+#: src/obd_diag/services/battery.py
+msgid "Verbinde und prüfe, ob der Motor steht …"
+msgstr "Connecting and checking that the engine is off …"
+
+#: src/obd_diag/services/battery.py
+msgid "Messe die Ruhespannung, Motor noch nicht starten …"
+msgstr "Measuring resting voltage, do not start the engine yet …"
+
+#: src/obd_diag/services/battery.py
+msgid "Jetzt den Motor starten."
+msgstr "Start the engine now."
+
+#: src/obd_diag/services/battery.py
+msgid "Anlassen erkannt …"
+msgstr "Cranking detected …"
+
+#: src/obd_diag/services/battery.py
+msgid "Motor läuft, messe die Ladespannung. Motor laufen lassen …"
+msgstr "Engine running, measuring charging voltage. Keep the engine running …"
+
+#: src/obd_diag/services/battery.py
+msgid "Der Adapter liefert keine Bordspannung (ATRV); ohne sie geht der Test nicht."
+msgstr "The adapter does not report the battery voltage (ATRV); the test cannot run without it."
+
+#: src/obd_diag/services/battery.py
+msgid "nicht gemessen"
+msgstr "not measured"
+
+#: src/obd_diag/services/battery.py
+msgid "kein Anlassen erkannt"
+msgstr "no cranking detected"
+
+#: src/obd_diag/services/battery.py
+msgid "nicht lesbar"
+msgstr "not readable"
+
+#: src/obd_diag/services/battery.py
+msgid "Der Motor ist nicht angesprungen (oder die Drehzahl war nicht lesbar)."
+msgstr "The engine did not start (or the engine speed was not readable)."
+
+#: src/obd_diag/services/battery.py
+msgid "Der Adapter startete beim Anlassen neu und wurde neu eingerichtet."
+msgstr "The adapter restarted while cranking and was set up again."
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: entladen, Batterie laden und den Test wiederholen"
+msgstr "{voltage}: discharged, charge the battery and repeat the test"
+
+#: src/obd_diag/services/battery.py
+msgid "nicht messbar: der Adapter startete beim Anlassen neu, die Spannung brach vermutlich sehr tief ein"
+msgstr "not measurable: the adapter restarted while cranking, the voltage probably dropped very low"
+
+#: src/obd_diag/services/battery.py
+msgid "kein Spannungseinbruch erkannt"
+msgstr "no voltage dip detected"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage} (Grenze {limit}): zu tief, Batterie schwach oder entladen (auch Anlasser und Kabel kommen in Frage)"
+msgstr "{voltage} (limit {limit}): too low, battery weak or discharged (starter and cables are also possible causes)"
+
+#: src/obd_diag/services/battery.py
+msgid "nicht gemessen: Motor ist nicht angesprungen"
+msgstr "not measured: the engine did not start"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: Lichtmaschine lädt nicht"
+msgstr "{voltage}: alternator is not charging"
+
+#: src/obd_diag/services/battery.py
+msgid "Das Steuergerät meldet keine Spannung (PID 42): Werte nur vom Adapter, oft einige Zehntel Volt zu niedrig."
+msgstr "The control unit does not report a voltage (PID 42): values from the adapter only, often a few tenths of a volt too low."
+
+#: src/obd_diag/services/battery.py
+msgid "Der Motor läuft ({rpm:.0f} 1/min). Motor abstellen, Zündung an lassen und den Test erneut starten."
+msgstr "The engine is running ({rpm:.0f} rpm). Switch the engine off, leave the ignition on and start the test again."
+
+#: src/obd_diag/services/battery.py
+msgid "Die Bordspannung ({voltage} V) ist so hoch wie bei laufendem Motor. Motor abstellen, Zündung an lassen und den Test erneut starten."
+msgstr "The battery voltage ({voltage} V) is as high as with the engine running. Switch the engine off, leave the ignition on and start the test again."
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: gut geladen"
+msgstr "{voltage}: well charged"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: nur teilweise geladen, Batterie laden"
+msgstr "{voltage}: only partly charged, charge the battery"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage} (Grenze {limit}): gut"
+msgstr "{voltage} (limit {limit}): good"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage} (Grenze {limit}): knapp, Batterie altert"
+msgstr "{voltage} (limit {limit}): marginal, battery is ageing"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: zu hoch, Laderegler prüfen lassen"
+msgstr "{voltage}: too high, have the voltage regulator checked"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: Lichtmaschine lädt"
+msgstr "{voltage}: alternator is charging"
+
+#: src/obd_diag/services/battery.py
+msgid "{voltage}: niedrig; bei Fahrzeugen mit Batteriemanagement (Start-Stopp) oft gewollt, sonst Lichtmaschine prüfen"
+msgstr "{voltage}: low; often intended on vehicles with battery management (start-stop), otherwise check the alternator"
+
+#: src/obd_diag/services/battery.py
+msgid "Adapter-Messung um {offset} V korrigiert (Abweichung zum Steuergerät in Ruhe)."
+msgstr "Adapter reading corrected by {offset} V (difference to the control unit at rest)."
+
 #: src/obd_diag/services/clear.py
 msgid "Löschen ist vorerst deaktiviert: Erst muss das Lesen an einem echten Fahrzeug geprüft sein. Es wurde nichts gesendet."
 msgstr "Clearing is disabled for now: reading must first be verified on a real vehicle. Nothing was sent."
@@ -2541,6 +2915,65 @@ msgstr "Control unit did not confirm clearing (NO DATA). Backup: {backup}"
 msgid "Löschen nicht bestätigt ({error}), Ergebnis mit 'obd-diag scan' prüfen. Sicherung: {backup}"
 msgstr "Clearing not confirmed ({error}), check the result with 'obd-diag scan'. Backup: {backup}"
 
+#: src/obd_diag/services/compare.py
+msgid "Die Sitzungen stammen von verschiedenen Fahrzeugen (FIN verschieden)."
+msgstr "The sessions come from different vehicles (VIN differs)."
+
+#: src/obd_diag/services/compare.py
+msgid "gespeichert"
+msgstr "stored"
+
+#: src/obd_diag/services/compare.py
+msgid "ausstehend"
+msgstr "pending"
+
+#: src/obd_diag/services/compare.py
+msgid "permanent"
+msgstr "permanent"
+
+#: src/obd_diag/services/compare.py
+msgid "verfügbar"
+msgstr "available"
+
+#: src/obd_diag/services/compare.py
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Readiness"
+msgstr "Readiness"
+
+#: src/obd_diag/services/compare.py
+#: src/obd_diag/ui/qml/ViewTabs.qml
+msgid "Freeze Frame"
+msgstr "Freeze frame"
+
+#: src/obd_diag/services/compare.py
+msgid "Zähler seit dem Löschen"
+msgstr "Counters since clearing"
+
+#: src/obd_diag/services/compare.py
+#: src/obd_diag/ui/viewmodels/session_parts.py
+msgid "Otto"
+msgstr "Petrol"
+
+#: src/obd_diag/services/compare.py
+msgid "Diesel"
+msgstr "Diesel"
+
+#: src/obd_diag/services/compare.py
+msgid "Auslösender Fehlercode"
+msgstr "Triggering trouble code"
+
+#: src/obd_diag/services/compare.py
+msgid "neu: {value}"
+msgstr "new: {value}"
+
+#: src/obd_diag/services/compare.py
+msgid "entfällt (vorher: {value})"
+msgstr "gone (before: {value})"
+
+#: src/obd_diag/services/compare.py
+msgid "weiterhin {value}"
+msgstr "still {value}"
+
 #: src/obd_diag/services/live.py
 msgid "keine"
 msgstr "none"
@@ -2560,6 +2993,10 @@ msgstr "{problem} (available: {offered})"
 #: src/obd_diag/services/live.py
 msgid "Bordspannung (V)"
 msgstr "Battery voltage (V)"
+
+#: src/obd_diag/services/live.py
+msgid "Warnungen"
+msgstr "Warnings"
 
 #: src/obd_diag/services/live.py
 msgid "unbekannte Werte: {keys}"
@@ -2886,6 +3323,66 @@ msgstr "{error}. Is another program using the adapter?"
 msgid "kein freier Dateiname für {stem} in {directory}"
 msgstr "no free file name for {stem} in {directory}"
 
+#: src/obd_diag/services/urgency.py
+msgid "Die Dringlichkeit ist eine grobe Einordnung aus Code, Art und Kontrollleuchte, keine Ferndiagnose. Im Zweifel und bei spürbaren Auffälligkeiten (Geräusche, Geruch, Leistungsverlust, Warnmeldungen im Kombiinstrument) eine Werkstatt fragen."
+msgstr "The urgency is a rough rating from the code, its type and the warning light, not a remote diagnosis. If in doubt, or if you notice anything (noises, smell, loss of power, warnings in the instrument cluster), ask a workshop."
+
+#: src/obd_diag/services/urgency.py
+msgid "Verbrennungsaussetzer. Blinkt die Kontrollleuchte, kann der Katalysator Schaden nehmen: dann nur langsam und ohne Last weiterfahren, am besten gleich in die Werkstatt."
+msgstr "Misfire. If the warning light flashes, the catalytic converter can be damaged: then drive only slowly and without load, ideally straight to a workshop."
+
+#: src/obd_diag/services/urgency.py
+msgid "Rückhaltesystem (Airbag, Gurtstraffer): Es kann im Ernstfall ausfallen."
+msgstr "Restraint system (airbag, belt tensioner): it may fail in a crash."
+
+#: src/obd_diag/services/urgency.py
+msgid "Permanenter Code: Das Steuergerät hat die Kontrollleuchte eingeschaltet. Er verschwindet erst, wenn die Eigendiagnose den Fehler als behoben erkennt."
+msgstr "Permanent code: the control unit has switched on the warning light. It only disappears once the self-test recognizes the fault as fixed."
+
+#: src/obd_diag/services/urgency.py
+msgid "Gespeichert, und die Kontrollleuchte ist an."
+msgstr "Stored, and the warning light is on."
+
+#: src/obd_diag/services/urgency.py
+msgid "Gespeichert, die Kontrollleuchte ist aus."
+msgstr "Stored, the warning light is off."
+
+#: src/obd_diag/services/urgency.py
+msgid "Gespeichert; ob die Kontrollleuchte an ist, wurde nicht gelesen."
+msgstr "Stored; whether the warning light is on was not read."
+
+#: src/obd_diag/services/urgency.py
+msgid "Ausstehend: einmal erkannt, aber noch nicht bestätigt. Nach einigen Fahrten erneut lesen."
+msgstr "Pending: detected once but not yet confirmed. Read again after a few drives."
+
+#: src/obd_diag/services/urgency.py
+msgid "Beobachten"
+msgstr "Keep an eye on it"
+
+#: src/obd_diag/services/urgency.py
+msgid "Bei Gelegenheit prüfen"
+msgstr "Check when convenient"
+
+#: src/obd_diag/services/urgency.py
+msgid "Bald in die Werkstatt"
+msgstr "Visit a workshop soon"
+
+#: src/obd_diag/services/urgency.py
+msgid "Möglichst nicht weiterfahren"
+msgstr "Avoid driving"
+
+#: src/obd_diag/services/urgency.py
+msgid "Der Motor meldet Übertemperatur. Weiterfahren kann den Motor schwer beschädigen; anhalten, Motor abstellen, Kühlmittel prüfen (erst nach dem Abkühlen öffnen)."
+msgstr "The engine reports overheating. Driving on can seriously damage the engine; stop, switch off the engine, check the coolant (open only once it has cooled down)."
+
+#: src/obd_diag/services/urgency.py
+msgid "Das Getriebe meldet Übertemperatur. Weiterfahren kann das Getriebe beschädigen; anhalten und abkühlen lassen."
+msgstr "The transmission reports overheating. Driving on can damage the transmission; stop and let it cool down."
+
+#: src/obd_diag/services/urgency.py
+msgid "Der Motoröldruck ist zu niedrig. Weiterfahren kann den Motor schwer beschädigen; anhalten, Motor abstellen, Ölstand prüfen."
+msgstr "The engine oil pressure is too low. Driving on can seriously damage the engine; stop, switch off the engine, check the oil level."
+
 #: src/obd_diag/services/used_car.py
 msgid "Gebrauchtwagen-Check"
 msgstr "Used-car check"
@@ -3149,8 +3646,26 @@ msgid "Der Adapter-Check ist in diesem Backend nicht verfügbar"
 msgstr "The adapter check is not available in this backend"
 
 #: src/obd_diag/ui/backend.py
+msgid "Der Batterietest ist in diesem Backend nicht verfügbar"
+msgstr "The battery test is not available in this backend"
+
+#: src/obd_diag/ui/backend.py
 msgid "Der Readiness-Assistent ist in diesem Backend nicht verfügbar"
 msgstr "The readiness assistant is not available in this backend"
+
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "Erst die laufende Abfrage beenden, dann den Test starten."
+msgstr "Finish the running query first, then start the test."
+
+#: src/obd_diag/ui/viewmodels/battery.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Bitte einen Port angeben, z. B. /dev/ttyUSB0."
+msgstr "Please specify a port, e.g. /dev/ttyUSB0."
+
+#: src/obd_diag/ui/viewmodels/battery.py
+msgid "noch {seconds:.0f} s"
+msgstr "{seconds:.0f} s left"
 
 #: src/obd_diag/ui/viewmodels/codes.py
 msgid "schwierig"
@@ -3159,6 +3674,15 @@ msgstr "difficult"
 #: src/obd_diag/ui/viewmodels/codes.py
 msgid "ca. {cost} €"
 msgstr "approx. €{cost}"
+
+#: src/obd_diag/ui/viewmodels/compare.py
+msgid "angezeigte Diagnose"
+msgstr "displayed diagnosis"
+
+#: src/obd_diag/ui/viewmodels/compare.py
+#: src/obd_diag/ui/viewmodels/diagnosis.py
+msgid "Sitzung ließ sich nicht öffnen: {error}"
+msgstr "Session could not be opened: {error}"
 
 #: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Batteriespannung niedrig: Ergebnisse können unzuverlässig sein. Vor dem Löschen Batterie laden oder Ladegerät anschließen."
@@ -3209,11 +3733,6 @@ msgid "obd-bericht-{date}"
 msgstr "obd-report-{date}"
 
 #: src/obd_diag/ui/viewmodels/diagnosis.py
-#: src/obd_diag/ui/viewmodels/live.py
-msgid "Bitte einen Port angeben, z. B. /dev/ttyUSB0."
-msgstr "Please specify a port, e.g. /dev/ttyUSB0."
-
-#: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Gespeicherte Sitzung vom {created} geöffnet (nur ansehen): {path}"
 msgstr "Opened saved session from {created} (view only): {path}"
 
@@ -3256,14 +3775,26 @@ msgid "Sitzung ließ sich nicht speichern: {error}"
 msgstr "Session could not be saved: {error}"
 
 #: src/obd_diag/ui/viewmodels/diagnosis.py
-msgid "Sitzung ließ sich nicht öffnen: {error}"
-msgstr "Session could not be opened: {error}"
-
-#: src/obd_diag/ui/viewmodels/diagnosis.py
 msgid "Weiterhin {n} Code vorhanden."
 msgid_plural "Weiterhin {n} Codes vorhanden."
 msgstr[0] "{n} code still present."
 msgstr[1] "{n} codes still present."
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "über {limit}"
+msgstr "above {limit}"
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "unter {limit}"
+msgstr "below {limit}"
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Während der Abfrage nicht änderbar."
+msgstr "Cannot be changed while reading."
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "Bitte eine Zahl eingeben."
+msgstr "Please enter a number."
 
 #: src/obd_diag/ui/viewmodels/live.py
 msgid "Bitte mindestens einen Wert auswählen."
@@ -3274,6 +3805,10 @@ msgid "Live-Daten beendet nach {n} Runde."
 msgid_plural "Live-Daten beendet nach {n} Runden."
 msgstr[0] "Live data stopped after {n} round."
 msgstr[1] "Live data stopped after {n} rounds."
+
+#: src/obd_diag/ui/viewmodels/live.py
+msgid "unbekannter Wert: {key}"
+msgstr "unknown value: {key}"
 
 #: src/obd_diag/ui/viewmodels/live.py
 msgid "Auswahl nicht möglich: {error}"
@@ -3294,10 +3829,6 @@ msgstr "Not all tests complete"
 #: src/obd_diag/ui/viewmodels/session_parts.py
 msgid "Diesel (Selbstzünder)"
 msgstr "Diesel (compression ignition)"
-
-#: src/obd_diag/ui/viewmodels/session_parts.py
-msgid "Otto"
-msgstr "Petrol"
 
 #: src/obd_diag/ui/viewmodels/session_parts.py
 msgid "Herstellercode (WMI)"
@@ -3371,6 +3902,32 @@ msgstr "Commands checked"
 msgid "Hinweis schließen"
 msgstr "Close notice"
 
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+msgid "Batterie- und Anlasstest"
+msgstr "Battery and cranking test"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+msgid "Verbinde …"
+msgstr "Connecting …"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+msgid "Erneut testen"
+msgstr "Test again"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+msgid "Test starten"
+msgstr "Start test"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+#: src/obd_diag/ui/qml/ClearDialog.qml
+msgid "Abbrechen"
+msgstr "Cancel"
+
+#: src/obd_diag/ui/qml/BatteryDialog.qml
+#: src/obd_diag/ui/qml/SetupDialog.qml
+msgid "Schließen"
+msgstr "Close"
+
 #: src/obd_diag/ui/qml/ClearDialog.qml
 msgid "Fehlercodes löschen?"
 msgstr "Clear trouble codes?"
@@ -3412,16 +3969,16 @@ msgid "Zündung ist an, der Motor ist aus. Ich möchte die Codes löschen."
 msgstr "The ignition is on, the engine is off. I want to clear the codes."
 
 #: src/obd_diag/ui/qml/ClearDialog.qml
-msgid "Abbrechen"
-msgstr "Cancel"
-
-#: src/obd_diag/ui/qml/ClearDialog.qml
 msgid "Fehlercodes löschen"
 msgstr "Clear trouble codes"
 
 #: src/obd_diag/ui/qml/CodeDetail.qml
 msgid "Code in der Liste auswählen"
 msgstr "Select a code in the list"
+
+#: src/obd_diag/ui/qml/CodeDetail.qml
+msgid "Dringlichkeit: %1. %2"
+msgstr "Urgency: %1. %2"
 
 #: src/obd_diag/ui/qml/CodeDetail.qml
 msgid "Für diesen Code gibt es keinen Eintrag im Offline-Katalog. Herstellerspezifische Codes (z. B. P1xxx, U1xxx) sind dort oft nicht enthalten; die Bedeutung steht in den Unterlagen des Herstellers."
@@ -3472,6 +4029,10 @@ msgid "Richtwert für Teile und Arbeit, je nach Fahrzeug und Werkstatt."
 msgstr "Estimate for parts and labour, depending on vehicle and workshop."
 
 #: src/obd_diag/ui/qml/CodeList.qml
+msgid "Dringlichkeit: %1"
+msgstr "Urgency: %1"
+
+#: src/obd_diag/ui/qml/CodeList.qml
 msgid "Lese Fehlercodes …"
 msgstr "Reading trouble codes …"
 
@@ -3491,6 +4052,10 @@ msgstr "No stored, pending or permanent codes."
 #: src/obd_diag/ui/qml/CodeList.qml
 msgid "Adapter einstecken, Zündung einschalten, Port wählen und „Verbinden & Scannen“ drücken."
 msgstr "Plug in the adapter, switch the ignition on, choose the port and press “Connect & Scan”."
+
+#: src/obd_diag/ui/qml/CompareDialog.qml
+msgid "Sitzungsvergleich"
+msgstr "Session comparison"
 
 #: src/obd_diag/ui/qml/ConnectionBar.qml
 msgid "Port"
@@ -3600,6 +4165,10 @@ msgid "Jede Runde sofort in eine neue CSV-Datei schreiben"
 msgstr "Write every round straight into a new CSV file"
 
 #: src/obd_diag/ui/qml/LiveView.qml
+msgid "Warnschwellen …"
+msgstr "Warning thresholds …"
+
+#: src/obd_diag/ui/qml/LiveView.qml
 msgid "Bordspannung %1"
 msgstr "Battery voltage %1"
 
@@ -3614,6 +4183,10 @@ msgstr "%1 rounds"
 #: src/obd_diag/ui/qml/LiveView.qml
 msgid "Während der Fahrt nur durch Beifahrer bedienen. Wer fährt, achtet auf den Verkehr, nicht auf den Bildschirm."
 msgstr "While driving, only a passenger should operate this. The driver watches the traffic, not the screen."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Warnschwelle überschritten: %1"
+msgstr "Warning threshold exceeded: %1"
 
 #: src/obd_diag/ui/qml/LiveView.qml
 msgid "Bordspannung niedrig (%1): die Abfrage ist gedrosselt, um die Batterie zu schonen."
@@ -3656,6 +4229,34 @@ msgid "Port oben wählen, Werte auswählen und „Start“ drücken. Gelesen wir
 msgstr "Choose the port above, select values and press “Start”. Read-only (mode 01); nothing is changed on the vehicle."
 
 #: src/obd_diag/ui/qml/LiveView.qml
+msgid "Warnschwellen"
+msgstr "Warning thresholds"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Liegt ein Wert unter „unter“ oder über „über“, wird die Kachel rot markiert und die Warnung in der Aufzeichnung vermerkt. Leeres Feld: keine Grenze. Die Vorgaben sind grobe Richtwerte; was für das Fahrzeug normal ist, steht in seinen Unterlagen."
+msgstr "If a value is below “below” or above “above”, its tile turns red and the warning is noted in the recording. Empty field: no limit. The defaults are rough guide values; what is normal for the vehicle is in its documentation."
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "unter"
+msgstr "below"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "über"
+msgstr "above"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Untere Schwelle für %1"
+msgstr "Lower threshold for %1"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Obere Schwelle für %1"
+msgstr "Upper threshold for %1"
+
+#: src/obd_diag/ui/qml/LiveView.qml
+msgid "Vorgaben wiederherstellen"
+msgstr "Restore defaults"
+
+#: src/obd_diag/ui/qml/LiveView.qml
 msgid "gesehen %1 bis %2"
 msgstr "seen %1 to %2"
 
@@ -3678,6 +4279,10 @@ msgstr "Export CSV …"
 #: src/obd_diag/ui/qml/Main.qml
 msgid "&Datei"
 msgstr "&File"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Mit Sitzung vergleichen …"
+msgstr "Compare with session …"
 
 #: src/obd_diag/ui/qml/Main.qml
 msgid "Beenden"
@@ -3703,6 +4308,10 @@ msgstr "Explain trouble codes online"
 #: src/obd_diag/ui/qml/Main.qml
 msgid "Adapter prüfen …"
 msgstr "Check adapter …"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Batterie- und Anlasstest …"
+msgstr "Battery and cranking test …"
 
 #: src/obd_diag/ui/qml/Main.qml
 msgid "Adapter-Mitschnitt aufzeichnen"
@@ -3795,6 +4404,10 @@ msgstr "Diagnosis sessions (*.json)"
 #: src/obd_diag/ui/qml/Main.qml
 msgid "Alle Dateien (*)"
 msgstr "All files (*)"
+
+#: src/obd_diag/ui/qml/Main.qml
+msgid "Gespeicherte Sitzung zum Vergleich wählen"
+msgstr "Choose a saved session to compare"
 
 #: src/obd_diag/ui/qml/Main.qml
 msgid "Bericht als PDF speichern"
@@ -3892,10 +4505,6 @@ msgstr "Check"
 msgid "Übernehmen"
 msgstr "Apply"
 
-#: src/obd_diag/ui/qml/SetupDialog.qml
-msgid "Schließen"
-msgstr "Close"
-
 #: src/obd_diag/ui/qml/TestResultsView.qml
 msgid "Lese Testergebnisse …"
 msgstr "Reading test results …"
@@ -3987,14 +4596,6 @@ msgstr "Control unit {address} (mode 09)"
 #: src/obd_diag/ui/qml/VehicleView.qml
 msgid "Überwachungszähler (In-Use Performance): wie oft ein Test abgeschlossen wurde und wie oft die Fahrbedingungen dafür gegeben waren; in Klammern die Quote. Eine niedrige Quote heißt, dass der Test selten zum Zug kommt, nicht dass etwas defekt ist."
 msgstr "Monitoring counters (in-use performance): how often a test was completed and how often the driving conditions for it were met; the ratio in brackets. A low ratio means the test rarely gets a chance to run, not that something is faulty."
-
-#: src/obd_diag/ui/qml/ViewTabs.qml
-msgid "Readiness"
-msgstr "Readiness"
-
-#: src/obd_diag/ui/qml/ViewTabs.qml
-msgid "Freeze Frame"
-msgstr "Freeze frame"
 
 #: src/obd_diag/ui/qml/ViewTabs.qml
 msgid "Gebrauchtwagen"

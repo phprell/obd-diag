@@ -23,7 +23,7 @@ from obd_diag.protocol.monitor_tests import (
     tid_name,
 )
 from obd_diag.protocol.obd import FreezeFrame
-from obd_diag.protocol.pids import PidSpec
+from obd_diag.protocol.pids import PIDS, PidSpec
 from obd_diag.protocol.vehicle_info import EcuInfo, read_ecu_info
 from obd_diag.services.adapter_check import (
     UDS_NOTE,
@@ -36,6 +36,30 @@ from obd_diag.services.adapter_check import (
     version_text,
     voltage_text,
 )
+from obd_diag.services.alarms import (
+    DEFAULT_THRESHOLDS,
+    VOLTAGE_KEY,
+    VOLTAGE_LABEL,
+    Threshold,
+    merge,
+    parse_threshold,
+)
+from obd_diag.services.battery import (
+    BATTERY_INSTRUCTIONS,
+    PHASE_TEXTS,
+    START_TIMEOUT,
+    BatteryProgress,
+    BatteryTestCancelled,
+    BatteryTestRefused,
+    Phase,
+    charge_verdict,
+    crank_verdict,
+    notes,
+    overall_text,
+    rest_verdict,
+    result_to_dict,
+    run_battery_test,
+)
 from obd_diag.services.clear import (
     CLEAR_DISABLED_MESSAGE,
     ClearRefused,
@@ -43,6 +67,14 @@ from obd_diag.services.clear import (
     clear_codes,
     clear_enabled,
     clearable_codes,
+)
+from obd_diag.services.compare import (
+    DIFFERENT_VEHICLE_WARNING,
+    ChangeKind,
+    SessionComparison,
+    change_text,
+    compare_sessions,
+    comparison_to_dict,
 )
 from obd_diag.services.diagnostics import (
     LOW_VOLTAGE,
@@ -60,6 +92,7 @@ from obd_diag.services.live import (
     LiveRecorder,
     LiveSample,
     SelectionError,
+    alarm_text,
     new_recording_path,
     prepare_live,
     recording_dir,
@@ -76,6 +109,7 @@ from obd_diag.services.readiness_assist import (
 from obd_diag.services.session import Session, run_diagnosis, save_session, session_to_dict
 from obd_diag.services.setup_check import SetupReport, Status, run_setup_check
 from obd_diag.services.storage import trace_dir
+from obd_diag.services.urgency import URGENCY_NOTE, UrgencyRating, highest, rate_codes
 from obd_diag.services.used_car import NOTE as USED_CAR_NOTE
 from obd_diag.services.used_car import TITLE as USED_CAR_TITLE
 from obd_diag.services.used_car import (
@@ -125,17 +159,30 @@ def _labelled(rows: list[tuple[str, str]], indent: str = "") -> None:
         print(f"{indent}{label + ':':<{width}} {value}")
 
 
+def _urgency_text(rating: UrgencyRating) -> str:
+    return tr("Dringlichkeit: {label}. {reason}").format(
+        label=tr(rating.label), reason=tr(rating.reason)
+    )
+
+
 def _print_codes(
-    codes: list[DiagnosticCode], manufacturer: str | None = None, *, web_search: bool = False
+    codes: list[DiagnosticCode],
+    manufacturer: str | None = None,
+    *,
+    web_search: bool = False,
+    ratings: dict[str, UrgencyRating] | None = None,
 ) -> None:
-    """Code und Titel; mit ``web_search`` (``--online-codes``) zu Codes ohne Katalogtext
-    die Online-Erklärung und einen Link für die Websuche."""
+    """Code und Titel, mit ``ratings`` darunter die Dringlichkeit; mit ``web_search``
+    (``--online-codes``) zu Codes ohne Katalogtext die Online-Erklärung und einen Link
+    für die Websuche."""
+    indent = " " * 9
     for c in codes:
-        if c.info is not None:
-            print(f"  {c.code}  {c.info.title}")
-            continue
-        print(f"  {c.code}  {tr('(keine Beschreibung im Katalog)')}")
-        if not web_search:
+        title = c.info.title if c.info is not None else tr("(keine Beschreibung im Katalog)")
+        print(f"  {c.code}  {title}")
+        if ratings is not None and c.code in ratings:
+            text = _urgency_text(ratings[c.code])
+            print(textwrap.fill(text, 88, initial_indent=indent, subsequent_indent=indent))
+        if c.info is not None or not web_search:
             continue
         if c.online is not None:
             print("         " + tr("Online, ungeprüft: {text}").format(text=c.online.text))
@@ -147,8 +194,14 @@ def _print_codes(
 
 
 def _print_scan(
-    result: ScanResult, manufacturer: str | None = None, *, web_search: bool = False
+    result: ScanResult,
+    manufacturer: str | None = None,
+    *,
+    web_search: bool = False,
+    mil_on: bool | None = None,
 ) -> None:
+    """Adapter, Spannung und Codes nach Art mit Dringlichkeit; ``mil_on`` aus der
+    Readiness (``None``: nicht gelesen)."""
     voltage = tr("unbekannt") if result.voltage is None else f"{result.voltage:.1f} V"
     _labelled(
         [
@@ -163,12 +216,18 @@ def _print_scan(
     if not result.codes:
         print(tr("Keine Fehlercodes gespeichert."))
         return
+    ratings = rate_codes(result.codes, mil_on)
     for kind, heading in _SECTIONS:
         codes = [c for c in result.codes if c.kind is kind]
         if not codes:
             continue
         print(f"{tr(heading)}:")
-        _print_codes(codes, manufacturer, web_search=web_search)
+        _print_codes(codes, manufacturer, web_search=web_search, ratings=ratings)
+    top = highest(ratings.values())
+    if top is not None:
+        print()
+        print(tr("Dringlichkeit insgesamt: {label}").format(label=tr(top.label)))
+        print(textwrap.fill(tr("Hinweis: {message}").format(message=tr(URGENCY_NOTE)), 88))
 
 
 def _scan_json(result: ScanResult) -> str:
@@ -179,14 +238,15 @@ _AUTO_TRACE = "auto"
 _AUTO_RECORD = "auto"
 
 
-def _transport(args: argparse.Namespace) -> Transport:
+def _transport(args: argparse.Namespace, *, engine_start: bool = False) -> Transport:
     """Serieller Transport aus ``--port``/``--baud``, bei ``--trace`` mit Mitschnitt;
-    mit ``--demo`` (oder ``--port demo``) das Demo-Fahrzeug statt eines Adapters."""
+    mit ``--demo`` (oder ``--port demo``) das Demo-Fahrzeug statt eines Adapters, mit
+    ``engine_start`` bei stehendem Motor, der von selbst anspringt (Batterietest)."""
     demo = args.demo or args.port == DEMO_PORT
     transport: Transport
     if demo:
         _hint(tr(DEMO_NOTICE))
-        transport, label = DemoTransport(), tr("Demo-Fahrzeug")
+        transport, label = DemoTransport(engine_start=engine_start), tr("Demo-Fahrzeug")
     else:
         transport, label = SerialTransport(args.port, args.baud), f"{args.port} {args.baud} Baud"
     if args.trace is None:
@@ -256,6 +316,49 @@ def _run_adapter(args: argparse.Namespace) -> None:
     _labelled([(r.probe.command, probe_text(r)) for r in report.results], indent="  ")
     print()
     _hint(tr(UDS_NOTE), file=sys.stdout)
+
+
+def _run_battery(args: argparse.Namespace) -> int:
+    print(tr(BATTERY_INSTRUCTIONS), file=sys.stderr)
+    seen: set[Phase] = set()
+
+    def progress(p: BatteryProgress) -> None:
+        if p.phase in seen:
+            return
+        seen.add(p.phase)
+        text = tr(PHASE_TEXTS[p.phase])
+        if p.phase is Phase.START and p.remaining is not None:
+            text += " " + tr("(Zeit: {seconds:.0f} s)").format(seconds=p.remaining)
+        print(text, file=sys.stderr)
+
+    try:
+        with _transport(args, engine_start=True) as transport:
+            result = run_battery_test(
+                Elm327(transport), on_progress=progress, start_timeout=args.start_timeout
+            )
+    except BatteryTestRefused as e:
+        _error(e)
+        return 1
+    except (KeyboardInterrupt, BatteryTestCancelled):
+        print(file=sys.stderr)
+        _error(tr("Batterietest abgebrochen"))
+        return 1
+    if args.json:
+        print(json.dumps(result_to_dict(result), ensure_ascii=False, indent=2))
+        return 0
+    print()
+    _labelled(
+        [
+            (tr("Ruhespannung"), rest_verdict(result).text),
+            (tr("Anlassen"), crank_verdict(result).text),
+            (tr("Ladespannung"), charge_verdict(result).text),
+            (tr("Ergebnis"), overall_text(result)),
+        ]
+    )
+    print()
+    for note in notes(result):
+        _hint(note, file=sys.stdout)
+    return 0
 
 
 _STATUS_LABELS = {
@@ -606,7 +709,8 @@ def _print_session(session: Session, *, web_search: bool = False) -> None:
     print()
     vehicle = session.vehicle
     manufacturer = vehicle.manufacturer if vehicle is not None else None
-    _print_scan(session.scan, manufacturer, web_search=web_search)
+    mil_on = session.readiness.mil_on if session.readiness is not None else None
+    _print_scan(session.scan, manufacturer, web_search=web_search, mil_on=mil_on)
     print()
     _print_readiness(session.readiness)
     print()
@@ -748,6 +852,57 @@ def _run_export(args: argparse.Namespace, parser: argparse.ArgumentParser) -> in
     return 0
 
 
+# --- Sitzungsvergleich ---------------------------------------------------------------
+
+_CHANGE_MARKS = {
+    ChangeKind.ADDED: "+",
+    ChangeKind.REMOVED: "-",
+    ChangeKind.CHANGED: "~",
+    ChangeKind.UNCHANGED: "=",
+}
+
+
+def _print_comparison(comparison: SessionComparison, before: Path, after: Path) -> None:
+    _labelled(
+        [
+            (tr("Vorher"), f"{comparison.before.created:%Y-%m-%d %H:%M}  {before}"),
+            (tr("Nachher"), f"{comparison.after.created:%Y-%m-%d %H:%M}  {after}"),
+        ]
+    )
+    if comparison.same_vehicle is False:
+        print(tr("Warnung: {message}").format(message=tr(DIFFERENT_VEHICLE_WARNING)))
+    if not comparison.has_differences:
+        print()
+        print(tr("Keine Unterschiede."))
+    for section in comparison.sections:
+        if not section.changes:
+            continue
+        print()
+        print(f"{section.title}:")
+        for c in section.changes:
+            print(f"  {_CHANGE_MARKS[c.kind]} {c.subject}: {change_text(c)}")
+
+
+def _run_compare(args: argparse.Namespace) -> int:
+    from obd_diag.services.session import load_session
+
+    try:
+        first, second = load_session(args.first), load_session(args.second)
+    except OSError as e:
+        _error(f"{e.filename or ''}: {e.strerror or e}")
+        return 1
+    except ValueError as e:
+        _error(e)
+        return 1
+    comparison = compare_sessions(first, second)
+    if args.json:
+        print(json.dumps(comparison_to_dict(comparison), ensure_ascii=False, indent=2))
+        return 0
+    paths = (args.second, args.first) if comparison.swapped else (args.first, args.second)
+    _print_comparison(comparison, *paths)
+    return 0
+
+
 # --- Live-Daten ---------------------------------------------------------------------
 
 LIVE_SAFETY_NOTE = N_("Hinweis: Während der Fahrt nur durch Beifahrer bedienen.")
@@ -781,6 +936,21 @@ def _keys(text: str) -> list[str]:
     return [key.strip().lower() for key in text.split(",") if key.strip()]
 
 
+def _alarm(text: str) -> tuple[str, Threshold]:
+    """``--alarm SCHLÜSSEL=UNTEN:OBEN``; Schlüssel aus ``--list`` oder ``voltage``."""
+    try:
+        key, threshold = parse_threshold(text)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
+    if key != VOLTAGE_KEY and key not in PIDS:
+        raise argparse.ArgumentTypeError(
+            tr("unbekannter Wert: {key} (Schlüssel zeigt --list, Bordspannung: {voltage})").format(
+                key=key, voltage=VOLTAGE_KEY
+            )
+        )
+    return key, threshold
+
+
 def _live_number(value: float | None) -> str:
     if value is None:
         return _MISSING
@@ -789,7 +959,11 @@ def _live_number(value: float | None) -> str:
 
 
 class _LiveTable:
-    """Feste Spalten: Zeit, je Wert ``Name (Einheit)``, Bordspannung."""
+    """Feste Spalten: Zeit, je Wert ``Name (Einheit)``, Bordspannung.
+
+    Werte jenseits einer Warnschwelle stehen mit ``!`` in der Tabelle; Beginn und Ende
+    einer Warnung meldet ein Hinweis auf stderr (nicht jede Runde).
+    """
 
     def __init__(self, pids: list[PidSpec]) -> None:
         self.pids = pids
@@ -801,6 +975,7 @@ class _LiveTable:
         self.widths = [max(len(h), 8) for h in self.headers]
         self.rounds = 0
         self.throttled = False
+        self.alarming: set[str] = set()  # Schlüssel mit Warnung in der letzten Runde
 
     def print_header(self) -> None:
         print("  ".join(h.rjust(w) for h, w in zip(self.headers, self.widths, strict=True)))
@@ -819,10 +994,25 @@ class _LiveTable:
                 )
             else:
                 _hint(tr("Bordspannung wieder ausreichend."))
+        alarms = {alarm.key: alarm for alarm in sample.alarms}
+        for key, alarm in alarms.items():
+            if key not in self.alarming:
+                print(
+                    tr("Warnung: {message}").format(message=alarm_text(alarm, self.pids)),
+                    file=sys.stderr,
+                )
+        for key in sorted(self.alarming - alarms.keys()):
+            name = tr(VOLTAGE_LABEL) if key == VOLTAGE_KEY else PIDS[key].name
+            _hint(tr("{name} wieder im Bereich.").format(name=name))
+        self.alarming = set(alarms)
+
+        def mark(key: str, text: str) -> str:
+            return text + "!" if key in alarms else text
+
         cells = [
             f"{sample.elapsed:.1f}",
-            *(_live_number(sample.values.get(p.key)) for p in self.pids),
-            _MISSING if sample.voltage is None else f"{sample.voltage:.1f}",
+            *(mark(p.key, _live_number(sample.values.get(p.key))) for p in self.pids),
+            mark(VOLTAGE_KEY, _MISSING if sample.voltage is None else f"{sample.voltage:.1f}"),
         ]
         print("  ".join(c.rjust(w) for c, w in zip(cells, self.widths, strict=True)), flush=True)
         self.rounds += 1
@@ -838,6 +1028,12 @@ def _print_available(pids: list[PidSpec]) -> None:
     print(f"{key_title:<{key_width}}  {name_title:<{name_width}}  {unit_title}")
     for p in pids:
         print(f"{p.key:<{key_width}}  {p.name:<{name_width}}  {tr(p.unit)}")
+
+
+def _thresholds(args: argparse.Namespace) -> dict[str, Threshold]:
+    """Warnschwellen: die Vorgaben (ohne ``--no-alarms``), geändert durch ``--alarm``."""
+    base = {} if args.no_alarms else DEFAULT_THRESHOLDS
+    return merge(base, args.alarm or ())
 
 
 def _run_live(args: argparse.Namespace) -> int:
@@ -889,6 +1085,7 @@ def _run_live(args: argparse.Namespace) -> int:
                     ),
                     interval=args.interval,
                     recorder=recorder,
+                    thresholds=_thresholds(args),
                     clock=time.monotonic,
                     sleep=time.sleep,
                 )
@@ -969,6 +1166,24 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     adapter_parser.add_argument("--json", action="store_true", help=json_help)
+    battery_parser = sub.add_parser(
+        "battery",
+        parents=[connection],
+        help=tr(
+            "Batterie- und Anlasstest: Ruhespannung, Einbruch beim Anlassen und Ladespannung "
+            "messen und bewerten; den Motor startet man selbst, wenn der Test dazu auffordert"
+        ),
+    )
+    battery_parser.add_argument(
+        "--start-timeout",
+        type=_duration,
+        default=START_TIMEOUT,
+        metavar=tr("SEK"),
+        help=tr("so lange auf das Anlassen warten (Standard {default:g})").format(
+            default=START_TIMEOUT
+        ),
+    )
+    battery_parser.add_argument("--json", action="store_true", help=json_help)
     scan_parser = sub.add_parser(
         "scan",
         parents=[connection],
@@ -1094,6 +1309,25 @@ def build_parser() -> argparse.ArgumentParser:
             "vorhandene Dateien werden nicht überschrieben"
         ),
     )
+    defaults = ", ".join(
+        f"{key}={'' if t.low is None else f'{t.low:g}'}:{'' if t.high is None else f'{t.high:g}'}"
+        for key, t in DEFAULT_THRESHOLDS.items()
+    )
+    live_parser.add_argument(
+        "--alarm",
+        action="append",
+        type=_alarm,
+        metavar=tr("SCHLÜSSEL=UNTEN:OBEN"),
+        help=tr(
+            "Warnschwelle setzen, z. B. coolant_temp=:110 (leere Seite: keine Grenze, "
+            "SCHLÜSSEL=: schaltet die Warnung ab; mehrfach möglich). Vorgabe: {defaults}"
+        ).format(defaults=defaults),
+    )
+    live_parser.add_argument(
+        "--no-alarms",
+        action="store_true",
+        help=tr("ohne die vorgegebenen Warnschwellen (nur die mit --alarm gesetzten)"),
+    )
     sub.add_parser("ports", parents=[common], help=tr("angeschlossene Adapter auflisten"))
     setup_parser = sub.add_parser(
         "setup-check",
@@ -1116,6 +1350,17 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--csv", type=Path, metavar=csv_metavar, help=csv_help)
     # für Fehlermeldungen mit der Aufrufzeile von ``export``
     export_parser.set_defaults(export_parser=export_parser)
+    compare_parser = sub.add_parser(
+        "compare",
+        parents=[common],
+        help=tr(
+            "zwei gespeicherte Diagnosesitzungen vergleichen: neue und verschwundene "
+            "Fehlercodes, Readiness, Freeze Frame (die ältere gilt als vorher)"
+        ),
+    )
+    compare_parser.add_argument("first", type=Path, metavar=tr("SESSION1.json"))
+    compare_parser.add_argument("second", type=Path, metavar=tr("SESSION2.json"))
+    compare_parser.add_argument("--json", action="store_true", help=json_help)
     return parser
 
 
@@ -1147,6 +1392,8 @@ def main(argv: list[str] | None = None) -> int:
                 _labelled([(tr("Adapter"), adapter), (tr("Bordspannung"), voltage)])
         elif args.command == "adapter":
             _run_adapter(args)
+        elif args.command == "battery":
+            return _run_battery(args)
         elif args.command == "scan":
             _run_scan(args)
         elif args.command == "clear":
@@ -1171,6 +1418,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_setup_check(args)
         elif args.command == "export":
             return _run_export(args, args.export_parser)
+        elif args.command == "compare":
+            return _run_compare(args)
     except (TransportError, ElmError) as e:
         _error(e)
         if isinstance(e, NoConnectionError):

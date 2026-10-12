@@ -28,8 +28,8 @@ python-OBD geprüft ({doc}`entwickeln/testen`).
 | FIN lesen und offline dekodieren | Mode 09 PID 02 | {doc}`technik/fin` |
 | Steuergeräte: Name, Kalibrierungs-ID, CVN, Überwachungszähler | Mode 09 | {doc}`benutzen/steuergeraete-tests` |
 | Testergebnisse der Eigendiagnosen mit Grenzwerten | Mode 06 | {doc}`benutzen/steuergeraete-tests` |
-| Live-Daten: 116 Werte aus 82 PIDs, CSV-Aufzeichnung | Mode 01 | {doc}`benutzen/live-daten` |
-| Sitzungen speichern, PDF-Bericht, CSV | – | {doc}`benutzen/sitzungen` |
+| Live-Daten: 140 Werte aus 87 PIDs, CSV-Aufzeichnung | Mode 01 | {doc}`benutzen/live-daten` |
+| Sitzungen speichern und vergleichen, PDF-Bericht, CSV | – | {doc}`benutzen/sitzungen` |
 | Fehlercodes löschen (gesperrt) | Mode 04 | {doc}`benutzen/fehlercodes` |
 
 Was obd-diag nicht kann: Steuergeräte außerhalb der genormten Abgasdiagnose (Airbag,
@@ -68,6 +68,7 @@ benutzen/readiness
 benutzen/gebrauchtwagen
 benutzen/steuergeraete-tests
 benutzen/live-daten
+benutzen/batterie
 benutzen/sitzungen
 benutzen/probleme
 ```

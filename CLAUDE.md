@@ -50,7 +50,7 @@ Die Ideen stammen aus einem Cowork-Projekt, auf das Claude Code keinen Zugriff h
   einen roten Stand auf main gebracht).
 - `uv run python tools/emulator.py [--stored P0420,P0300 --pending P0171 --engine-off]`
   – ELM327-emulator mit standardgemäßen Antworten; zeigt das pty (z. B. /dev/pts/5)
-- `uv run obd-diag {info,adapter,scan,diagnose,readiness,used-car,vin,ecus,tests,clear,live,ports,export} --port … [--trace]`,
+- `uv run obd-diag {info,adapter,scan,diagnose,readiness,used-car,vin,ecus,tests,clear,live,ports,export,compare} --port … [--trace]`,
   `uv run obd-diag setup-check [--port …]` (Einrichtung: Rechte, Gruppe, Baudrate)
   (`live --list`, `--pids rpm,speed`, `--interval`, `--duration`, `--record [DATEI.csv]`)
 - `uv run obd-diag-gui`
@@ -102,8 +102,9 @@ PID 01, Otto + Diesel), Freeze Frame (Mode 02), FIN (Mode 09 PID 02) mit Offline
 Dekodierung, sicheres Löschen, Sitzungen als JSON, PDF-Bericht und CSV, Adapter-
 Mitschnitt, GUI mit Tabs (Fehlercodes / Readiness / Freeze Frame / Fahrzeug / Gebrauchtwagen /
 Live-Daten / Testergebnisse), Steuergeräte (Mode 09) und Testergebnisse (Mode 06), helles
-und dunkles Design. Live-Daten: 116 Werte aus 82 Mode-01-PIDs
-(auch Lambdasonden 1–8, Nachkat-Trimm, Drehmomentstufen, 66/67), CSV-Aufzeichnung,
+und dunkles Design. Live-Daten: 140 Werte aus 87 Mode-01-PIDs
+(auch Lambdasonden 1–8, Nachkat-Trimm, Drehmomentstufen, 66/67, 68/6C/6D/70/85
+am Auto noch ungeprüft), CSV-Aufzeichnung,
 Kacheln mit Verlaufskurve, CLI `obd-diag live`.
 
 ## Aufbau (src/obd_diag)
@@ -132,19 +133,28 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   `check_readiness`; CLI `obd-diag readiness`, GUI-Karte im Readiness-Reiter),
   `vehicle.py` (`read_vin`, `decode_vin`, `lookup_vpic`), `dtc_online.py`
   (`lookup_online`, `search_url`; Herstellerdatei nur laut FIN, Cache je Commit), `session.py`
-  (`run_diagnosis`, JSON speichern/laden), `storage.py` (XDG-Pfade, atomares
+  (`run_diagnosis`, JSON speichern/laden), `compare.py` (`compare_sessions`: Sitzungsvergleich,
+  je Abschnitt eine Funktion in `SECTIONS`, neue Sitzungsdaten dort anhängen), `storage.py` (XDG-Pfade, atomares
   Schreiben ohne Überschreiben), `setup_check.py` (`run_setup_check`: PySide6/Katalog,
   Zugriff und Gruppe je Port über injizierbaren `Host`, Baudraten 38400/115200 nur mit
   `Elm327.initialize`), `live.py` (`prepare_live`, `select_pids`, `run_live`
   mit injizierbarer Uhr, `LiveRecorder` CSV unter `recordings/`), `used_car.py`
   (Gebrauchtwagen-Check: `read_clear_counters` PID 30/31/4E/21/4D, je PID kleinster bzw.
   größter Wert aller Steuergeräte; `assess` bewertet mit Scan und Readiness, Texte erst bei
-  der Anzeige; `Session.clear_counters`, `None` in älteren Sitzungen).
+  der Anzeige; `Session.clear_counters`, `None` in älteren Sitzungen), `alarms.py`
+  (Warnschwellen je Live-Wert, `DEFAULT_THRESHOLDS`, Schlüssel `voltage` = `ATRV`;
+  `run_live(thresholds=…)` füllt `LiveSample.alarms`, CSV-Spalte „Warnungen“, CLI
+  `--alarm KEY=UNTEN:OBEN`/`--no-alarms`, GUI QSettings `live/warnschwellen`),
+  `urgency.py` (Dringlichkeit je Code aus Art, MIL und wenigen J2012-Codes; nur
+  berechnet, nicht in Sitzungen gespeichert), `battery.py` (`run_battery_test`: Batterie-
+  und Anlasstest, ATRV schnell + PID 42 als Bezug, injizierbare Uhr; Tests mit
+  `tests/battery_fakes.py`, Demo mit `engine_start`).
 - `data/` – `dtc_catalog.py` (SQLite, read-only), `catalog_build.py`, `wmi.py`
   (WMI → Hersteller, ISO-3780-Länderbereiche; Quellen im Modul).
 - `export/report.py` – PDF (ReportLab) und CSV.
 - `ui/` – `app.py`, `window.py`, `backend.py` (`live_port`), `jobs.py`, `theme.py`,
-  `viewmodels/` (`diagnosis.py`, `live.py`, `setup.py`: Dialog „Einrichtung prüfen“, öffnet
+  `viewmodels/` (`diagnosis.py`, `live.py`, `compare.py`: Sitzungsvergleich, Datei → Mit Sitzung vergleichen …,
+  `setup.py`: Dialog „Einrichtung prüfen“, öffnet
   sich bis zum ersten Schließen beim Start, QSettings `einrichtung/geprueft`; `tests/ui/conftest.py`
   setzt den Schlüssel, damit Tests nie echte Ports prüfen), `qml/` (`LiveView.qml` u. a.).
   `cli.py` – alle Befehle.
@@ -214,7 +224,8 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   läuft, ist `DiagnosisViewModel.blocked` gesetzt (Scan, Löschen, Export gesperrt,
   sonst stauten sie sich im einen Thread); Live startet nicht, solange die Diagnose
   `busy` ist. `app.py` stoppt Live vor `runner.wait()`.
-- **Live-Daten**: nur `01xx` und `ATRV`. Ein nicht lesbarer Wert ergibt `None` in der
+- **Live-Daten**: nur `01xx` und `ATRV` (dazu `ATH1`/`ATH0`, wenn sich mehrteilige
+  Antworten mehrerer Steuergeräte vermischen, wie beim Scan). Ein nicht lesbarer Wert ergibt `None` in der
   Runde, `TransportError` bricht ab, ebenso `MAX_FAILED_ROUNDS` (3) Runden, in denen
   jeder Wert an einem Adapterfehler scheitert (`?`/`NO DATA`/`7F` zählen nicht). Unter
   11,8 V nur alle 5 s abfragen und dann `ATRV` jede Runde (sonst jede zehnte); unlesbares
@@ -266,9 +277,10 @@ Kacheln mit Verlaufskurve, CLI `obd-diag live`.
   auf alle FINs mit 1–5 angewendet. CAN-Plausibilitätsgrenze „ab 2000“ ist geschätzt.
 - Wird `ATRV` nicht unterstützt, ist Löschen trotzdem erlaubt (nur bekannte niedrige
   Spannung blockiert) – bewusst, ggf. mit dem Nutzer klären.
-- Nicht aufgenommen sind PIDs mit Statusbyte, deren Aufbau in freien Quellen nicht
-  eindeutig ist (68–7F, u. a. 70 Ladedruck, 7A–7C Partikelfilter); Liste im Docstring
-  von `protocol/pids.py`. Erst mit der Norm (J1979-DA) oder echten Antworten angehen.
+- PIDs 68, 6C, 6D, 70, 85 (meldet der W177) sind nach OBDb + DashLogic dekodiert, aber
+  ohne echte Antwort: beim nächsten Autotest `live --pids` mit diesen Werten mitschneiden.
+  Nicht aufgenommen: übrige Statusbyte-PIDs (69, 7A–7C Partikelfilter u. a.) und
+  Bitfelder 88/92; Liste im Docstring von `protocol/pids.py`.
 - Nächste Roadmap-Schritte: v0.3+ Bluetooth LE, OBDb-Profile (CC-BY-SA beachten),
   SocketCAN/UDS mit Steuergeräte-Erkennung. Entwurf samt Sicherheitskonzept
   (Freigabeliste, gesperrte Dienste, Adresssuche nur im Diagnosebereich) steht im

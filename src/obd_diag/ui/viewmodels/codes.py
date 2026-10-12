@@ -14,6 +14,7 @@ from PySide6.QtCore import (
 from obd_diag.i18n import N_, tr
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind
 from obd_diag.services.dtc_online import search_url
+from obd_diag.services.urgency import URGENCY_NOTE, UrgencyRating, rate_codes
 
 # Bezeichnungen deutsch, bei der Ausgabe mit ``tr`` übersetzt
 KIND_LABELS = {
@@ -42,17 +43,26 @@ def cost_text(cost: tuple[int, int] | None) -> str:
     return tr("ca. {cost} €").format(cost=f"{low}–{high}")  # noqa: RUF001
 
 
-def code_entry(c: DiagnosticCode, manufacturer: str | None = None) -> dict[str, Any]:
+def code_entry(
+    c: DiagnosticCode, manufacturer: str | None = None, rating: UrgencyRating | None = None
+) -> dict[str, Any]:
     """Alle Angaben zu einem Code als einfache Werte, wie QML sie lesen kann.
 
-    ``manufacturer`` (aus der FIN) fließt nur in den Link für die Websuche ein.
+    ``manufacturer`` (aus der FIN) fließt nur in den Link für die Websuche ein;
+    ``rating`` ist die Dringlichkeit (ohne Angabe: nur aus diesem einen Eintrag bewertet).
     """
+    if rating is None:
+        rating = rate_codes([c], None)[c.code]
     info = c.info
     online = c.online
     return {
         "code": c.code,
         "kind": c.kind.value,
         "kindLabel": tr(KIND_LABELS[c.kind]),
+        "urgency": rating.level.key,  # "watch", "check", "soon", "stop"
+        "urgencyLabel": tr(rating.label),
+        "urgencyReason": tr(rating.reason),
+        "urgencyNote": tr(URGENCY_NOTE),
         "hasInfo": info is not None,
         "title": info.title if info is not None else tr(NO_INFO_TITLE),
         "description": (info.description or "") if info is not None else "",
@@ -87,6 +97,9 @@ _ROLE_NAMES = (
     "code",
     "kind",
     "kindLabel",
+    "urgency",
+    "urgencyLabel",
+    "urgencyReason",
     "hasInfo",
     "title",
     "description",
@@ -114,19 +127,28 @@ class CodeListModel(QAbstractListModel):
         self._entries: list[dict[str, Any]] = []
         self._codes: list[DiagnosticCode] = []
         self._manufacturer: str | None = None
+        self._mil_on: bool | None = None
 
-    def set_codes(self, codes: list[DiagnosticCode], manufacturer: str | None = None) -> None:
+    def set_codes(
+        self,
+        codes: list[DiagnosticCode],
+        manufacturer: str | None = None,
+        mil_on: bool | None = None,
+    ) -> None:
+        """``mil_on``: Kontrollleuchte laut Readiness (für die Dringlichkeit)."""
         order = list(KIND_LABELS)
         self._manufacturer = manufacturer
+        self._mil_on = mil_on
+        ratings = rate_codes(codes, mil_on)
         self.beginResetModel()
         self._codes = sorted(codes, key=lambda c: order.index(c.kind))  # stabil
-        self._entries = [code_entry(c, manufacturer) for c in self._codes]
+        self._entries = [code_entry(c, manufacturer, ratings[c.code]) for c in self._codes]
         self.endResetModel()
         self.countChanged.emit()
 
     def retranslate(self) -> None:
         """Bezeichnungen nach einem Sprachwechsel neu aufbauen (Katalogtexte bleiben)."""
-        self.set_codes(self._codes, self._manufacturer)
+        self.set_codes(self._codes, self._manufacturer, self._mil_on)
 
     @property
     def codes(self) -> list[DiagnosticCode]:

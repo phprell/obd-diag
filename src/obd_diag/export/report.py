@@ -52,6 +52,13 @@ from obd_diag.protocol.monitor_tests import (
 from obd_diag.services.diagnostics import LOW_VOLTAGE, DiagnosticCode, DtcKind
 from obd_diag.services.readiness import ALL_COMPLETE_LABEL, AU_NOTE, MonitorState, ReadinessStatus
 from obd_diag.services.session import Session
+from obd_diag.services.urgency import (
+    URGENCY_NOTE,
+    Urgency,
+    UrgencyRating,
+    highest,
+    rate_codes,
+)
 from obd_diag.services.used_car import NOTE as USED_CAR_NOTE
 from obd_diag.services.used_car import TITLE as USED_CAR_TITLE
 from obd_diag.services.used_car import Level, Verdict, assess, counter_rows
@@ -152,6 +159,7 @@ CSV_COLUMNS = (
     N_("Kosten bis (EUR)"),
     N_("Datum"),
     N_("FIN"),
+    N_("Dringlichkeit"),
 )
 
 
@@ -160,7 +168,13 @@ def csv_columns() -> list[str]:
     return [tr(column) for column in CSV_COLUMNS]
 
 
-def _csv_row(code: DiagnosticCode, created: str, vin: str) -> list[str]:
+def _ratings(session: Session) -> dict[str, UrgencyRating]:
+    """Dringlichkeit je Code, mit der Kontrollleuchte aus der Readiness."""
+    mil_on = session.readiness.mil_on if session.readiness is not None else None
+    return rate_codes(session.scan.codes, mil_on)
+
+
+def _csv_row(code: DiagnosticCode, created: str, vin: str, rating: UrgencyRating) -> list[str]:
     info = code.info
     if info is None:
         texts = ["", "", "", "", "", "", "", "", "", ""]
@@ -182,7 +196,7 @@ def _csv_row(code: DiagnosticCode, created: str, vin: str) -> list[str]:
             low,
             high,
         ]
-    return [code.code, tr(KIND_LABELS[code.kind]), *texts, created, vin]
+    return [code.code, tr(KIND_LABELS[code.kind]), *texts, created, vin, tr(rating.label)]
 
 
 def export_csv(session: Session, path: Path) -> None:
@@ -192,15 +206,17 @@ def export_csv(session: Session, path: Path) -> None:
     Ursachen/Symptome stehen durch `` | `` getrennt in einer Zelle, die
     Wahrscheinlichkeit in Klammern. „Datum“ und „FIN“ wiederholen sich in jeder Zeile,
     damit sich CSVs mehrerer Sitzungen aneinanderhängen lassen. Ohne Fehlercodes
-    enthält die Datei nur die Kopfzeile.
+    enthält die Datei nur die Kopfzeile. „Dringlichkeit“ (``services.urgency``) steht
+    zuletzt, damit ältere Auswertungen ihre Spalten behalten.
     """
     created = session.created.isoformat(timespec="seconds")
     vin = session.vehicle.vin if session.vehicle is not None else ""
     with path.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f, delimiter=csv_delimiter(), lineterminator="\r\n")
         writer.writerow(csv_columns())
+        ratings = _ratings(session)
         for code in session.scan.codes:
-            writer.writerow(_csv_row(code, created, vin))
+            writer.writerow(_csv_row(code, created, vin, ratings[code.code]))
 
 
 # --- Schrift ---
@@ -317,6 +333,12 @@ _WIDTH = A4[0] - 2 * _MARGIN_X
 _BOX_PAD = 9  # Einzug der Fehlercode-Kästen hinter dem farbigen Rand
 _INNER = _WIDTH - _BOX_PAD
 _TABLE_WIDTH = 135 * mm  # Messwert- und Monitortabellen
+_URGENCY_COLORS = {
+    Urgency.STOP: _BAD,
+    Urgency.SOON: _BAD,
+    Urgency.CHECK: _WARN,
+    Urgency.WATCH: _INK,
+}
 _LIKELIHOOD_COLORS = {"high": _BAD, "medium": _WARN, "low": _MUTED}
 
 
@@ -528,6 +550,10 @@ class _Builder:
             cells.append((tr("Kontrollleuchte"), self._colored(*mil, bold=True)))
             complete = (tr("ja"), _GOOD) if r.all_complete else (tr("nein"), _WARN)
             cells.append((tr(ALL_COMPLETE_LABEL), self._colored(*complete, bold=True)))
+        top = highest(_ratings(session).values())
+        if top is not None:
+            urgency = self._colored(tr(top.label), _URGENCY_COLORS[top.level], bold=True)
+            cells.append((tr("Dringlichkeit"), urgency))
         width = _WIDTH / len(cells)
         table = Table(
             [[self._p(label, "note") for label, _ in cells], [value for _, value in cells]],
@@ -652,8 +678,11 @@ class _Builder:
         )
         return table
 
-    def code_block(self, code: DiagnosticCode, seen: dict[str, DtcKind]) -> Table:
-        """Ein Code als Kasten mit farbigem Rand (Farbe nach Art)."""
+    def code_block(
+        self, code: DiagnosticCode, seen: dict[str, DtcKind], rating: UrgencyRating
+    ) -> Table:
+        """Ein Code als Kasten mit farbigem Rand (Farbe nach Art), darunter die
+        Dringlichkeit (beim ersten Auftreten des Codes)."""
         info = code.info
         color = _hex(_KIND_COLORS[code.kind])
         header = self._p(
@@ -663,6 +692,16 @@ class _Builder:
         )
         body: list[Flowable] = [header]
         earlier = seen.get(code.code)
+        if earlier is None:
+            color = _hex(_URGENCY_COLORS[rating.level])
+            label = escape(tr("Dringlichkeit: {label}.").format(label=tr(rating.label)))
+            body.append(
+                self._p(
+                    tr(rating.reason),
+                    "small",
+                    markup=f'<font name="{self.fonts.bold}" color="{color}">{label}</font> ',
+                )
+            )
         if earlier is not None and info is not None:
             body.append(
                 self._p(
@@ -780,6 +819,8 @@ class _Builder:
         out: list[Flowable] = []
         pending_title: list[Flowable] = [title]  # bleibt beim ersten Code
         seen: dict[str, DtcKind] = {}
+        ratings = _ratings(session)
+        pending_title.append(self._p(tr(URGENCY_NOTE), "note"))
         for kind in DtcKind:
             codes = [c for c in session.scan.codes if c.kind is kind]
             if not codes:
@@ -793,7 +834,7 @@ class _Builder:
                 Spacer(1, 6),
             ]
             for i, code in enumerate(codes):
-                block = [self.code_block(code, seen), Spacer(1, 10)]
+                block = [self.code_block(code, seen, ratings[code.code]), Spacer(1, 10)]
                 out.append(KeepTogether(intro + block if i == 0 else block))
             pending_title = []
         return out

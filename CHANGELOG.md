@@ -19,7 +19,28 @@ vor 1.0 kann sich die Bedienung noch ändern.
   des PDF-Berichts; in der Oberfläche stehen die Steuergeräte im Reiter *Fahrzeug*, die
   Testergebnisse im neuen Reiter *Testergebnisse*. Gelesen wird mit Headern (`ATH1`), damit
   jeder Wert dem richtigen Steuergerät zugeordnet ist. Die Demo zeigt erfundene Beispielwerte.
-
+- Sitzungsvergleich: `obd-diag compare ALT.json NEU.json` bzw. in der Oberfläche *Datei →
+  Mit Sitzung vergleichen …* zeigt, was sich zwischen zwei gespeicherten Diagnosen
+  geändert hat: neue, entfallene und weiterhin vorhandene Fehlercodes, Readiness-Monitore,
+  Kontrollleuchte, Freeze Frame, Zähler seit dem Löschen, FIN, Protokoll und
+  Bordspannung (`--json` für Skripte).
+  Arbeitet nur mit den Dateien, das Fahrzeug wird nicht angesprochen.
+- Dringlichkeit je Fehlercode in vier Stufen (möglichst nicht weiterfahren, bald in die
+  Werkstatt, bei Gelegenheit prüfen, beobachten) mit Begründung: in `scan`/`diagnose`,
+  in der Oberfläche (Etikett in der Liste, Begründung im Detail), im PDF-Bericht und als
+  letzte CSV-Spalte. Grundlage sind Art des Codes, Kontrollleuchte und wenige genormte
+  Codes (Übertemperatur, Öldruck, Aussetzer, Airbag); keine Ferndiagnose.
+- Warnschwellen für Live-Daten: `obd-diag live --alarm SCHLÜSSEL=UNTEN:OBEN`
+  (`--no-alarms` ohne Vorgaben), in der Oberfläche „Warnschwellen …“. Vorgaben:
+  Kühlmittel über 115 °C, Motoröl über 130 °C, Bord- und Steuergerätespannung unter
+  11,8 V oder über 15,5 V. Überschrittene Werte sind markiert (`!`, rote Kachel), die CSV
+  hat dafür die neue letzte Spalte „Warnungen“. Gesendet wird dafür nichts zusätzlich.
+- Batterie- und Anlasstest: `obd-diag battery` bzw. *Optionen → Batterie- und
+  Anlasstest …* misst die Ruhespannung, den Einbruch beim Anlassen (Motor startet man
+  selbst auf Aufforderung) und die Ladespannung im Leerlauf und bewertet sie mit
+  dokumentierten Richtwerten (Grenze beim Anlassen nach Temperatur). Die Spannung kommt
+  beim Anlassen in schneller Folge vom Adapter (`ATRV`), um die Abweichung zum
+  Steuergerät (PID 42) korrigiert. Nur lesend, keine neuen Befehle; auch im Demo-Modus.
 - Gebrauchtwagen-Check: `obd-diag used-car`, Reiter „Gebrauchtwagen“ in der Oberfläche
   und ein Abschnitt im PDF-Bericht zeigen, ob die Fehlercodes vor kurzem gelöscht wurden.
   Gelesen werden die Zähler, die das Löschen auf null setzt (Mode 01 PID 30 Warmläufe,
@@ -29,6 +50,13 @@ vor 1.0 kann sich die Bedienung noch ändern.
   10 Warmläufen, 200 km oder 300 Minuten). `obd-diag diagnose` und „Verbinden & Scannen“
   lesen die Zähler mit (fünf Anfragen mehr) und speichern sie in der Sitzung; ältere
   Sitzungen öffnen weiter. Nur lesend, keine neuen Befehle in der Freigabeliste.
+- Live-Daten: 24 weitere Werte aus den PIDs `68` (Ansauglufttemperatur je Sensor),
+  `6C` (Drosselklappensteller A/B), `6D` (Raildruck Soll/Ist und Temperatur), `70`
+  (Ladedruck Soll/Ist) und `85` (AdBlue: Verbrauch, Bedarf, Tankfüllstand, Laufzeit mit
+  NOx-Warnung), jetzt 140 Werte aus 87 PIDs. Der Mercedes A 180 d meldet sie als
+  unterstützt; am Auto geprüft sind die Antworten noch nicht. Auch der Demo-Modus zeigt
+  sie. Vermischen sich mehrteilige Antworten mehrerer Steuergeräte, wird die Anfrage mit
+  Headern wiederholt statt den Wert leer zu lassen.
 
 ## 0.2.1 – 2026-10-11
 

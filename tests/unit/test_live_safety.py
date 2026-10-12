@@ -79,9 +79,9 @@ def test_cli_live_sends_exactly(monkeypatch: pytest.MonkeyPatch, tmp_path: Path)
     lines = csv_file.read_text(encoding="utf-8-sig").splitlines()
     assert lines[0] == (
         "Zeit (s);Motordrehzahl (1/min);Geschwindigkeit (km/h);Kühlmitteltemperatur (°C);"
-        "Berechnete Motorlast (%);Ansauglufttemperatur (°C);Bordspannung (V)"
+        "Berechnete Motorlast (%);Ansauglufttemperatur (°C);Bordspannung (V);Warnungen"
     )
-    assert lines[1] == "0;1726;50;86;50,196;20;12,4"
+    assert lines[1] == "0;1726;50;86;50,196;20;12,4;"  # Vorgaben: keine Schwelle verletzt
     assert len(lines) == 3
 
 
@@ -201,7 +201,9 @@ def test_read_value_on_arbitrary_answers(answers: dict[str, str]) -> None:
     except ElmError:
         supported = set()
     assert all(0x01 <= pid <= 0xE0 for pid in supported)
-    assert all(c.startswith("01") for c in transport.sent), transport.sent
+    # Neben 01xx nur der Header-Rückfall bei vermischten Frames, immer mit ATH0 danach
+    assert all(c.startswith("01") or c in ("ATH1", "ATH0") for c in transport.sent), transport.sent
+    assert transport.sent.count("ATH1") == transport.sent.count("ATH0")
 
 
 @settings(max_examples=150, deadline=None)

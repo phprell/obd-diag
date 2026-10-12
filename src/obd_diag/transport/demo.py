@@ -9,10 +9,10 @@ Steuergeräte, ein gespeicherter Code (U1218) mit Freeze Frame, ein offener Read
 Runden der Reihe nach durch und beginnen danach von vorn.
 
 Nicht aufgezeichnet, aber vom Auto als unterstützt gemeldet und von obd-diag lesbar sind
-die PIDs 21, 30, 31, 41, 49 und 66; dafür stehen hier erfundene, plausible Beispielwerte.
-Ebenso erfunden sind die Antworten auf Mode 09 (Steuergerätenamen, Kalibrierungs-IDs,
-CVN, Überwachungszähler) und Mode 06 (Testergebnisse): zu beiden gibt es noch keinen
-Mitschnitt vom Auto.
+die PIDs 21, 30, 31, 41, 49, 66, 68, 6C, 6D, 70 und 85; dafür stehen hier erfundene,
+plausible Beispielwerte (Leerlauf, warmer Motor). Ebenso erfunden sind die Antworten auf
+Mode 09 (Steuergerätenamen, Kalibrierungs-IDs, CVN, Überwachungszähler) und Mode 06
+(Testergebnisse): zu beiden gibt es noch keinen Mitschnitt vom Auto.
 Auch die Steuergeräte-Adressen (nur mit ``ATH1`` sichtbar) sind angenommen; die
 Mitschnitte sind ohne Header entstanden.
 
@@ -21,10 +21,17 @@ Parser und Dienste genau wie am echten Auto, einschließlich Freigabeliste und
 Mindestpause. Nur Anfragen, für die es keine Daten gibt, beantwortet er mit ``NO DATA``,
 unbekannte Adapterbefehle mit ``?``. Löschen (Mode 04) beantwortet er nie: der Motor läuft,
 also bricht ``clear_codes`` schon an der Vorbedingung „Drehzahl 0“ ab.
+
+Für den Batterie- und Anlasstest (``engine_start=True``) steht der Motor zunächst, Zündung
+an; ``CRANK_AT`` Sekunden nach der ersten Drehzahlabfrage dreht der Anlasser
+``CRANK_SECONDS`` lang, danach läuft der Motor wie oben. Die Werte sind erfunden, aber an
+die Mitschnitte angelehnt (Adapter misst etwa 0,75 V weniger als das Steuergerät): Ruhe
+12,55 V, Einbruch auf 9,5 V laut Adapter (kurz 8,9 V beim Einschalten), Ladung 14,8 V.
 """
 
 import itertools
-from collections.abc import Iterator, Sequence
+import time
+from collections.abc import Callable, Iterator, Sequence
 from types import TracebackType
 from typing import Self
 
@@ -125,6 +132,14 @@ _STATIC: dict[str, Reply] = {
     # Readiness dieser Fahrt (PID 41, nur das Motorsteuergerät meldet sie laut 0140):
     # Abgassensor und NMHC-Katalysator noch offen, NOx-Nachbehandlung ausgesetzt
     "0141": ("41410006E921", None, None, None),
+    # Erfundene Beispielwerte (nicht aufgezeichnet): Ansaugluft 21 und 40 °C, Drossel-
+    # klappe Soll 100 % und Ist 94,9 %, Raildruck Soll 28000 und Ist 27950 kPa bei 30 °C,
+    # Ladedruck Soll 101 und Ist 100 kPa, AdBlue 0,01 L/h, Tank 70,2 %, keine NOx-Warnung
+    "0168": (None, "4168033D5000000000", None, None),
+    "016C": (None, "416C03FFF20000", None, None),
+    "016D": (None, "416D070AF00AEB460000000000", None, None),
+    "0170": (None, "4170030CA00C800000000000", None, None),
+    "0185": (None, "41850F00020002B300000000", "41850400000000B300000000", None),
 }
 
 
@@ -178,6 +193,28 @@ _CYCLING: dict[str, tuple[Reply, ...]] = {
 # Bordspannung laut Adapter (ATRV) bei laufendem Motor
 _VOLTAGES = ("13.9V", "14.0V")
 
+# Batterietest (``engine_start``): Ablauf ab der ersten Drehzahlabfrage, Sekunden
+CRANK_AT = 6.0
+CRANK_SECONDS = 0.9
+_INRUSH_SECONDS = 0.04
+# Motor aus, Zündung an: 11,8 V laut Adapter, 12,55 V laut Motorsteuergerät, 18 °C
+_OFF: dict[str, Reply] = {
+    "010C": ("410C0000", "410C0000", "410C0000", "410C0000"),
+    "010D": ("410D00", "410D00", "410D00", "410D00"),
+    "0104": ("410400", "410400", "410400", "410400"),
+    "0105": ("41053A", "41053A", "41053A", "41053A"),
+    "0142": ("41423106",),
+}
+_OFF_VOLTAGES = ("11.8V", "11.8V", "11.7V")
+# Anlasser dreht (250 1/min), Steuergerät meldet 10,24 V
+_CRANKING: dict[str, Reply] = {
+    **_OFF,
+    "010C": ("410C03E8", "410C03E8", "410C03E8", "410C03E8"),
+    "0142": ("41422800",),
+}
+_CRANK_VOLTAGES = ("9.6V", "9.5V", "9.6V", "9.7V")
+_INRUSH_VOLTAGE = "8.9V"
+
 # Adapterbefehle, die nur eine Einstellung ändern und mit OK antworten
 _SETTINGS = frozenset(
     {"ATE0", "ATE1", "ATL0", "ATL1", "ATS0", "ATS1", "ATH0", "ATH1", "ATSP0", "ATD"}
@@ -203,9 +240,14 @@ class DemoTransport:
     Zustand wie beim echten Adapter: Echo nach ``ATZ`` an, Header, Leerzeichen und
     Zeilenvorschub nach ``AT…``-Einstellung, die erste Anfrage nach ``ATSP0`` meldet
     ``SEARCHING...``. Jede Instanz beginnt die Live-Runden von vorn.
+
+    ``engine_start``: Motor steht und springt von selbst an (Batterietest, siehe Modul);
+    ``clock`` misst dafür die Zeit.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self, *, engine_start: bool = False, clock: Callable[[], float] = time.monotonic
+    ) -> None:
         self._open = False
         self._pending: bytes | None = None
         self._echo = True
@@ -217,6 +259,11 @@ class DemoTransport:
             cmd: itertools.cycle(replies) for cmd, replies in _CYCLING.items()
         }
         self._voltages = itertools.cycle(_VOLTAGES)
+        self._engine_start = engine_start
+        self._clock = clock
+        self._ignition_at: float | None = None  # erste Drehzahlabfrage (Batterietest)
+        self._off_voltages = itertools.cycle(_OFF_VOLTAGES)
+        self._crank_voltages = itertools.cycle(_CRANK_VOLTAGES)
 
     # --- Transport -----------------------------------------------------------
 
@@ -282,7 +329,7 @@ class DemoTransport:
         if cmd == "AT@1":
             return ["obd-diag Demo"]
         if cmd == "ATRV":
-            return [next(self._voltages)]
+            return [self._voltage()]
         if cmd == "ATDPN":
             return ["A" + (PROTOCOL_NUMBER if self._searched else "0")]
         if cmd == "ATDP":
@@ -302,7 +349,37 @@ class DemoTransport:
             self._searched = False
         return ["OK"]
 
+    def _engine(self) -> str:
+        """Zustand des Motors: ``off``, ``inrush``, ``cranking`` oder ``running``."""
+        if not self._engine_start:
+            return "running"
+        if self._ignition_at is None:
+            return "off"
+        since = self._clock() - self._ignition_at - CRANK_AT
+        if since < 0:
+            return "off"
+        if since < _INRUSH_SECONDS:
+            return "inrush"
+        return "cranking" if since < CRANK_SECONDS else "running"
+
+    def _voltage(self) -> str:
+        engine = self._engine()
+        if engine == "off":
+            return next(self._off_voltages)
+        if engine == "inrush":
+            return _INRUSH_VOLTAGE
+        if engine == "cranking":
+            return next(self._crank_voltages)
+        return next(self._voltages)
+
     def _reply(self, cmd: str) -> Reply | None:
+        if self._engine_start and cmd == "010C" and self._ignition_at is None:
+            self._ignition_at = self._clock()
+        engine = self._engine()
+        if engine == "off" and cmd in _OFF:
+            return _OFF[cmd]
+        if engine in ("inrush", "cranking") and cmd in _CRANKING:
+            return _CRANKING[cmd]
         if cmd in self._cycles:
             return next(self._cycles[cmd])
         return _STATIC.get(cmd)

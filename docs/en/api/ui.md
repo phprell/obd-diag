@@ -40,6 +40,11 @@
 ```{automodule} obd_diag.ui.viewmodels.live
 ```
 
+## `obd_diag.ui.viewmodels.compare`
+
+```{automodule} obd_diag.ui.viewmodels.compare
+```
+
 ## `obd_diag.ui.viewmodels.codes`
 
 ```{automodule} obd_diag.ui.viewmodels.codes

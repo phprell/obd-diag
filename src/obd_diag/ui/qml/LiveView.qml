@@ -90,6 +90,13 @@ Rectangle {
                     ToolTip.delay: 600
                     ToolTip.text: qsTr("Jede Runde sofort in eine neue CSV-Datei schreiben")
                 }
+                Button {
+                    objectName: "liveThresholdsButton"
+                    text: qsTr("Warnschwellen …")
+                    enabled: !pane.running
+                    flat: true
+                    onClicked: thresholdDialog.open()
+                }
 
                 Item {
                     Layout.fillWidth: true
@@ -105,8 +112,10 @@ Rectangle {
                     objectName: "liveVoltage"
                     visible: pane.running || pane.live.sampleCount > 0
                     text: qsTr("Bordspannung %1").arg(pane.live.voltageText)
-                    textColor: pane.live.throttled ? Theme.warnText : Theme.muted
-                    fill: pane.live.throttled ? Theme.warnBg : Theme.background
+                    textColor: pane.live.voltageAlarm ? Theme.errorText
+                             : pane.live.throttled ? Theme.warnText : Theme.muted
+                    fill: pane.live.voltageAlarm ? Theme.errorBg
+                        : pane.live.throttled ? Theme.warnBg : Theme.background
                 }
                 Chip {
                     objectName: "liveElapsed"
@@ -133,6 +142,14 @@ Rectangle {
                 Layout.fillWidth: true
                 kind: "warn"
                 text: "⚠  " + qsTr("Während der Fahrt nur durch Beifahrer bedienen. Wer fährt, achtet auf den Verkehr, nicht auf den Bildschirm.")
+            }
+            Banner {
+                objectName: "liveAlarmBanner"
+                Layout.fillWidth: true
+                kind: "error"
+                text: pane.running && pane.live.alarmTexts.length > 0
+                      ? qsTr("Warnschwelle überschritten: %1").arg(pane.live.alarmTexts.join("; "))
+                      : ""
             }
             Banner {
                 objectName: "liveThrottleBanner"
@@ -303,6 +320,113 @@ Rectangle {
         }
     }
 
+    // Warnschwellen je Wert; gelten ab dem nächsten Start, gespeichert in den Einstellungen
+    Dialog {
+        id: thresholdDialog
+        objectName: "liveThresholdDialog"
+        title: qsTr("Warnschwellen")
+        modal: true
+        anchors.centerIn: Overlay.overlay
+        width: Math.min(560, pane.width - 2 * Theme.pad)
+        standardButtons: Dialog.Close
+
+        property string error: ""
+        onAboutToShow: {
+            error = ""
+            pane.live.reloadThresholds()
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: Theme.gap
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Liegt ein Wert unter „unter“ oder über „über“, wird die Kachel rot markiert und die Warnung in der Aufzeichnung vermerkt. Leeres Feld: keine Grenze. Die Vorgaben sind grobe Richtwerte; was für das Fahrzeug normal ist, steht in seinen Unterlagen.")
+                color: Theme.muted
+                font.pixelSize: 12
+                wrapMode: Text.Wrap
+            }
+            Banner {
+                Layout.fillWidth: true
+                kind: "error"
+                text: thresholdDialog.error
+            }
+            // Kopfzeile und je Wert eine Zeile: Name, untere und obere Schwelle
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.gap
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Wert")
+                    font.bold: true
+                }
+                Label {
+                    Layout.preferredWidth: 90
+                    text: qsTr("unter")
+                    font.bold: true
+                }
+                Label {
+                    Layout.preferredWidth: 90
+                    text: qsTr("über")
+                    font.bold: true
+                }
+            }
+            Repeater {
+                objectName: "liveThresholdRows"
+                model: pane.live.thresholdRows
+                delegate: RowLayout {
+                    id: thresholdRow
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: Theme.gap
+
+                    // Beim Verlassen eines Felds speichern; beide Felder zusammen, damit
+                    // die Prüfung „unten kleiner als oben“ die aktuellen Eingaben sieht
+                    function apply() {
+                        thresholdDialog.error = pane.live.setThreshold(
+                            modelData.key, lowField.text, highField.text)
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: thresholdRow.modelData.name
+                              + (thresholdRow.modelData.unit ? " (" + thresholdRow.modelData.unit + ")" : "")
+                        elide: Text.ElideRight
+                    }
+                    TextField {
+                        id: lowField
+                        objectName: "liveThresholdLow_" + thresholdRow.modelData.key
+                        Layout.preferredWidth: 90
+                        text: thresholdRow.modelData.lowText
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        validator: RegularExpressionValidator { regularExpression: /-?[0-9]*([.,][0-9]*)?/ }
+                        Accessible.name: qsTr("Untere Schwelle für %1").arg(thresholdRow.modelData.name)
+                        onEditingFinished: thresholdRow.apply()
+                    }
+                    TextField {
+                        id: highField
+                        objectName: "liveThresholdHigh_" + thresholdRow.modelData.key
+                        Layout.preferredWidth: 90
+                        text: thresholdRow.modelData.highText
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        validator: RegularExpressionValidator { regularExpression: /-?[0-9]*([.,][0-9]*)?/ }
+                        Accessible.name: qsTr("Obere Schwelle für %1").arg(thresholdRow.modelData.name)
+                        onEditingFinished: thresholdRow.apply()
+                    }
+                }
+            }
+            Button {
+                objectName: "liveThresholdsReset"
+                text: qsTr("Vorgaben wiederherstellen")
+                onClicked: {
+                    thresholdDialog.error = ""
+                    pane.live.resetThresholds()
+                }
+            }
+        }
+    }
+
     // Eine Kachel: Name, großer Wert mit Einheit, Verlaufskurve auf der Skala der PID.
     component LiveTile: Rectangle {
         id: tile
@@ -319,12 +443,16 @@ Rectangle {
         required property string lowText
         required property string highText
         required property var history
+        required property string alarm  // "", "low" oder "high"
+        required property string alarmText
         property int historyLength: 120
+        readonly property bool alarming: alarm !== ""
 
         objectName: "liveTile_" + key
         implicitHeight: tileColumn.implicitHeight + 2 * 14
-        color: Theme.surface
-        border.color: Theme.border
+        color: alarming ? Theme.errorBg : Theme.surface
+        border.color: alarming ? Theme.errorDot : Theme.border
+        border.width: alarming ? 2 : 1
         radius: 6
 
         ColumnLayout {
@@ -349,13 +477,25 @@ Rectangle {
                     font.pixelSize: 30
                     font.bold: true
                     font.features: { "tnum": 1 }
-                    color: tile.hasValue ? palette.text : Theme.muted
+                    color: tile.alarming ? Theme.errorText : tile.hasValue ? palette.text : Theme.muted
                 }
                 Label {
                     Layout.alignment: Qt.AlignBaseline
                     text: tile.unit
                     color: Theme.muted
                     font.pixelSize: 14
+                }
+                Label {
+                    objectName: "liveAlarm_" + tile.key
+                    Layout.alignment: Qt.AlignBaseline
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignRight
+                    visible: tile.alarming
+                    text: "⚠ " + tile.alarmText
+                    color: Theme.errorText
+                    font.bold: true
+                    font.pixelSize: 12
+                    elide: Text.ElideRight
                 }
             }
 

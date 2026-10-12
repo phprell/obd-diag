@@ -9,7 +9,7 @@ Auch der Fehlercode-Katalog wird je Job geöffnet: SQLite-Verbindungen gehören 
 Thread, der sie angelegt hat, und Jobs laufen nicht im GUI-Thread.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +21,8 @@ from obd_diag.i18n import tr
 from obd_diag.protocol.elm327 import Elm327
 from obd_diag.protocol.pids import PidSpec
 from obd_diag.services.adapter_check import AdapterReport, check_adapter
+from obd_diag.services.alarms import Threshold
+from obd_diag.services.battery import BatteryProgress, BatteryTestResult, run_battery_test
 from obd_diag.services.clear import ClearResult, clear_codes
 from obd_diag.services.live import (
     LiveRecorder,
@@ -78,6 +80,7 @@ class LiveFunction(Protocol):
         on_sample: Callable[[LiveSample], None],
         should_stop: Callable[[], bool],
         skip_unsupported: bool = False,
+        thresholds: Mapping[str, Threshold] | None = None,
     ) -> LiveResult: ...
 
 
@@ -87,6 +90,23 @@ def _no_live(*args: Any, **kwargs: Any) -> LiveResult:
 
 def _no_adapter_check(port: str, baud: int) -> AdapterReport:
     raise NotImplementedError(tr("Der Adapter-Check ist in diesem Backend nicht verfügbar"))
+
+
+class BatteryFunction(Protocol):
+    """Batterie- und Anlasstest; läuft im Worker-Thread, ``on_progress`` kommt von dort."""
+
+    def __call__(
+        self,
+        port: str,
+        baud: int,
+        *,
+        on_progress: Callable[[BatteryProgress], None],
+        should_stop: Callable[[], bool],
+    ) -> BatteryTestResult: ...
+
+
+def _no_battery(*args: Any, **kwargs: Any) -> BatteryTestResult:
+    raise NotImplementedError(tr("Der Batterietest ist in diesem Backend nicht verfügbar"))
 
 
 def _no_readiness_check(port: str, baud: int) -> ReadinessCheck:
@@ -117,6 +137,8 @@ class Backend:
     live: LiveFunction = _no_live
     # Adapter-Check (Worker-Thread); siehe ``adapter_port``
     check_adapter: Callable[[str, int], AdapterReport] = _no_adapter_check
+    # Batterie- und Anlasstest (Worker-Thread); siehe ``battery_port``
+    battery_test: BatteryFunction = _no_battery
     # Readiness-Assistent: PID 01 und 41 (Worker-Thread); siehe ``readiness_port``
     check_readiness: Callable[[str, int], ReadinessCheck] = _no_readiness_check
 
@@ -166,6 +188,20 @@ def adapter_port(port: str, baud: int, trace: bool = False) -> AdapterReport:
         return check_adapter(Elm327(transport))
 
 
+def battery_port(
+    port: str,
+    baud: int,
+    *,
+    on_progress: Callable[[BatteryProgress], None],
+    should_stop: Callable[[], bool],
+    trace: bool = False,
+) -> BatteryTestResult:
+    """Batterie- und Anlasstest (``services.battery``); nur lesend. Das Demo-Fahrzeug
+    steht dafür zuerst und springt von selbst an."""
+    with open_serial(port, baud, _trace_path(trace), engine_start=True) as transport:
+        return run_battery_test(Elm327(transport), on_progress=on_progress, should_stop=should_stop)
+
+
 def readiness_port(port: str, baud: int, trace: bool = False) -> ReadinessCheck:
     """Readiness seit dem Löschen und in dieser Fahrt (PID 01 und 41); nur lesend."""
     with open_serial(port, baud, _trace_path(trace)) as transport:
@@ -184,6 +220,7 @@ def live_port(
     on_sample: Callable[[LiveSample], None],
     should_stop: Callable[[], bool],
     skip_unsupported: bool = False,
+    thresholds: Mapping[str, Threshold] | None = None,
     trace: bool = False,
 ) -> LiveResult:
     """Live-Werte (Mode 01) lesen, bis ``should_stop`` True liefert; nur lesend.
@@ -192,6 +229,7 @@ def live_port(
     Werte, soweit unterstützt; keiner davon: ``SelectionError``). Mit ``record`` wird
     jede Runde sofort in eine neue CSV-Datei geschrieben. Wird schon während der
     Initialisierung gestoppt, endet der Job ohne Abfrage und ohne Aufzeichnung.
+    ``thresholds``: Warnschwellen wie bei ``run_live``.
     """
     with open_serial(port, baud, _trace_path(trace)) as transport:
         elm = Elm327(transport)
@@ -211,6 +249,7 @@ def live_port(
                 should_stop=should_stop,
                 interval=interval,
                 recorder=recorder,
+                thresholds=thresholds,
             )
         return LiveResult(count, path)
 
@@ -235,6 +274,9 @@ def serial_backend() -> Backend:
         # Signatur wie ``LiveFunction``; nur der Mitschnitt kommt hinzu.
         return live_port(*args, **kwargs, trace=tracing["enabled"])
 
+    def battery_test(*args: Any, **kwargs: Any) -> BatteryTestResult:
+        return battery_port(*args, **kwargs, trace=tracing["enabled"])
+
     return Backend(
         diagnose=lambda port, baud, online_vin, online_codes: diagnose_port(
             port, baud, online_vin, online_codes, trace=tracing["enabled"]
@@ -245,5 +287,6 @@ def serial_backend() -> Backend:
         set_tracing=set_tracing,
         live=live,
         check_adapter=lambda port, baud: adapter_port(port, baud, trace=tracing["enabled"]),
+        battery_test=battery_test,
         check_readiness=lambda port, baud: readiness_port(port, baud, trace=tracing["enabled"]),
     )
