@@ -96,10 +96,11 @@ Steuergeräte. Zusammen bietet das Fahrzeug diese PIDs an:
 | `0160` | 2 | `66`, `68`, `6C`, `6D`, `70` (eines), `80` |
 | `0180` | 2 | `85`, `88`, `92` |
 
-`68`, `6C`, `6D`, `70`, `85`, `88` und `92` liest obd-diag noch nicht: Es sind PIDs mit
-Statusbyte, deren Aufbau in freien Quellen nicht eindeutig ist (Liste im Docstring von
-`protocol/pids.py`). Dass der W177 etwa `70` (Ladedruckregelung) anbietet, macht ihn
-zu einem guten Kandidaten, um das Format später an echten Antworten zu klären.
+`68`, `6C`, `6D`, `70` und `85` liest obd-diag inzwischen (Ansaugluft, Drosselklappe,
+Raildruck, Ladedruck, AdBlue; {doc}`pids`), dekodiert nach J1979, aber noch ohne
+echte Antwort vom W177: In diesem Mitschnitt wurden sie nicht abgefragt. `88` und `92`
+sind reine Status-Bitfelder und bleiben draußen. Beim nächsten Test am Auto sollen
+die neuen Werte mitgeschnitten werden.
 
 ## Steuergerätespannung (PID 42)
 

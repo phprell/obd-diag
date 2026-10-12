@@ -35,6 +35,13 @@ vor 1.0 kann sich die Bedienung noch ändern.
   10 Warmläufen, 200 km oder 300 Minuten). `obd-diag diagnose` und „Verbinden & Scannen“
   lesen die Zähler mit (fünf Anfragen mehr) und speichern sie in der Sitzung; ältere
   Sitzungen öffnen weiter. Nur lesend, keine neuen Befehle in der Freigabeliste.
+- Live-Daten: 24 weitere Werte aus den PIDs `68` (Ansauglufttemperatur je Sensor),
+  `6C` (Drosselklappensteller A/B), `6D` (Raildruck Soll/Ist und Temperatur), `70`
+  (Ladedruck Soll/Ist) und `85` (AdBlue: Verbrauch, Bedarf, Tankfüllstand, Laufzeit mit
+  NOx-Warnung), jetzt 140 Werte aus 87 PIDs. Der Mercedes A 180 d meldet sie als
+  unterstützt; am Auto geprüft sind die Antworten noch nicht. Auch der Demo-Modus zeigt
+  sie. Vermischen sich mehrteilige Antworten mehrerer Steuergeräte, wird die Anfrage mit
+  Headern wiederholt statt den Wert leer zu lassen.
 
 ## 0.2.1 – 2026-10-11
 

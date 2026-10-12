@@ -29,7 +29,7 @@ and so on. obd-diag asks all control units and merges the results.
 ```
 
 **Values.** Every PID has a fixed conversion, e.g. `410C1AF8` → (256 · 0x1A + 0xF8) / 4
-= 1726 rpm. All 116 values with formula: {doc}`pids`.
+= 1726 rpm. All 140 values with formula: {doc}`pids`.
 
 **Readiness (PID 01).** Four data bytes A to D:
 

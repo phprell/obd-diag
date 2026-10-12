@@ -12,10 +12,19 @@ begründet:
   python-OBD wertet A und B einzeln aus.
 - **`44`** (Lambda-Sollwert): Faktor genau 2/65536 statt des gerundeten 0,0000305.
 
+Die PIDs **`68`** (Ansauglufttemperatur je Sensor), **`6C`** (Drosselklappensteller),
+**`6D`** (Raildruck-Regelung), **`70`** (Ladedruck) und **`85`** (AdBlue) meldet der
+Mercedes A 180 d als unterstützt, Antworten darauf vom Auto gibt es aber noch nicht:
+**am Fahrzeug noch nicht geprüft**. Ihr Aufbau folgt J1979 nach zwei unabhängigen
+Darstellungen, die übereinstimmen (Signalliste von OBDb, PID-Liste von DashLogic).
+Jede dieser PIDs beginnt mit einem Statusbyte A, das sagt, welche Werte das Fahrzeug
+liefert; fehlt das Bit, bleibt der Wert leer. Ein Wert kommt ohnehin nur, wenn das
+Fahrzeug die PID meldet.
+
 Nicht enthalten sind Bitfelder ohne Messwert (`01`, `03`, `12`, `13`, `1C`, `1D`,
-`1E`, `41`, `51`, `65`) und PIDs mit Statusbyte, deren Aufbau sich zwischen Ausgaben
-der Norm geändert hat oder in freien Quellen nicht eindeutig ist (`68`–`7F`, u. a.
-`70` Ladedruck und `7A`–`7C` Partikelfilter), außerdem `53`/`54`. Sie werden erst mit
+`1E`, `41`, `51`, `65`, `88`, `92`, der Regelstatus in `70`) und PIDs mit Statusbyte,
+deren Aufbau in freien Quellen nicht eindeutig ist oder die das Testauto nicht meldet
+(u. a. `69` AGR, `7A`–`7C` Partikelfilter), außerdem `53`/`54`. Sie werden erst mit
 der Norm (J1979-DA) oder echten Antworten aufgenommen.
 
 ```{include} ../_gen/pids.md

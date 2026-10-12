@@ -22,8 +22,8 @@ Während der Fahrt nur durch Beifahrer bedienen.
 
 ## Welche Werte
 
-116 Werte aus 82 Mode-01-PIDs nach SAE J1979, darunter Drehzahl, Geschwindigkeit,
-Temperaturen, Last, Luftmasse, Saugrohr- und Raildruck, AGR, Kraftstofftrimm,
+140 Werte aus 87 Mode-01-PIDs nach SAE J1979, darunter Drehzahl, Geschwindigkeit,
+Temperaturen, Last, Luftmasse, Saugrohr-, Rail- und Ladedruck, AdBlue, AGR, Kraftstofftrimm,
 Lambdasonden 1–8, Drehmoment, Tankfüllstand, Verbrauch und Kilometerstand. Die
 vollständige Liste mit Schlüssel, Formel und Wertebereich steht unter
 {doc}`../technik/pids`.
@@ -52,7 +52,8 @@ vollständige Liste mit Schlüssel, Formel und Wertebereich steht unter
 - Meldet der Adapter drei Runden lang bei jedem Wert einen Busfehler (z. B. Zündung
   aus), endet die Abfrage mit einer Fehlermeldung. `NO DATA`, `?` und Ablehnungen
   zählen dabei nicht als Busfehler.
-- Gesendet werden nur `01xx` und `ATRV`.
+- Gesendet werden nur `01xx` und `ATRV`, dazu `ATH1`/`ATH0` (Header an und aus), wenn
+  sich mehrteilige Antworten mehrerer Steuergeräte vermischen.
 
 ## Aufzeichnung
 

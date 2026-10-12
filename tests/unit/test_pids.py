@@ -69,7 +69,7 @@ def test_table_is_consistent() -> None:
     assert [s.pid for s in PIDS.values()] == sorted(s.pid for s in PIDS.values())
     for key, spec in PIDS.items():
         assert spec.key == key
-        assert 1 <= spec.size <= 5
+        assert 1 <= spec.size <= 11  # 6D: Statusbyte und zehn Datenbytes
         assert spec.minimum < spec.maximum
         assert spec.name and spec.name[0].isupper()
         assert spec.pid % 0x20 != 0  # Bitmasken-PIDs sind keine Live-Werte
@@ -242,7 +242,67 @@ EXAMPLES = [
     ("coolant_temp_2", "020000", -40),
     ("coolant_temp_2", "0300FF", 215),
     ("coolant_temp_2", "01007B", None),
+    # 68: Ansauglufttemperatur, Bit 0-5 von A: Bank 1 Sensor 1-3, Bank 2 Sensor 1-3
+    ("intake_temp_b1s1", "013C", 20),
+    ("intake_temp_b1s2", "02003C", 20),
+    ("intake_temp_b2s3", "200000000000" + "3C", 20),
+    # 6C: Drosselklappensteller A/B Sollwert und relative Stellung, je 100*X/255 %
+    ("commanded_throttle_a", "0133", 20),
+    ("relative_throttle_b", "0F00000033", 20),
+    # 6D: Solldruck/Druck je (256X+Y)*10 kPa, Temperatur X - 40 °C
+    ("commanded_fuel_rail_pressure_a", "010AF0", 28000),
+    ("fuel_rail_pressure_a", "0300000AEB", 27950),
+    ("fuel_rail_temp_a", "070000000046", 30),
+    ("fuel_rail_pressure_b", "10" + "00" * 7 + "0AEB", 27950),
+    # 70: Soll-/Istladedruck je (256X+Y)/32 kPa; Bit 2 und 5 (Regelstatus) zählen nicht
+    ("commanded_boost_a", "010CA0", 101),
+    ("boost_a", "0700000C80", 100),
+    ("commanded_boost_a", "040CA0", None),
+    ("boost_b", "10" + "00" * 6 + "0020", 1.0),
+    # 85: Reduktionsmittel, Verbrauch/Bedarf (256X+Y)/200 L/h, Tank 100*F/255 %,
+    # Laufzeit mit NOx-Warnung in s (4 Bytes)
+    ("reagent_consumption", "0100C8", 1.0),
+    ("reagent_demand", "0F00000064", 0.5),
+    ("reagent_level", "0400000000B3", 179 * 100 / 255),
+    ("nox_warning_time", "08" + "00" * 5 + "00000E10", 3600),
 ]
+
+# Werte hinter einem Statusbyte (Bit ``bit`` von A) an Byte ``offset``, ``width`` Bytes:
+# Rand unten (alles 00), oben (alles FF) und ohne Statusbit (None)
+_STATUS_VALUES = [
+    *(
+        (f"intake_temp_{s}", bit, bit + 1, 1)
+        for bit, s in enumerate(("b1s1", "b1s2", "b1s3", "b2s1", "b2s2", "b2s3"))
+    ),
+    ("commanded_throttle_a", 0, 1, 1),
+    ("relative_throttle_a", 1, 2, 1),
+    ("commanded_throttle_b", 2, 3, 1),
+    ("relative_throttle_b", 3, 4, 1),
+    ("commanded_fuel_rail_pressure_a", 0, 1, 2),
+    ("fuel_rail_pressure_a", 1, 3, 2),
+    ("fuel_rail_temp_a", 2, 5, 1),
+    ("commanded_fuel_rail_pressure_b", 3, 6, 2),
+    ("fuel_rail_pressure_b", 4, 8, 2),
+    ("fuel_rail_temp_b", 5, 10, 1),
+    ("commanded_boost_a", 0, 1, 2),
+    ("boost_a", 1, 3, 2),
+    ("commanded_boost_b", 3, 5, 2),
+    ("boost_b", 4, 7, 2),
+    ("reagent_consumption", 0, 1, 2),
+    ("reagent_demand", 1, 3, 2),
+    ("reagent_level", 2, 5, 1),
+    ("nox_warning_time", 3, 6, 4),
+]
+for _key, _bit, _offset, _width in _STATUS_VALUES:
+    _spec = pid_by_key(_key)
+    assert _offset + _width == _spec.size, _key
+    _flag = f"{1 << _bit:02X}"
+    _others = f"{0x3F & ~(1 << _bit):02X}"
+    EXAMPLES += [
+        (_key, _flag + "00" * (_spec.size - 1), _spec.minimum),
+        (_key, _flag + "FF" * (_spec.size - 1), _spec.maximum),
+        (_key, _others + "FF" * (_spec.size - 1), None),
+    ]
 
 # Lambdasonden 1-8 haben je Art dieselbe Kodierung (nachgerechnet nach J1979)
 for _n in range(1, 9):
@@ -279,6 +339,7 @@ MAY_BE_INVALID = {
     "maf_b",
     "coolant_temp_1",
     "coolant_temp_2",
+    *(key for key, _, _, _ in _STATUS_VALUES),
 }
 
 
@@ -525,6 +586,52 @@ def test_read_values_status_without_sensor_is_none() -> None:
     elm, _ = _elm({"0166": "4166010020FFFF"})
     specs = [pid_by_key("maf_a"), pid_by_key("maf_b")]
     assert read_values(elm, specs) == {"maf_a": 1.0, "maf_b": None}
+
+
+# 85 von zwei Steuergeräten (29-Bit-CAN wie beim W177), je zwölf Bytes, also mehrteilig;
+# ohne Header greifen die Frames ineinander
+_REAGENT_MIXED = "00C\r0:41850F00C800\r00C\r0:418504000000\r1:64B300000E1000\r1:00800000000000"
+_REAGENT_HEADERS = (
+    "18 DA F1 18 10 0C 41 85 04 00 00 00\r18 DA F1 11 10 0C 41 85 0F 00 C8 00\r"
+    "18 DA F1 18 21 00 80 00 00 00 00 00\r18 DA F1 11 21 64 B3 00 00 0E 10 00"
+)
+_REAGENT_KEYS = ["reagent_consumption", "reagent_demand", "reagent_level", "nox_warning_time"]
+
+
+def test_read_values_mixed_multiframe_reread_with_headers() -> None:
+    transport = FakeTransport({"0185": _REAGENT_MIXED}, headers_on={"0185": _REAGENT_HEADERS})
+    values = read_values(Elm327(transport), [pid_by_key(k) for k in _REAGENT_KEYS])
+    # nach Adresse sortiert: 18DAF111 zuerst, obwohl 18DAF118 zuerst eintraf
+    assert values == {
+        "reagent_consumption": 1.0,
+        "reagent_demand": 0.5,
+        "reagent_level": pytest.approx(179 * 100 / 255),
+        "nox_warning_time": 3600,
+    }
+    assert transport.sent == ["0185", "ATH1", "0185", "ATH0"]
+
+
+def test_read_values_mixed_multiframe_unreadable_with_headers_is_none() -> None:
+    # Auch mit Headern keine zuordenbare Antwort: Werte leer, kein Fehler, ATH0 gesendet
+    transport = FakeTransport({"0185": _REAGENT_MIXED})
+    values = read_values(Elm327(transport), [pid_by_key(k) for k in _REAGENT_KEYS])
+    assert values == dict.fromkeys(_REAGENT_KEYS)
+    assert transport.sent == ["0185", "ATH1", "0185", "ATH0"]
+
+
+def test_read_values_multiframe_from_one_ecu() -> None:
+    # 6D vom Motorsteuergerät allein: 13 Bytes, mehrteilig, ohne Header lesbar
+    elm, transport = _elm({"016D": "00D\r0:416D070AF00AEB\r1:46000000000000"})
+    keys = ["commanded_fuel_rail_pressure_a", "fuel_rail_pressure_a", "fuel_rail_temp_a"]
+    keys_b = ["commanded_fuel_rail_pressure_b", "fuel_rail_pressure_b", "fuel_rail_temp_b"]
+    values = read_values(elm, [pid_by_key(k) for k in keys + keys_b])
+    assert values == {
+        "commanded_fuel_rail_pressure_a": 28000,
+        "fuel_rail_pressure_a": 27950,
+        "fuel_rail_temp_a": 30,
+        **dict.fromkeys(keys_b),
+    }
+    assert transport.sent == ["016D"]
 
 
 @pytest.mark.parametrize("keys", [["rpm", "speed"], []])

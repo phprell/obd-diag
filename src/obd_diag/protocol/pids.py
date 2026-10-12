@@ -19,12 +19,25 @@ bis 8 in der Reihenfolge der PIDs. Welche Bank und Position das ist, legt das
 Fahrzeug über PID ``13`` (2 Bänke zu je 4) oder ``1D`` (4 Bänke zu je 2) fest;
 eine feste Zuordnung wie „B1S1“ wäre bei ``1D`` falsch.
 
+Die PIDs ``68``, ``6C``, ``6D``, ``70`` und ``85`` meldet der Mercedes A 180 d (W177)
+als unterstützt (Bitmasken ``0160``/``0180`` in ``tests/fixtures/traces/mercedes_w177``),
+Antworten darauf gibt es aber noch keine vom Auto: am Fahrzeug noch nicht geprüft.
+Ihr Aufbau (Statusbyte A, welche Werte es gibt, dann die Werte) folgt J1979 in zwei
+unabhängigen Darstellungen, die übereinstimmen: der Signalliste von OBDb
+(github.com/OBDb/SAEJ1979, ``signalsets/v3/default.json``) und der PID-Liste von
+DashLogic (dashlogic.com/docs/technical/obdii_pids). ``68`` gibt es auch in einer
+älteren, kürzeren Form mit zwei Sensoren (Bit 0 und 1, Bytes B und C); sie deckt sich
+mit den ersten beiden Sensoren der langen Form, Sensoren dahinter bleiben bei der
+kurzen Antwort ``None`` (zu wenige Bytes).
+
 Bewusst nicht aufgenommen (offen):
 
-- PIDs mit Statusbyte, deren Aufbau sich zwischen Ausgaben von J1979 geändert hat
-  oder in den frei zugänglichen Quellen nicht eindeutig ist: ``68``
-  (Ansauglufttemperatur je Sensor: 2 oder 6 Sensoren), ``69`` (AGR), ``6A``-``6F``,
-  ``70`` (Ladedruckregelung), ``71``-``79``, ``7A``-``7C`` (DPF), ``7F`` und höher.
+- PIDs mit Statusbyte, deren Aufbau in den frei zugänglichen Quellen nicht eindeutig
+  ist oder die das Testauto nicht meldet: ``69`` (AGR), ``6A``, ``6B``, ``6E``, ``6F``,
+  ``71``-``79``, ``7A``-``7C`` (DPF), ``7D``-``84``, ``86``, ``87``, ``89`` und höher
+  (außer ``A6``).
+- Reine Status- und Bitfelder: der Regelstatus in Byte J von ``70``, ``88``
+  (SCR-Aufforderungssystem), ``92`` (Regelkreise der Kraftstoffanlage).
 - Bitfelder und Aufzählungen ohne Messwert: ``01``, ``03``, ``12``, ``13``, ``1C``,
   ``1D``, ``1E``, ``41``, ``51``, ``65``.
 - ``53``/``54`` (Absolut-/Relativdruck Tankentlüftung): Kodierung von ``54`` ist in
@@ -36,8 +49,9 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from obd_diag.i18n import N_, tr
-from obd_diag.protocol.elm327 import Elm327
-from obd_diag.protocol.frames import split_messages
+from obd_diag.protocol.elm327 import Elm327, ElmError
+from obd_diag.protocol.frames import FrameSequenceError, split_messages
+from obd_diag.protocol.obd import read_with_headers
 
 log = logging.getLogger(__name__)
 
@@ -273,6 +287,194 @@ def _torque_points() -> list[PidSpec]:
     ]
 
 
+def _intake_temperatures() -> list[PidSpec]:
+    """68: Ansauglufttemperatur je Bank und Sensor (je X - 40 °C); Bit 0-5 von A sagen,
+    welche Sensoren es gibt (Bank 1 Sensor 1-3, dann Bank 2 Sensor 1-3)."""
+    labels = (
+        ("b1s1", N_("Ansauglufttemperatur Bank 1, Sensor 1")),
+        ("b1s2", N_("Ansauglufttemperatur Bank 1, Sensor 2")),
+        ("b1s3", N_("Ansauglufttemperatur Bank 1, Sensor 3")),
+        ("b2s1", N_("Ansauglufttemperatur Bank 2, Sensor 1")),
+        ("b2s2", N_("Ansauglufttemperatur Bank 2, Sensor 2")),
+        ("b2s3", N_("Ansauglufttemperatur Bank 2, Sensor 3")),
+    )
+    return [
+        _spec(
+            0x68,
+            f"intake_temp_{sensor}",
+            label,
+            "°C",
+            bit + 2,
+            _if_supported(bit, _at(bit + 1, _temperature)),
+            _TEMPERATURE,
+        )
+        for bit, (sensor, label) in enumerate(labels)
+    ]
+
+
+def _throttle_actuators() -> list[PidSpec]:
+    """6C: Drosselklappensteller A/B Sollwert und relative Stellung (je 100*X/255 %);
+    Bit 0-3 von A: Sollwert A, Stellung A, Sollwert B, Stellung B."""
+    labels = (
+        ("commanded_throttle_a", N_("Drosselklappensteller A Sollwert")),
+        ("relative_throttle_a", N_("Relative Drosselklappenstellung A")),
+        ("commanded_throttle_b", N_("Drosselklappensteller B Sollwert")),
+        ("relative_throttle_b", N_("Relative Drosselklappenstellung B")),
+    )
+    return [
+        _spec(
+            0x6C,
+            key,
+            label,
+            "%",
+            bit + 2,
+            _if_supported(bit, _at(bit + 1, _percent)),
+            _PERCENT,
+        )
+        for bit, (key, label) in enumerate(labels)
+    ]
+
+
+_RAIL_PRESSURE = (0.0, 655350.0)
+_BOOST = (0.0, 65535 / 32)
+_REAGENT_RATE = (0.0, 65535 / 200)
+
+_PIDS_68_TO_85 = [
+    *_intake_temperatures(),
+    *_throttle_actuators(),
+    # 6D: Kraftstoffdruckregelung, Bit 0-5 von A: Solldruck, Druck, Temperatur je Rail
+    _spec(
+        0x6D,
+        "commanded_fuel_rail_pressure_a",
+        N_("Kraftstoffverteilerdruck A Sollwert"),
+        "kPa",
+        3,
+        _if_supported(0, lambda d: _word(d[1:3]) * 10),
+        _RAIL_PRESSURE,
+    ),
+    _spec(
+        0x6D,
+        "fuel_rail_pressure_a",
+        N_("Kraftstoffverteilerdruck A"),
+        "kPa",
+        5,
+        _if_supported(1, lambda d: _word(d[3:5]) * 10),
+        _RAIL_PRESSURE,
+    ),
+    _spec(
+        0x6D,
+        "fuel_rail_temp_a",
+        N_("Kraftstoffverteilertemperatur A"),
+        "°C",
+        6,
+        _if_supported(2, lambda d: d[5] - 40),
+        _TEMPERATURE,
+    ),
+    _spec(
+        0x6D,
+        "commanded_fuel_rail_pressure_b",
+        N_("Kraftstoffverteilerdruck B Sollwert"),
+        "kPa",
+        8,
+        _if_supported(3, lambda d: _word(d[6:8]) * 10),
+        _RAIL_PRESSURE,
+    ),
+    _spec(
+        0x6D,
+        "fuel_rail_pressure_b",
+        N_("Kraftstoffverteilerdruck B"),
+        "kPa",
+        10,
+        _if_supported(4, lambda d: _word(d[8:10]) * 10),
+        _RAIL_PRESSURE,
+    ),
+    _spec(
+        0x6D,
+        "fuel_rail_temp_b",
+        N_("Kraftstoffverteilertemperatur B"),
+        "°C",
+        11,
+        _if_supported(5, lambda d: d[10] - 40),
+        _TEMPERATURE,
+    ),
+    # 70: Ladedruckregelung, Bit 0/1 von A: Soll-/Istdruck A, Bit 3/4: B (Bit 2/5 und
+    # Byte J sind der Regelstatus, kein Messwert)
+    _spec(
+        0x70,
+        "commanded_boost_a",
+        N_("Ladedruck A Sollwert"),
+        "kPa",
+        3,
+        _if_supported(0, lambda d: _word(d[1:3]) / 32),
+        _BOOST,
+    ),
+    _spec(
+        0x70,
+        "boost_a",
+        N_("Ladedruck A"),
+        "kPa",
+        5,
+        _if_supported(1, lambda d: _word(d[3:5]) / 32),
+        _BOOST,
+    ),
+    _spec(
+        0x70,
+        "commanded_boost_b",
+        N_("Ladedruck B Sollwert"),
+        "kPa",
+        7,
+        _if_supported(3, lambda d: _word(d[5:7]) / 32),
+        _BOOST,
+    ),
+    _spec(
+        0x70,
+        "boost_b",
+        N_("Ladedruck B"),
+        "kPa",
+        9,
+        _if_supported(4, lambda d: _word(d[7:9]) / 32),
+        _BOOST,
+    ),
+    # 85: Reduktionsmittel (AdBlue) der NOx-Nachbehandlung, Bit 0-3 von A
+    _spec(
+        0x85,
+        "reagent_consumption",
+        N_("Reduktionsmittelverbrauch (Mittel)"),
+        "L/h",
+        3,
+        _if_supported(0, lambda d: _word(d[1:3]) / 200),
+        _REAGENT_RATE,
+    ),
+    _spec(
+        0x85,
+        "reagent_demand",
+        N_("Reduktionsmittelbedarf (Mittel)"),
+        "L/h",
+        5,
+        _if_supported(1, lambda d: _word(d[3:5]) / 200),
+        _REAGENT_RATE,
+    ),
+    _spec(
+        0x85,
+        "reagent_level",
+        N_("Füllstand Reduktionsmitteltank"),
+        "%",
+        6,
+        _if_supported(2, _at(5, _percent)),
+        _PERCENT,
+    ),
+    _spec(
+        0x85,
+        "nox_warning_time",
+        N_("Laufzeit mit NOx-Warnung"),
+        "s",
+        10,
+        _if_supported(3, lambda d: int.from_bytes(d[6:10], "big")),
+        (0.0, float(0xFFFFFFFF)),
+    ),
+]
+
+
 _TABLE = [
     _spec(0x04, "engine_load", N_("Berechnete Motorlast"), "%", 1, _percent, _PERCENT),
     _spec(0x05, "coolant_temp", N_("Kühlmitteltemperatur"), "°C", 1, _temperature, _TEMPERATURE),
@@ -479,6 +681,7 @@ _TABLE = [
         _if_supported(1, lambda d: d[2] - 40),
         _TEMPERATURE,
     ),
+    *_PIDS_68_TO_85,
     _spec(
         0xA6,
         "odometer",
@@ -579,7 +782,10 @@ def read_values(elm: Elm327, specs: Sequence[PidSpec]) -> dict[str, float | None
     ``41 <pid>`` mit mindestens ``spec.size`` Datenbytes (überzählige werden
     ignoriert), deren Dekodierung nicht ``None`` ist. ``None`` bei ``NO DATA``,
     Ablehnung (``7F 01 xx``), zu kurzer Antwort oder ungültigem Wert; ``ElmError``
-    bei Adapterfehlern geht an den Aufrufer. Verschiedene PIDs in ``specs`` sind ein
+    bei Adapterfehlern geht an den Aufrufer. Vermischen sich mehrteilige Antworten
+    mehrerer Steuergeräte, wird die Anfrage einmal mit Headern (``ATH1``) wiederholt;
+    gelingt auch das nicht, bleiben die Werte ``None`` (``TransportError``, wenn sich
+    ``ATH0`` nicht wiederherstellen lässt, geht durch). Verschiedene PIDs in ``specs`` sind ein
     Programmierfehler (``ValueError``), ebenso eine leere Liste.
     """
     pids = {spec.pid for spec in specs}
@@ -593,7 +799,19 @@ def read_values(elm: Elm327, specs: Sequence[PidSpec]) -> dict[str, float | None
     response = elm.query(cmd)
     if response is None:
         return values
-    messages = [m for m in _messages(cmd, response) if m[:2] == bytes([0x41, pid])]
+    try:
+        messages = split_messages(response)
+    except FrameSequenceError as e:
+        # Mehrteilige Antworten mehrerer Steuergeräte (z. B. 6D, 70, 85) vermischen sich
+        # ohne Header; einmal mit Headern wiederholen, sonst bleibt der Wert leer.
+        try:
+            messages = [m.data for m in read_with_headers(elm, cmd, e)]
+        except ElmError as error:
+            log.info("%s", error)
+            return values
+    except ValueError:
+        messages = _messages(cmd, response)
+    messages = [m for m in messages if m[:2] == bytes([0x41, pid])]
     for spec in specs:
         for message in messages:
             if len(message) >= 2 + spec.size:

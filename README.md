@@ -28,7 +28,7 @@ Full documentation (usage, how it works, development):
   dark theme.
 - **v0.2** (version 0.2.0, changes in
   [CHANGELOG.md](https://github.com/phprell/obd-diag/blob/main/CHANGELOG.md), German): live data
-  according to SAE J1979 (116 values from 82 PIDs, including all oxygen sensors), CSV
+  according to SAE J1979 (140 values from 87 PIDs, including all oxygen sensors), CSV
   recording, tab “Live data” and `obd-diag live`.
 - **English and German** (not released yet, see CHANGELOG): user interface
   (*Options → Sprache / Language*), command line (`--lang en|de`), PDF report, CSV,
@@ -487,9 +487,9 @@ Time (s)  Engine speed (rpm)  Speed (km/h)  Coolant temperature (°C)  …  Volt
      1.0                1731            51                        86  …         14.1
 ```
 
-- **Values:** 116 values from 82 mode 01 PIDs according to SAE J1979
+- **Values:** 140 values from 87 mode 01 PIDs according to SAE J1979
   (`protocol/pids.py`), among them engine speed, speed, coolant, intake air and oil
-  temperature, load, air flow, manifold and rail pressure, EGR, commanded equivalence
+  temperature, load, air flow, manifold, rail and boost pressure, AdBlue, EGR, commanded equivalence
   ratio, fuel trim (also secondary), oxygen sensors 1–8 (narrow and wide band), torque
   points, fuel level, fuel rate and odometer. If one PID returns several values (e.g.
   sensor voltage and trim), it is queried only once per round. The sensors are
@@ -512,7 +512,8 @@ Time (s)  Engine speed (rpm)  Speed (km/h)  Coolant temperature (°C)  …  Volt
   as for the export: UTF-8 with BOM, in English `,` and a decimal point (in German `;`
   and a decimal comma); first column `Time (s)`, then `Name (unit)` per value, last
   `Battery voltage (V)`. Every row is written immediately, so an abort loses nothing.
-- **Read-only:** only `01xx` and `ATRV` are sent.
+- **Read-only:** only `01xx` and `ATRV` are sent (plus `ATH1`/`ATH0` when multi-frame
+  responses of several control modules get mixed up).
 
 While driving, only a passenger should operate this. Against the emulator,
 `tools/emulator.py` returns randomly changing values with the engine running.
