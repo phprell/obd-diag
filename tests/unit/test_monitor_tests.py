@@ -237,3 +237,14 @@ def test_unreadable_supported_mids_are_an_elm_error() -> None:
     with pytest.raises(ElmError, match="0600"):
         read_test_results(Elm327(transport))
     assert transport.sent[-1] == "ATH0"
+
+
+def test_buffer_full_keeps_complete_results() -> None:
+    """``BUFFER FULL`` mitten in 0601: der vollständige Teil zählt, der Rest fehlt."""
+    other = can_lines("7E9", "46" + "01010A" + "0B00" + "0900" + "0D00" * 2 + "00")
+    cut = "\r".join(other.split("\r")[:2])  # 7E9 nur erster und ein Folge-Frame
+    headers = dict(MONITOR_TESTS_HEADERS)
+    headers["0601"] = f"{MONITOR_TESTS_HEADERS['0601']}\r{cut}\r7E9 2\rBUFFER FULL"
+    results, _ = _read(headers)
+    assert results is not None
+    assert {r.ecu for r in results if r.mid == 0x01} == {"7E8"}

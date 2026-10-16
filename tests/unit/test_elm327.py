@@ -1,6 +1,7 @@
 import pytest
 
 from obd_diag.protocol.elm327 import (
+    BufferFullError,
     Elm327,
     ElmError,
     NoConnectionError,
@@ -325,3 +326,11 @@ def test_search_timeout_is_restored_after_an_error() -> None:
     with pytest.raises(ElmError):
         elm.protocol()
     assert elm.timeout == 2.0
+
+
+def test_buffer_full_keeps_the_lines_before() -> None:
+    raw = "18DAF15906490014400000\r18DAF15810\rBUFFER FULL"
+    with pytest.raises(BufferFullError) as caught:
+        Elm327(FakeTransport({"0900": raw})).command("0900")
+    assert caught.value.partial == "18DAF15906490014400000\n18DAF15810"
+    assert isinstance(caught.value, ElmError)  # wer nur ElmError kennt, bleibt richtig

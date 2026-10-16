@@ -17,7 +17,12 @@ from hypothesis import event, given, settings
 from hypothesis import strategies as st
 
 from obd_diag.protocol.elm327 import Elm327, ElmError
-from obd_diag.protocol.headers import EcuMessage, HeaderFormat, parse_header_response
+from obd_diag.protocol.headers import (
+    EcuMessage,
+    HeaderFormat,
+    parse_header_response,
+    parse_truncated_header_response,
+)
 from obd_diag.protocol.obd import DTC_MODES, read_dtcs
 from obd_diag.services.vehicle import read_vin
 from tests.verification.helpers import (
@@ -291,3 +296,58 @@ def test_parse_header_response_raises_only_value_error(text: str, can: bool | No
     except ValueError:
         return
     assert all(isinstance(m.data, bytes) for m in messages)
+
+
+@SETTINGS
+@given(
+    st.lists(st.lists(st.integers(0, 255), min_size=1, max_size=70), min_size=1, max_size=5),
+    st.booleans(),
+    st.data(),
+)
+def test_truncated_response_yields_only_correct_messages(
+    payloads: list[list[int]], spaces: bool, data: st.DataObject
+) -> None:
+    """BUFFER FULL an beliebiger Stelle: jede gerettete Nachricht ist genau die vollständige
+    des Absenders, die abgeschnittenen sind als solche gemeldet, und nichts geht verloren,
+    was vor dem Schnitt vollständig war."""
+    ids = data.draw(ecu_ids(len(payloads)))
+    rng = data.draw(st.randoms(use_true_random=False))
+    frames = [
+        isotp_frames(can_id, payload, spaces, 0xAA, False)
+        for (_, can_id), payload in zip(ids, payloads, strict=True)
+    ]
+    _, on = _texts(mix_frames(frames, rng), spaces)
+    text = "\r".join(on)
+    cut = data.draw(st.integers(0, len(text)))
+    messages, incomplete = parse_truncated_header_response(text[:cut])
+    full = {m.header: m for m in parse_header_response(text)}
+    assert all(m == full[m.header] for m in messages)
+    assert not {m.header for m in messages} & set(incomplete)
+    # gerettet wird jede Nachricht, deren letzte Zeile nicht die letzte vor dem Schnitt ist
+    complete_lines = text[:cut].rstrip("\r").split("\r")[:-1]
+    for (_, can_id), frame_list in zip(ids, frames, strict=True):
+        if header_line(frame_list[-1], spaces) in complete_lines:
+            assert can_id in {m.header for m in messages}
+
+
+def test_truncated_response_rejects_a_gap_before_the_cut() -> None:
+    lines = [
+        "18DAF15A1017490A0154434D",
+        "18DAF15A226D69734374726C",  # Folge-Frame 1 fehlt
+        "18DAF15",
+    ]
+    with pytest.raises(ValueError, match="Folge-Frame 2 statt 1"):
+        parse_truncated_header_response("\r".join(lines))
+
+
+def test_truncated_response_rejects_a_broken_line_before_the_last() -> None:
+    with pytest.raises(ValueError):
+        parse_truncated_header_response("18DAF\r18DAF15906490014400000\r18DAF15A")
+
+
+def test_truncated_response_never_uses_the_last_line() -> None:
+    # gekürzter erster Frame eines 11-Bit-Absenders sähe aus wie eine J1850-Nachricht
+    assert parse_truncated_header_response("7E803410000\r7E81008000") == (
+        [EcuMessage(0x7E8, "7E8", bytes.fromhex("410000"))],
+        [],
+    )

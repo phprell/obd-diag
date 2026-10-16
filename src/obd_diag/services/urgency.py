@@ -98,8 +98,29 @@ _MIL_REASON = N_("Gespeichert, und die Kontrollleuchte ist an.")
 _STORED_MIL_OFF_REASON = N_("Gespeichert, die Kontrollleuchte ist aus.")
 _STORED_REASON = N_("Gespeichert; ob die Kontrollleuchte an ist, wurde nicht gelesen.")
 _PENDING_REASON = N_(
-    "Ausstehend: einmal erkannt, aber noch nicht bestätigt. Nach einigen Fahrten erneut lesen."
+    "Ausstehend: einmal erkannt, aber noch nicht bestätigt; die Kontrollleuchte geht dafür "
+    "noch nicht an. Nach einigen Fahrten erneut lesen."
 )
+
+# Katalogangabe „schaltet die Kontrollleuchte ein“, passend zur Art des Codes
+_MIL_YES = N_("Schaltet die Motorkontrollleuchte ein")
+_MIL_PENDING = N_("Kontrollleuchte erst, wenn bestätigt")
+_MIL_NO = N_("Keine Motorkontrollleuchte")
+
+
+def catalog_mil_text(mil: bool | None, kind: DtcKind) -> str | None:
+    """Die Katalogangabe zur Kontrollleuchte als Text (deutsch, zur Ausgabe ``tr``).
+
+    Der Katalog sagt, ob der Code die Kontrollleuchte einschaltet, sobald er bestätigt ist,
+    nicht, ob sie jetzt leuchtet (das meldet PID 01). Ein ausstehender Code (Mode 07) ist
+    noch nicht bestätigt, die Leuchte bleibt dafür aus; am W177 kam so P24C7 bei
+    ausgeschalteter Leuchte. ``None``, wenn der Katalog nichts angibt.
+    """
+    if mil is None:
+        return None
+    if not mil:
+        return _MIL_NO
+    return _MIL_PENDING if kind is DtcKind.PENDING else _MIL_YES
 
 
 @dataclass(frozen=True)

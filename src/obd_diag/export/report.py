@@ -56,6 +56,7 @@ from obd_diag.services.urgency import (
     URGENCY_NOTE,
     Urgency,
     UrgencyRating,
+    catalog_mil_text,
     highest,
     rate_codes,
 )
@@ -712,7 +713,7 @@ class _Builder:
                 )
             )
         elif info is not None:
-            body += self._details(info)
+            body += self._details(info, code.kind)
         else:
             if code.online is not None and earlier is None:
                 body.append(
@@ -749,13 +750,14 @@ class _Builder:
         )
         return box
 
-    def _details(self, info: DtcInfo) -> list[Flowable]:
+    def _details(self, info: DtcInfo, kind: DtcKind) -> list[Flowable]:
         out: list[Flowable] = []
         if info.description:
             out += [Spacer(1, 2), self._p(info.description)]
         facts: list[tuple[str, str]] = []
-        if info.mil is not None:
-            facts.append((tr("Kontrollleuchte"), _yes_no(info.mil)))
+        mil = catalog_mil_text(info.mil, kind)
+        if mil is not None:
+            facts.append((tr("Kontrollleuchte"), tr(mil)))
         if info.emissions_relevant is not None:
             facts.append((tr("Abgasrelevant"), _yes_no(info.emissions_relevant)))
         if info.repair_difficulty:

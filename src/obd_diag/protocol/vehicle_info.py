@@ -27,8 +27,12 @@ import logging
 from dataclasses import dataclass
 
 from obd_diag.i18n import N_, tr
-from obd_diag.protocol.elm327 import Elm327, ElmError
-from obd_diag.protocol.headers import EcuMessage, parse_header_response
+from obd_diag.protocol.elm327 import BufferFullError, Elm327, ElmError
+from obd_diag.protocol.headers import (
+    EcuMessage,
+    parse_header_response,
+    parse_truncated_header_response,
+)
 
 log = logging.getLogger(__name__)
 
@@ -240,20 +244,60 @@ def parse_performance(info_type: int, messages: list[EcuMessage]) -> InUsePerfor
     return InUsePerformance(compression, values[0], values[1], counters)
 
 
-def _by_ecu(response: str | None) -> dict[str, list[EcuMessage]]:
-    if response is None:
-        return {}
+def _by_ecu(messages: list[EcuMessage]) -> dict[str, list[EcuMessage]]:
     grouped: dict[str, list[EcuMessage]] = {}
-    for message in parse_header_response(response):
+    for message in messages:
         grouped.setdefault(message.header, []).append(message)
     return grouped
 
 
 def _query(elm: Elm327, cmd: str) -> dict[str, list[EcuMessage]]:
+    """Antworten je Absender; ``ElmError``, wenn der Adapter ablehnt oder sie unlesbar sind."""
+    return _query_once(elm, cmd)[0]
+
+
+def _query_once(elm: Elm327, cmd: str) -> tuple[dict[str, list[EcuMessage]], bool]:
+    """Wie ``_query``, dazu ob der Adapterpuffer übergelaufen ist (``BUFFER FULL``).
+
+    Dann zählen die Nachrichten, die vorher vollständig ankamen; wessen Antwort
+    abgeschnitten ist, der fehlt (Log-Eintrag).
+    """
     try:
-        return _by_ecu(elm.query(cmd))
+        try:
+            response = elm.query(cmd)
+        except BufferFullError as e:
+            messages, cut = parse_truncated_header_response(e.partial)
+            log.warning(
+                "%s: Adapterpuffer voll (BUFFER FULL), Antwort unvollständig von %s",
+                cmd,
+                ", ".join(cut) or "?",
+            )
+            return _by_ecu(messages), True
+        messages = parse_header_response(response) if response is not None else []
+        return _by_ecu(messages), False
     except ValueError as e:
         raise ElmError(f"{cmd}: {e}") from e
+
+
+def _query_all(elm: Elm327, cmd: str, expected: set[str]) -> dict[str, list[EcuMessage]]:
+    """Wie ``_query``; lief der Puffer über und fehlen Steuergeräte aus ``expected``,
+    wird die Anfrage einmal wiederholt.
+
+    Am W177 läuft bei ``0904`` und ``090A`` der Puffer des Adapters über, weil vier
+    Steuergeräte gleichzeitig mehrteilig antworten. Die Reihenfolge wechselt bei jeder
+    Anfrage, daher kommt beim zweiten Mal oft durch, was beim ersten fehlte; die
+    Antworten werden je Steuergerät zusammengeführt (die erste vollständige gilt).
+    """
+    answers, overflow = _query_once(elm, cmd)
+    missing = expected - answers.keys()
+    if not overflow or not missing:
+        return answers
+    try:
+        again = _query(elm, cmd)
+    except ElmError as e:
+        log.warning("%s (Wiederholung) nicht lesbar: %s", cmd, e)
+        return answers
+    return answers | {ecu: again[ecu] for ecu in sorted(missing) if ecu in again}
 
 
 def read_ecu_info(elm: Elm327) -> list[EcuInfo] | None:
@@ -262,8 +306,9 @@ def read_ecu_info(elm: Elm327) -> list[EcuInfo] | None:
     Fragt ``0900`` und dann jeden InfoType aus ``READ_INFO_TYPES``, den mindestens ein
     Steuergerät als unterstützt meldet, alles in einem Block mit Headern (``ATH1`` …
     ``ATH0``). Lehnt ein Steuergerät ab oder ist seine Antwort nicht normgerecht, fehlt
-    nur diese Angabe (mit Log-Eintrag). ``ElmError``, wenn schon ``0900`` unlesbar ist;
-    ``TransportError`` bricht ab.
+    nur diese Angabe (mit Log-Eintrag). Bei ``BUFFER FULL`` bleibt, was vollständig ankam,
+    und die Anfrage wird einmal wiederholt (``_query_all``). ``ElmError``, wenn schon
+    ``0900`` unlesbar ist; ``TransportError`` bricht ab.
     """
     with elm.headers():
         supported: dict[str, tuple[int, ...]] = {}
@@ -278,8 +323,9 @@ def read_ecu_info(elm: Elm327) -> list[EcuInfo] | None:
         answers: dict[int, dict[str, list[EcuMessage]]] = {}
         for info_type in wanted:
             cmd = f"09{info_type:02X}"
+            expected = {ecu for ecu, types in supported.items() if info_type in types}
             try:
-                answers[info_type] = _query(elm, cmd)
+                answers[info_type] = _query_all(elm, cmd, expected)
             except ElmError as e:
                 log.warning("%s nicht lesbar: %s", cmd, e)
     return [_ecu_info(ecu, supported[ecu], answers) for ecu in sorted(supported)]

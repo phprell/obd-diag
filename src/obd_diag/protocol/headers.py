@@ -120,13 +120,36 @@ def parse_header_response(response: str, *, can: bool | None = None) -> list[Ecu
     ohne Hex-Daten, ungültigen PCI-Bytes, Folge-Frames ohne ersten Frame, Lücken in der
     Nummerierung und unvollständigen Nachrichten.
     """
+    return _parse(response, can, truncated=False)[0]
+
+
+def parse_truncated_header_response(
+    response: str, *, can: bool | None = None
+) -> tuple[list[EcuMessage], list[str]]:
+    """Wie ``parse_header_response`` für die Zeilen vor ``BUFFER FULL``.
+
+    Der Adapter hat mitten in der Antwort aufgehört (``BufferFullError.partial``). Die
+    letzte Zeile kann daher abgeschnitten sein und wird immer übergangen; mehrteilige
+    Nachrichten, deren Rest fehlt, fallen weg. Alles andere
+    prüft die Funktion so streng wie ``parse_header_response`` (Lücken in der
+    Nummerierung bleiben ein ``ValueError``). Ergebnis: die vollständigen Nachrichten und
+    die Absender (Header) der abgeschnittenen.
+    """
+    return _parse(response, can, truncated=True)
+
+
+def _parse(
+    response: str, can: bool | None, *, truncated: bool
+) -> tuple[list[EcuMessage], list[str]]:
     found: list[tuple[int, int, str, bytearray]] = []  # (ecu, Eingang, Header, Daten)
     lengths: list[int | None] = []
     opened: dict[str, _Open] = {}
-    for raw in response.upper().splitlines():
-        line = raw.strip()
-        if not line:
-            continue
+    lines = [line for raw in response.upper().splitlines() if (line := raw.strip())]
+    if truncated:
+        # Die letzte Zeile kann mitten im Frame enden und dann anders aussehen, als sie
+        # ist (gekürzt kann eine 11-Bit-Zeile wie eine J1850-Zeile wirken): nie verwenden.
+        lines = lines[:-1]
+    for line in lines:
         fmt, header, frame = _classify(line, can)
         ecu = _ecu(fmt, header)
         if fmt is HeaderFormat.LEGACY:
@@ -187,16 +210,23 @@ def parse_header_response(response: str, *, can: bool | None = None) -> list[Ecu
             raise ValueError(
                 tr("unbekanntes PCI-Byte {pci:02X}: {line}").format(pci=frame[0], line=repr(line))
             )
-    for header, current in opened.items():
-        if not current.complete:
-            raise ValueError(
-                tr(
-                    "mehrteilige Nachricht von {header} unvollständig ({got} von {length} Bytes)"
-                ).format(header=header, got=len(current.data), length=current.length)
-            )
+    incomplete = [header for header, current in opened.items() if not current.complete]
+    if incomplete and not truncated:
+        current = opened[incomplete[0]]
+        raise ValueError(
+            tr(
+                "mehrteilige Nachricht von {header} unvollständig ({got} von {length} Bytes)"
+            ).format(header=incomplete[0], got=len(current.data), length=current.length)
+        )
+    dropped = {opened[header].index for header in incomplete}
+    kept = [
+        (entry, length)
+        for i, (entry, length) in enumerate(zip(found, lengths, strict=True))
+        if i not in dropped
+    ]
+    kept.sort(key=lambda item: (item[0][0], item[0][1]))
     messages = [
         EcuMessage(ecu, header, bytes(data if length is None else data[:length]))
-        for (ecu, _, header, data), length in zip(found, lengths, strict=True)
+        for (ecu, _, header, data), length in kept
     ]
-    order = sorted(range(len(found)), key=lambda i: (found[i][0], found[i][1]))
-    return [messages[i] for i in order]
+    return messages, incomplete

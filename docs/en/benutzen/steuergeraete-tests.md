@@ -50,6 +50,12 @@ Each control unit reports which items it provides (`0900`). obd-diag only reques
 those and only the ones listed; the control unit's serial number and similar items are
 left out.
 
+If a name or calibration ID is missing, the answer was usually too long for the adapter:
+when several control units answer with multi-frame messages at once, its buffer
+overflows (`BUFFER FULL`, especially at 38400 baud). obd-diag then keeps what arrived
+complete and asks once more. On the Mercedes W177 only the four calibration IDs of the
+engine control unit are missing this way.
+
 ## Test results (mode 06)
 
 ```{image} ../_static/screenshots/demo-testergebnisse-light.png
@@ -80,11 +86,18 @@ not run since the codes were last cleared. A *failed* alone is not yet a fault; 
 control unit only sets a trouble code according to its own logic (often two drives in
 a row).
 
+Limits at the edge of the value range mean “no limit”: for signed units the minimum is
+then, for example, −3276.8 °C (raw value `8000`, the smallest possible value); for
+unsigned units 0 as minimum or 65535 as maximum. From test number 80 only the
+manufacturer knows what is measured; obd-diag shows value, limits and verdict there, but
+no interpretation.
+
 obd-diag reads mode 06 only on CAN vehicles (roughly from 2008). Older protocols use a
 different format without units, which is not evaluated here. What the requests look
 like is described in {doc}`../technik/dienste`.
 
 :::{note}
-The demo vehicle's answers to mode 09 and mode 06 are invented; there is no capture of
-these services from a real car yet.
+The demo vehicle's answers to mode 09 and mode 06 are invented. Real answers from a
+Mercedes W177 (third car test) are checked by the regression tests
+(`tests/verification/test_real_car_mode09.py`).
 :::
