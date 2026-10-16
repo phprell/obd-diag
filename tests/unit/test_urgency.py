@@ -8,6 +8,7 @@ from obd_diag.services.urgency import (
     URGENCY_LABELS,
     Urgency,
     UrgencyRating,
+    catalog_mil_text,
     highest,
     rate_code,
     rate_codes,
@@ -83,3 +84,21 @@ def test_levels_have_labels_and_keys() -> None:
     assert [u.key for u in sorted(Urgency)] == ["watch", "check", "soon", "stop"]
     set_language("en")
     assert tr(URGENCY_LABELS[Urgency.STOP]) == "Avoid driving"
+
+
+@pytest.mark.parametrize(
+    ("mil", "kind", "text"),
+    [
+        (True, STORED, "Schaltet die Motorkontrollleuchte ein"),
+        (True, PERMANENT, "Schaltet die Motorkontrollleuchte ein"),
+        (True, PENDING, "Kontrollleuchte erst, wenn bestätigt"),
+        (False, PENDING, "Keine Motorkontrollleuchte"),
+        (None, STORED, None),
+    ],
+)
+def test_catalog_mil_text_depends_on_the_kind(
+    mil: bool | None, kind: DtcKind, text: str | None
+) -> None:
+    """P24C7 am W177: ausstehend, Katalog „MIL: ja“, Leuchte aus. Die Anzeige darf nicht
+    „Kontrollleuchte an“ sagen."""
+    assert catalog_mil_text(mil, kind) == text

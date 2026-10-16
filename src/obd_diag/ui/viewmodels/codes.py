@@ -14,7 +14,12 @@ from PySide6.QtCore import (
 from obd_diag.i18n import N_, tr
 from obd_diag.services.diagnostics import DiagnosticCode, DtcKind
 from obd_diag.services.dtc_online import search_url
-from obd_diag.services.urgency import URGENCY_NOTE, UrgencyRating, rate_codes
+from obd_diag.services.urgency import (
+    URGENCY_NOTE,
+    UrgencyRating,
+    catalog_mil_text,
+    rate_codes,
+)
 
 # Bezeichnungen deutsch, bei der Ausgabe mit ``tr`` übersetzt
 KIND_LABELS = {
@@ -55,6 +60,7 @@ def code_entry(
         rating = rate_codes([c], None)[c.code]
     info = c.info
     online = c.online
+    mil = info.mil if info is not None else None
     return {
         "code": c.code,
         "kind": c.kind.value,
@@ -76,7 +82,10 @@ def code_entry(
         ],
         "symptoms": list(info.symptoms) if info is not None else [],
         # None bedeutet: im Katalog nicht angegeben
-        "mil": info.mil if info is not None else None,
+        "mil": mil,
+        # Katalogangabe passend zur Art; leer, wenn nicht angegeben
+        "milText": tr(text) if (text := catalog_mil_text(mil, c.kind)) else "",
+        "milWarn": mil is True and c.kind is not DtcKind.PENDING,
         "emissionsRelevant": info.emissions_relevant if info is not None else None,
         "difficultyLabel": (
             _label(DIFFICULTY_LABELS, info.repair_difficulty)
@@ -106,6 +115,8 @@ _ROLE_NAMES = (
     "causes",
     "symptoms",
     "mil",
+    "milText",
+    "milWarn",
     "emissionsRelevant",
     "difficultyLabel",
     "costText",

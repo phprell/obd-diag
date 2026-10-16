@@ -50,6 +50,11 @@ Welche Angaben ein Steuergerät liefert, meldet es selbst (`0900`). obd-diag fra
 diese ab und nur die genannten; die Seriennummer des Steuergeräts und Ähnliches bleiben
 außen vor.
 
+Fehlen Name oder Kalibrierungs-ID, war die Antwort meist zu lang für den Adapter: Antworten
+mehrere Steuergeräte gleichzeitig mehrteilig, läuft sein Puffer über (`BUFFER FULL`,
+besonders bei 38400 Baud). obd-diag behält dann, was vollständig ankam, und fragt einmal
+nach. Am Mercedes W177 fehlen so nur die vier Kalibrierungs-IDs des Motorsteuergeräts.
+
 ## Testergebnisse (Mode 06)
 
 ```{image} ../_static/screenshots/demo-testergebnisse-light.png
@@ -80,11 +85,17 @@ seit dem letzten Löschen noch nicht gelaufen. Ein *nicht bestanden* allein ist 
 Fehler; das Steuergerät setzt erst nach eigener Logik (oft zwei Fahrten in Folge) einen
 Fehlercode.
 
+Grenzen am Rand des Wertebereichs heißen „keine Grenze“: Bei Einheiten mit Vorzeichen
+steht dann etwa −3276,8 °C als Minimum (Rohwert `8000`, der kleinste mögliche Wert), ohne
+Vorzeichen 0 als Minimum oder 65535 als Maximum. Ab Testnummer 80 sagt nur der Hersteller,
+was gemessen wird; obd-diag zeigt dort Wert, Grenzen und Urteil, aber keine Deutung.
+
 obd-diag liest Mode 06 nur bei CAN-Fahrzeugen (etwa ab 2008). Ältere Protokolle
 verwenden ein anderes Format ohne Einheiten, das hier nicht ausgewertet wird. Wie die
 Anfragen aussehen, steht unter {doc}`../technik/dienste`.
 
 :::{note}
-Die Antworten des Demo-Fahrzeugs auf Mode 09 und Mode 06 sind erfunden; von diesen
-Diensten gibt es noch keinen Mitschnitt vom echten Auto.
+Die Antworten des Demo-Fahrzeugs auf Mode 09 und Mode 06 sind erfunden. Echte Antworten
+eines Mercedes W177 (dritter Autotest) prüfen die Regressionstests
+(`tests/verification/test_real_car_mode09.py`).
 :::

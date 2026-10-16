@@ -154,17 +154,15 @@ Rectangle {
                         Layout.fillWidth: true
                         Layout.topMargin: 2
                         spacing: 6
-                        visible: pane.entry.mil !== undefined && pane.entry.mil !== null
+                        visible: (pane.entry.milText ?? "") !== ""
                                  || pane.entry.emissionsRelevant === true
+                        // Katalogangabe, nicht der Zustand der Leuchte (der steht bei
+                        // Readiness); ausstehende Codes schalten sie noch nicht ein
                         Chip {
-                            visible: pane.entry.mil === true
-                            text: qsTr("Motorkontrollleuchte (MIL) an")
-                            textColor: Theme.warnText
-                            fill: Theme.warnBg
-                        }
-                        Chip {
-                            visible: pane.entry.mil === false
-                            text: qsTr("Keine Motorkontrollleuchte")
+                            visible: text !== ""
+                            text: pane.entry.milText ?? ""
+                            textColor: pane.entry.milWarn ? Theme.warnText : Theme.muted
+                            fill: pane.entry.milWarn ? Theme.warnBg : Theme.background
                         }
                         Chip {
                             visible: pane.entry.emissionsRelevant === true

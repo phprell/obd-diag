@@ -95,6 +95,21 @@ class UnknownCommandError(ElmError):
     """``?``: der Adapter kennt den Befehl nicht oder unterstützt ihn nicht."""
 
 
+class BufferFullError(ElmError):
+    """``BUFFER FULL``: der Ausgabepuffer des Adapters ist übergelaufen.
+
+    Laut Datenblatt (ELM327DSJ, S. 78, „Error Messages and Alerts“) füllt sich der Puffer, wenn
+    die Daten vom Fahrzeug schneller kommen, als die serielle Verbindung sie weitergibt
+    (besonders bei CAN und niedriger Baudrate); der Adapter hört dann auf zu lesen. Am W177
+    passiert das bei ``0904``/``090A``, wenn vier Steuergeräte gleichzeitig mehrteilig
+    antworten. ``partial``: die Zeilen davor (die letzte oft abgeschnitten).
+    """
+
+    def __init__(self, message: str, partial: str) -> None:
+        super().__init__(message)
+        self.partial = partial
+
+
 class NoConnectionError(ElmError):
     """``UNABLE TO CONNECT``: der Adapter findet kein Steuergerät, mit dem er sprechen kann.
 
@@ -275,6 +290,9 @@ class Elm327:
             # auch "BUS INIT: ...UNABLE TO CONNECT" bei K-Line
             if line.endswith("UNABLE TO CONNECT"):
                 raise NoConnectionError(f"{cmd}: {text}")
+        if "BUFFER FULL" in lines:
+            partial = "\n".join(lines[: lines.index("BUFFER FULL")])
+            raise BufferFullError(f"{cmd}: {text}", partial)
         for line in lines:
             # Fehler auch nach Teildaten (z. B. ``STOPPED``): die Antwort ist unvollständig.
             if line in _ERRORS or line.startswith("BUS INIT:") or _ERROR_LINE.search(line):

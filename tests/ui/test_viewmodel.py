@@ -118,6 +118,9 @@ def test_model_roles() -> None:
     assert model.data(index, roles["kindLabel"]) == "Ausstehend"
     assert model.data(index, roles["title"]).startswith("Katalysatorwirkungsgrad")
     assert model.data(index, roles["mil"]) is True
+    # ausstehend: der Katalog sagt „MIL“, die Leuchte geht aber erst bestätigt an
+    assert model.data(index, roles["milText"]) == "Kontrollleuchte erst, wenn bestätigt"
+    assert model.data(index, roles["milWarn"]) is False
     assert model.data(index, roles["emissionsRelevant"]) is True
     assert model.data(index, roles["difficultyLabel"]) == "schwierig"
     assert model.data(index, roles["costText"]) == "ca. 600–2500 €"  # noqa: RUF001
@@ -343,3 +346,11 @@ def test_adapter_check_needs_a_port_and_a_free_adapter(fake_backend: FakeBackend
     vm.set_blocked(True)
     vm.checkAdapter("/dev/ttyUSB0", 38400)
     assert fake_backend.calls == []
+
+
+def test_model_mil_text_for_a_stored_code() -> None:
+    model = CodeListModel()
+    model.set_codes([DiagnosticCode("P0420", DtcKind.STORED, P0420)])
+    roles = {bytes(name.data()).decode(): role for role, name in model.roleNames().items()}
+    assert model.data(model.index(0), roles["milText"]) == "Schaltet die Motorkontrollleuchte ein"
+    assert model.data(model.index(0), roles["milWarn"]) is True

@@ -24,8 +24,12 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from obd_diag.i18n import N_, tr
-from obd_diag.protocol.elm327 import Elm327, ElmError
-from obd_diag.protocol.headers import EcuMessage, parse_header_response
+from obd_diag.protocol.elm327 import BufferFullError, Elm327, ElmError
+from obd_diag.protocol.headers import (
+    EcuMessage,
+    parse_header_response,
+    parse_truncated_header_response,
+)
 
 log = logging.getLogger(__name__)
 
@@ -335,11 +339,19 @@ def parse_results(message: EcuMessage, mid: int) -> list[TestResult]:
 
 
 def _messages(elm: Elm327, cmd: str) -> list[EcuMessage]:
-    response = elm.query(cmd)
-    if response is None:
-        return []
+    """Nachrichten mit Header; bei ``BUFFER FULL`` die, die vorher vollständig ankamen."""
     try:
-        return parse_header_response(response)
+        try:
+            response = elm.query(cmd)
+        except BufferFullError as e:
+            messages, cut = parse_truncated_header_response(e.partial)
+            log.warning(
+                "%s: Adapterpuffer voll (BUFFER FULL), Antwort unvollständig von %s",
+                cmd,
+                ", ".join(cut) or "?",
+            )
+            return messages
+        return parse_header_response(response) if response is not None else []
     except ValueError as e:
         raise ElmError(f"{cmd}: {e}") from e
 

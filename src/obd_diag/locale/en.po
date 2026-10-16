@@ -1849,6 +1849,10 @@ msgid "ungerade Zahl von Hex-Ziffern nach dem Header: {line}"
 msgstr "odd number of hex digits after the header: {line}"
 
 #: src/obd_diag/protocol/headers.py
+msgid "mehrteilige Nachricht von {header} unvollständig ({got} von {length} Bytes)"
+msgstr "multi-frame message from {header} incomplete ({got} of {length} bytes)"
+
+#: src/obd_diag/protocol/headers.py
 msgid "CAN-Header bei Nicht-CAN-Protokoll: {line}"
 msgstr "CAN header with a non-CAN protocol: {line}"
 
@@ -1859,10 +1863,6 @@ msgstr "odd number of hex digits: {line}"
 #: src/obd_diag/protocol/headers.py
 msgid "CAN-Frame ohne Daten: {line}"
 msgstr "CAN frame without data: {line}"
-
-#: src/obd_diag/protocol/headers.py
-msgid "mehrteilige Nachricht von {header} unvollständig ({got} von {length} Bytes)"
-msgstr "multi-frame message from {header} incomplete ({got} of {length} bytes)"
 
 #: src/obd_diag/protocol/headers.py
 msgid "Nachricht ohne Daten: {line}"
@@ -3352,8 +3352,20 @@ msgid "Gespeichert; ob die Kontrollleuchte an ist, wurde nicht gelesen."
 msgstr "Stored; whether the warning light is on was not read."
 
 #: src/obd_diag/services/urgency.py
-msgid "Ausstehend: einmal erkannt, aber noch nicht bestätigt. Nach einigen Fahrten erneut lesen."
-msgstr "Pending: detected once but not yet confirmed. Read again after a few drives."
+msgid "Ausstehend: einmal erkannt, aber noch nicht bestätigt; die Kontrollleuchte geht dafür noch nicht an. Nach einigen Fahrten erneut lesen."
+msgstr "Pending: detected once but not yet confirmed; it does not turn on the warning lamp yet. Read again after a few drives."
+
+#: src/obd_diag/services/urgency.py
+msgid "Schaltet die Motorkontrollleuchte ein"
+msgstr "Turns on the check engine light"
+
+#: src/obd_diag/services/urgency.py
+msgid "Kontrollleuchte erst, wenn bestätigt"
+msgstr "Warning lamp only once confirmed"
+
+#: src/obd_diag/services/urgency.py
+msgid "Keine Motorkontrollleuchte"
+msgstr "No check engine light"
 
 #: src/obd_diag/services/urgency.py
 msgid "Beobachten"
@@ -3999,14 +4011,6 @@ msgstr "Search the web"
 #: src/obd_diag/ui/qml/CodeDetail.qml
 msgid "Öffnet eine Websuche nach dem Code im Browser"
 msgstr "Opens a web search for the code in the browser"
-
-#: src/obd_diag/ui/qml/CodeDetail.qml
-msgid "Motorkontrollleuchte (MIL) an"
-msgstr "Check engine light (MIL) on"
-
-#: src/obd_diag/ui/qml/CodeDetail.qml
-msgid "Keine Motorkontrollleuchte"
-msgstr "No check engine light"
 
 #: src/obd_diag/ui/qml/CodeDetail.qml
 msgid "Mögliche Ursachen"

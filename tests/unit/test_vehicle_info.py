@@ -18,6 +18,7 @@ from obd_diag.protocol.vehicle_info import (
     read_ecu_info,
 )
 from obd_diag.transport import TransportError
+from obd_diag.transport.trace import ReplayTransport
 from tests.fakes import CAN_CAR_FULL, ECU_INFO_HEADERS, IPT_SPARK, FakeTransport, can_lines
 
 
@@ -225,3 +226,88 @@ def test_lost_connection_aborts() -> None:
 
     with pytest.raises(TransportError):
         read_ecu_info(Elm327(Unplugged(CAN_CAR_FULL, headers_on=ECU_INFO_HEADERS)))
+
+
+# --- BUFFER FULL (W177, 2026-10-16) --------------------------------------------------
+
+_SUPPORTED = "18DAF15906490010400000\r18DAF15806490010400000"  # beide: 04 (CALID), 0A (Name)
+_NAME_58 = can_lines("18DAF158", "490A01" + "45434D002D456E67696E65436F6E74726F6C0000").replace(
+    " ", ""
+)
+_NAME_59 = can_lines("18DAF159", "490A01" + "50434D002D506F776572747261696E4374726C00").replace(
+    " ", ""
+)
+
+
+def _replay(*exchanges: tuple[str, str]) -> Elm327:
+    entries = [(">>", b"ATH1\r"), ("<<", b"OK\r\r>")]
+    for cmd, answer in exchanges:
+        entries += [(">>", f"{cmd}\r".encode()), ("<<", f"{answer}\r\r>".encode())]
+    entries += [(">>", b"ATH0\r"), ("<<", b"OK\r\r>")]
+    return Elm327(ReplayTransport(entries))
+
+
+def _cut(lines: str, keep: int, tail: str) -> str:
+    """Die ersten ``keep`` Zeilen, ein abgeschnittener Rest und BUFFER FULL."""
+    return "\r".join([*lines.split("\r")[:keep], tail, "BUFFER FULL"])
+
+
+def test_buffer_full_keeps_complete_answers_and_retries_once() -> None:
+    both = f"{_NAME_59}\r{_NAME_58}"
+    elm = _replay(
+        ("0900", _SUPPORTED),
+        ("0904", "NO DATA"),
+        ("090A", _cut(both, 5, "18DAF")),  # 59 vollständig (4 Frames), 58 nur erster Frame
+        ("090A", _cut(_NAME_58 + "\r" + _NAME_59, 4, "18DAF15")),  # jetzt 58 vollständig
+    )
+    infos = read_ecu_info(elm)
+    assert infos is not None
+    assert {i.ecu: i.name for i in infos} == {
+        "18DAF158": "ECM-EngineControl",
+        "18DAF159": "PCM-PowertrainCtrl",
+    }
+
+
+def test_buffer_full_retry_does_not_replace_complete_answers() -> None:
+    other_59 = _NAME_59.replace("506F776572", "506F776573")  # „Powes…“: darf nicht gelten
+    elm = _replay(
+        ("0900", _SUPPORTED),
+        ("0904", "NO DATA"),
+        ("090A", _cut(f"{_NAME_59}\r{_NAME_58}", 5, "18DAF158")),
+        ("090A", _cut(f"{other_59}\r{_NAME_58}", 4, "18DAF15")),  # 58 wieder unvollständig
+    )
+    infos = read_ecu_info(elm)
+    assert infos is not None
+    assert {i.ecu: i.name for i in infos} == {"18DAF158": None, "18DAF159": "PCM-PowertrainCtrl"}
+
+
+def test_buffer_full_with_all_expected_complete_is_not_retried() -> None:
+    both = f"{_NAME_59}\r{_NAME_58}"
+    elm = _replay(
+        ("0900", _SUPPORTED),
+        ("0904", "NO DATA"),
+        ("090A", f"{both}\r18DAF15A10\rBUFFER FULL"),  # 18DAF15A meldet 0A nicht
+    )
+    infos = read_ecu_info(elm)
+    assert infos is not None
+    assert all(i.name for i in infos)
+
+
+def test_missing_ecu_without_buffer_full_is_not_retried() -> None:
+    elm = _replay(("0900", _SUPPORTED), ("0904", "NO DATA"), ("090A", _NAME_59))
+    infos = read_ecu_info(elm)
+    assert infos is not None
+    assert {i.ecu: i.name for i in infos} == {"18DAF158": None, "18DAF159": "PCM-PowertrainCtrl"}
+
+
+def test_buffer_full_with_a_gap_is_not_salvaged() -> None:
+    """Fehlt ein Frame mitten in der Antwort, bleibt es ein Fehler: lieber nichts als
+    falsch zusammengesetzt."""
+    lines = f"{_NAME_59}\r{_NAME_58}".split("\r")
+    del lines[1]
+    elm = _replay(
+        ("0900", _SUPPORTED), ("0904", "NO DATA"), ("090A", "\r".join([*lines, "BUFFER FULL"]))
+    )
+    infos = read_ecu_info(elm)
+    assert infos is not None
+    assert all(i.name is None for i in infos)

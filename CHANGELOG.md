@@ -3,6 +3,32 @@
 Alle nennenswerten Änderungen an obd-diag. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/);
 vor 1.0 kann sich die Bedienung noch ändern.
 
+## Unveröffentlicht
+
+Korrekturen nach dem dritten Test am echten Auto (Mercedes A 180 d, W177, 2026-10-16), dem
+ersten mit Mode 09 und Mode 06.
+
+### Behoben
+
+- Steuergerätenamen und Kalibrierungs-IDs fehlten: Auf `0904` und `090A` antworten vier
+  Steuergeräte gleichzeitig mehrteilig, der Puffer des Adapters lief über (`BUFFER
+  FULL`), und die ganze Antwort wurde verworfen. Jetzt zählt, was vor dem Überlauf
+  vollständig ankam, und die Anfrage wird einmal wiederholt; die Antworten kommen jedes
+  Mal anders sortiert, sodass die Wiederholung die fehlenden Namen meist ergänzt. Am W177
+  bleiben die vier Kalibrierungs-IDs des Motorsteuergeräts offen (zu lang für den Puffer).
+  Mode 06 rettet die vollständigen Teile genauso. Kein neuer Befehl.
+- Ein ausstehender Fehlercode zeigte „Motorkontrollleuchte (MIL) an“, obwohl die Leuchte
+  aus war: Das ist die Katalogangabe für den bestätigten Code. Jetzt steht dort „Schaltet
+  die Motorkontrollleuchte ein“ bzw. bei ausstehenden Codes „Kontrollleuchte erst, wenn
+  bestätigt“ (Oberfläche und PDF), und die Begründung der Dringlichkeit sagt es auch.
+
+### Tests
+
+- Regressionstests mit beiden Mitschnitten des dritten Autotests (FIN geschwärzt):
+  Mode 09 je Steuergerät, Mode 06 mit Grenzen mit Vorzeichen, P24C7 ausstehend bei
+  ausgeschalteter Leuchte. Abbruch an jeder Stelle einer Antwort mit Headern per
+  Hypothesis: gerettet wird nur, was vollständig und richtig zusammengesetzt ist.
+
 ## 0.2.2 – 2026-10-12
 
 Neu sind Auswertungen aus den Daten, die das Tool schon liest: Gebrauchtwagen-Check,
